@@ -12,15 +12,19 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as CalendarioRouteImport } from './routes/calendario'
+import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as CustosFixosRouteImport } from './routes/custos-fixos'
 import { Route as FaturasRouteImport } from './routes/faturas'
 import { Route as FluxoRouteImport } from './routes/fluxo'
+import { Route as HabitosRouteImport } from './routes/habitos'
 import { Route as InvestimentosRouteImport } from './routes/investimentos'
 import { Route as ListaRouteImport } from './routes/lista'
+import { Route as MaisRouteImport } from './routes/mais'
 import { Route as MercadoRouteImport } from './routes/mercado'
 import { Route as MetasRouteImport } from './routes/metas'
 import { Route as OrcamentoRouteImport } from './routes/orcamento'
 import { Route as ParceladosRouteImport } from './routes/parcelados'
+import { Route as TarefasRouteImport } from './routes/tarefas'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -35,6 +39,11 @@ const AgendaRoute = AgendaRouteImport.update({
 const CalendarioRoute = CalendarioRouteImport.update({
   id: '/calendario',
   path: '/calendario',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
+  id: '/configuracoes',
+  path: '/configuracoes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CustosFixosRoute = CustosFixosRouteImport.update({
@@ -52,6 +61,11 @@ const FluxoRoute = FluxoRouteImport.update({
   path: '/fluxo',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HabitosRoute = HabitosRouteImport.update({
+  id: '/habitos',
+  path: '/habitos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InvestimentosRoute = InvestimentosRouteImport.update({
   id: '/investimentos',
   path: '/investimentos',
@@ -60,6 +74,11 @@ const InvestimentosRoute = InvestimentosRouteImport.update({
 const ListaRoute = ListaRouteImport.update({
   id: '/lista',
   path: '/lista',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MaisRoute = MaisRouteImport.update({
+  id: '/mais',
+  path: '/mais',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MercadoRoute = MercadoRouteImport.update({
@@ -82,49 +101,66 @@ const ParceladosRoute = ParceladosRouteImport.update({
   path: '/parcelados',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TarefasRoute = TarefasRouteImport.update({
+  id: '/tarefas',
+  path: '/tarefas',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/calendario': typeof CalendarioRoute
+  '/configuracoes': typeof ConfiguracoesRoute
   '/custos-fixos': typeof CustosFixosRoute
   '/faturas': typeof FaturasRoute
   '/fluxo': typeof FluxoRoute
+  '/habitos': typeof HabitosRoute
   '/investimentos': typeof InvestimentosRoute
   '/lista': typeof ListaRoute
+  '/mais': typeof MaisRoute
   '/mercado': typeof MercadoRoute
   '/metas': typeof MetasRoute
   '/orcamento': typeof OrcamentoRoute
   '/parcelados': typeof ParceladosRoute
+  '/tarefas': typeof TarefasRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/calendario': typeof CalendarioRoute
+  '/configuracoes': typeof ConfiguracoesRoute
   '/custos-fixos': typeof CustosFixosRoute
   '/faturas': typeof FaturasRoute
   '/fluxo': typeof FluxoRoute
+  '/habitos': typeof HabitosRoute
   '/investimentos': typeof InvestimentosRoute
   '/lista': typeof ListaRoute
+  '/mais': typeof MaisRoute
   '/mercado': typeof MercadoRoute
   '/metas': typeof MetasRoute
   '/orcamento': typeof OrcamentoRoute
   '/parcelados': typeof ParceladosRoute
+  '/tarefas': typeof TarefasRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/calendario': typeof CalendarioRoute
+  '/configuracoes': typeof ConfiguracoesRoute
   '/custos-fixos': typeof CustosFixosRoute
   '/faturas': typeof FaturasRoute
   '/fluxo': typeof FluxoRoute
+  '/habitos': typeof HabitosRoute
   '/investimentos': typeof InvestimentosRoute
   '/lista': typeof ListaRoute
+  '/mais': typeof MaisRoute
   '/mercado': typeof MercadoRoute
   '/metas': typeof MetasRoute
   '/orcamento': typeof OrcamentoRoute
   '/parcelados': typeof ParceladosRoute
+  '/tarefas': typeof TarefasRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -132,58 +168,74 @@ export interface FileRouteTypes {
     | '/'
     | '/agenda'
     | '/calendario'
+    | '/configuracoes'
     | '/custos-fixos'
     | '/faturas'
     | '/fluxo'
+    | '/habitos'
     | '/investimentos'
     | '/lista'
+    | '/mais'
     | '/mercado'
     | '/metas'
     | '/orcamento'
     | '/parcelados'
+    | '/tarefas'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/agenda'
     | '/calendario'
+    | '/configuracoes'
     | '/custos-fixos'
     | '/faturas'
     | '/fluxo'
+    | '/habitos'
     | '/investimentos'
     | '/lista'
+    | '/mais'
     | '/mercado'
     | '/metas'
     | '/orcamento'
     | '/parcelados'
+    | '/tarefas'
   id:
     | '__root__'
     | '/'
     | '/agenda'
     | '/calendario'
+    | '/configuracoes'
     | '/custos-fixos'
     | '/faturas'
     | '/fluxo'
+    | '/habitos'
     | '/investimentos'
     | '/lista'
+    | '/mais'
     | '/mercado'
     | '/metas'
     | '/orcamento'
     | '/parcelados'
+    | '/tarefas'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AgendaRoute: typeof AgendaRoute
   CalendarioRoute: typeof CalendarioRoute
+  ConfiguracoesRoute: typeof ConfiguracoesRoute
   CustosFixosRoute: typeof CustosFixosRoute
   FaturasRoute: typeof FaturasRoute
   FluxoRoute: typeof FluxoRoute
+  HabitosRoute: typeof HabitosRoute
   InvestimentosRoute: typeof InvestimentosRoute
   ListaRoute: typeof ListaRoute
+  MaisRoute: typeof MaisRoute
   MercadoRoute: typeof MercadoRoute
   MetasRoute: typeof MetasRoute
   OrcamentoRoute: typeof OrcamentoRoute
   ParceladosRoute: typeof ParceladosRoute
+  TarefasRoute: typeof TarefasRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -209,6 +261,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CalendarioRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/configuracoes': {
+      id: '/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/configuracoes'
+      preLoaderRoute: typeof ConfiguracoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/custos-fixos': {
       id: '/custos-fixos'
       path: '/custos-fixos'
@@ -230,6 +289,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FluxoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/habitos': {
+      id: '/habitos'
+      path: '/habitos'
+      fullPath: '/habitos'
+      preLoaderRoute: typeof HabitosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/investimentos': {
       id: '/investimentos'
       path: '/investimentos'
@@ -242,6 +308,13 @@ declare module '@tanstack/react-router' {
       path: '/lista'
       fullPath: '/lista'
       preLoaderRoute: typeof ListaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mais': {
+      id: '/mais'
+      path: '/mais'
+      fullPath: '/mais'
+      preLoaderRoute: typeof MaisRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mercado': {
@@ -272,6 +345,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ParceladosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tarefas': {
+      id: '/tarefas'
+      path: '/tarefas'
+      fullPath: '/tarefas'
+      preLoaderRoute: typeof TarefasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -279,15 +359,19 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgendaRoute: AgendaRoute,
   CalendarioRoute: CalendarioRoute,
+  ConfiguracoesRoute: ConfiguracoesRoute,
   CustosFixosRoute: CustosFixosRoute,
   FaturasRoute: FaturasRoute,
   FluxoRoute: FluxoRoute,
+  HabitosRoute: HabitosRoute,
   InvestimentosRoute: InvestimentosRoute,
   ListaRoute: ListaRoute,
+  MaisRoute: MaisRoute,
   MercadoRoute: MercadoRoute,
   MetasRoute: MetasRoute,
   OrcamentoRoute: OrcamentoRoute,
   ParceladosRoute: ParceladosRoute,
+  TarefasRoute: TarefasRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
