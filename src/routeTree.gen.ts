@@ -10,33 +10,115 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CalendarioRouteImport } from './routes/calendario'
+import { Route as CustosFixosRouteImport } from './routes/custos-fixos'
+import { Route as FaturasRouteImport } from './routes/faturas'
+import { Route as FluxoRouteImport } from './routes/fluxo'
+import { Route as OrcamentoRouteImport } from './routes/orcamento'
+import { Route as ParceladosRouteImport } from './routes/parcelados'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CalendarioRoute = CalendarioRouteImport.update({
+  id: '/calendario',
+  path: '/calendario',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CustosFixosRoute = CustosFixosRouteImport.update({
+  id: '/custos-fixos',
+  path: '/custos-fixos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FaturasRoute = FaturasRouteImport.update({
+  id: '/faturas',
+  path: '/faturas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FluxoRoute = FluxoRouteImport.update({
+  id: '/fluxo',
+  path: '/fluxo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrcamentoRoute = OrcamentoRouteImport.update({
+  id: '/orcamento',
+  path: '/orcamento',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ParceladosRoute = ParceladosRouteImport.update({
+  id: '/parcelados',
+  path: '/parcelados',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/calendario': typeof CalendarioRoute
+  '/custos-fixos': typeof CustosFixosRoute
+  '/faturas': typeof FaturasRoute
+  '/fluxo': typeof FluxoRoute
+  '/orcamento': typeof OrcamentoRoute
+  '/parcelados': typeof ParceladosRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/calendario': typeof CalendarioRoute
+  '/custos-fixos': typeof CustosFixosRoute
+  '/faturas': typeof FaturasRoute
+  '/fluxo': typeof FluxoRoute
+  '/orcamento': typeof OrcamentoRoute
+  '/parcelados': typeof ParceladosRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/calendario': typeof CalendarioRoute
+  '/custos-fixos': typeof CustosFixosRoute
+  '/faturas': typeof FaturasRoute
+  '/fluxo': typeof FluxoRoute
+  '/orcamento': typeof OrcamentoRoute
+  '/parcelados': typeof ParceladosRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/calendario'
+    | '/custos-fixos'
+    | '/faturas'
+    | '/fluxo'
+    | '/orcamento'
+    | '/parcelados'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/calendario'
+    | '/custos-fixos'
+    | '/faturas'
+    | '/fluxo'
+    | '/orcamento'
+    | '/parcelados'
+  id:
+    | '__root__'
+    | '/'
+    | '/calendario'
+    | '/custos-fixos'
+    | '/faturas'
+    | '/fluxo'
+    | '/orcamento'
+    | '/parcelados'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CalendarioRoute: typeof CalendarioRoute
+  CustosFixosRoute: typeof CustosFixosRoute
+  FaturasRoute: typeof FaturasRoute
+  FluxoRoute: typeof FluxoRoute
+  OrcamentoRoute: typeof OrcamentoRoute
+  ParceladosRoute: typeof ParceladosRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +130,59 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/calendario': {
+      id: '/calendario'
+      path: '/calendario'
+      fullPath: '/calendario'
+      preLoaderRoute: typeof CalendarioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/custos-fixos': {
+      id: '/custos-fixos'
+      path: '/custos-fixos'
+      fullPath: '/custos-fixos'
+      preLoaderRoute: typeof CustosFixosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/faturas': {
+      id: '/faturas'
+      path: '/faturas'
+      fullPath: '/faturas'
+      preLoaderRoute: typeof FaturasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fluxo': {
+      id: '/fluxo'
+      path: '/fluxo'
+      fullPath: '/fluxo'
+      preLoaderRoute: typeof FluxoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/orcamento': {
+      id: '/orcamento'
+      path: '/orcamento'
+      fullPath: '/orcamento'
+      preLoaderRoute: typeof OrcamentoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/parcelados': {
+      id: '/parcelados'
+      path: '/parcelados'
+      fullPath: '/parcelados'
+      preLoaderRoute: typeof ParceladosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CalendarioRoute: CalendarioRoute,
+  CustosFixosRoute: CustosFixosRoute,
+  FaturasRoute: FaturasRoute,
+  FluxoRoute: FluxoRoute,
+  OrcamentoRoute: OrcamentoRoute,
+  ParceladosRoute: ParceladosRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
