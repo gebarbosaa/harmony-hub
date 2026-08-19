@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
 import {
   Wallet,
   CreditCard,
@@ -25,13 +26,13 @@ import {
 } from "recharts";
 import { PageHeader, Panel, StatCard, ProgressBar, Tag, PersonDot } from "@/components/ui-kit";
 import {
-  upcomingBills,
-  monthlyEvolution,
-  categoryDistribution,
-  compositionData,
-  splitData,
-  appointments,
-  goals,
+  upcomingBills = [],
+  monthlyEvolution = [],
+  categoryDistribution = [],
+  compositionData = [],
+  splitData = [],
+  appointments = [],
+  goals = [],
 } from "@/lib/mock-data";
 import { formatCurrency, calculateGoalProgress, calculateBudgetUsage } from "@/lib/finance";
 
@@ -41,11 +42,6 @@ export const Route = createFileRoute("/")({
       { title: "VISÃO GERAL — MULTICAP" },
       {
         name: "description",
-        content: "Resumo financeiro do mês: saldo, gastos, vencimentos, metas e agenda do casal.",
-      },
-      { property: "og:title", content: "VISÃO GERAL — MULTICAP" },
-      {
-        property: "og:description",
         content: "Resumo financeiro do mês: saldo, gastos, vencimentos, metas e agenda do casal.",
       },
     ],
@@ -62,7 +58,18 @@ const PIE_COLORS = [
 ];
 
 function Dashboard() {
-  const mainGoal = goals[0]!;
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const mainGoal = goals[0] || {
+    name: "Sem meta cadastrada",
+    current: 0,
+    target: 1,
+    deadline: "-",
+  };
 
   return (
     <div className="space-y-5">
@@ -143,77 +150,81 @@ function Dashboard() {
       <div className="grid gap-4 lg:grid-cols-3">
         <Panel title="EVOLUÇÃO ANUAL" className="lg:col-span-2">
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={monthlyEvolution}>
-                <defs>
-                  <linearGradient id="g-gastos" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--orange-primary)" stopOpacity={0.55} />
-                    <stop offset="100%" stopColor="var(--orange-primary)" stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid stroke="var(--border)" vertical={false} />
-                <XAxis dataKey="mes" stroke="var(--muted-foreground)" fontSize={11} tickLine={false} />
-                <YAxis stroke="var(--muted-foreground)" fontSize={11} tickLine={false} width={48} />
-                <Tooltip
-                  contentStyle={{
-                    background: "var(--popover)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 12,
-                    fontSize: 12,
-                  }}
-                  formatter={(v: number) => formatCurrency(v)}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="gastos"
-                  stroke="var(--orange-primary)"
-                  strokeWidth={2.5}
-                  fill="url(#g-gastos)"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="receitas"
-                  stroke="var(--success)"
-                  strokeWidth={2}
-                  fill="transparent"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            {isMounted && (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={monthlyEvolution}>
+                  <defs>
+                    <linearGradient id="g-gastos" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="var(--orange-primary)" stopOpacity={0.55} />
+                      <stop offset="100%" stopColor="var(--orange-primary)" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke="var(--border)" vertical={false} />
+                  <XAxis dataKey="mes" stroke="var(--muted-foreground)" fontSize={11} tickLine={false} />
+                  <YAxis stroke="var(--muted-foreground)" fontSize={11} tickLine={false} width={48} />
+                  <Tooltip
+                    contentStyle={{
+                      background: "var(--popover)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 12,
+                      fontSize: 12,
+                    }}
+                    formatter={(v: number) => formatCurrency(v)}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="gastos"
+                    stroke="var(--orange-primary)"
+                    strokeWidth={2.5}
+                    fill="url(#g-gastos)"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="receitas"
+                    stroke="var(--success)"
+                    strokeWidth={2}
+                    fill="transparent"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </Panel>
 
         <Panel title="DISTRIBUIÇÃO DE GASTOS">
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={categoryDistribution}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius={55}
-                  outerRadius={85}
-                  paddingAngle={3}
-                  stroke="none"
-                >
-                  {categoryDistribution.map((entry, index) => (
-                    <Cell
-                      key={entry.name}
-                      fill={entry.value > entry.budget ? "var(--danger)" : PIE_COLORS[index % 5]}
-                    />
-                  ))}
-                </Pie>
-                <Legend wrapperStyle={{ fontSize: 10, letterSpacing: "0.08em" }} />
-                <Tooltip
-                  contentStyle={{
-                    background: "var(--popover)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 12,
-                    fontSize: 12,
-                  }}
-                  formatter={(v: number) => formatCurrency(v)}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            {isMounted && (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={categoryDistribution}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius={55}
+                    outerRadius={85}
+                    paddingAngle={3}
+                    stroke="none"
+                  >
+                    {categoryDistribution.map((entry, index) => (
+                      <Cell
+                        key={entry.name}
+                        fill={entry.value > entry.budget ? "var(--danger)" : PIE_COLORS[index % 5]}
+                      />
+                    ))}
+                  </Pie>
+                  <Legend wrapperStyle={{ fontSize: 10, letterSpacing: "0.08em" }} />
+                  <Tooltip
+                    contentStyle={{
+                      background: "var(--popover)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 12,
+                      fontSize: 12,
+                    }}
+                    formatter={(v: number) => formatCurrency(v)}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </Panel>
       </div>
@@ -221,31 +232,33 @@ function Dashboard() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Panel title="COMPOSIÇÃO FINANCEIRA">
           <div className="h-56">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={compositionData}>
-                <CartesianGrid stroke="var(--border)" vertical={false} />
-                <XAxis dataKey="name" stroke="var(--muted-foreground)" fontSize={10} tickLine={false} />
-                <YAxis stroke="var(--muted-foreground)" fontSize={10} width={48} tickLine={false} />
-                <Tooltip
-                  cursor={{ fill: "var(--secondary)" }}
-                  contentStyle={{
-                    background: "var(--popover)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 12,
-                    fontSize: 12,
-                  }}
-                  formatter={(v: number) => formatCurrency(v)}
-                />
-                <Bar dataKey="value" radius={[8, 8, 0, 0]} fill="var(--orange-primary)" />
-              </BarChart>
-            </ResponsiveContainer>
+            {isMounted && (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={compositionData}>
+                  <CartesianGrid stroke="var(--border)" vertical={false} />
+                  <XAxis dataKey="name" stroke="var(--muted-foreground)" fontSize={10} tickLine={false} />
+                  <YAxis stroke="var(--muted-foreground)" fontSize={10} width={48} tickLine={false} />
+                  <Tooltip
+                    cursor={{ fill: "var(--secondary)" }}
+                    contentStyle={{
+                      background: "var(--popover)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 12,
+                      fontSize: 12,
+                    }}
+                    formatter={(v: number) => formatCurrency(v)}
+                  />
+                  <Bar dataKey="value" radius={[8, 8, 0, 0]} fill="var(--orange-primary)" />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </Panel>
 
         <Panel title="DIVISÃO DE CUSTOS">
           <div className="space-y-4 pt-2">
             {splitData.map((person) => {
-              const total = splitData.reduce((sum, p) => sum + p.value, 0);
+              const total = splitData.reduce((sum, p) => sum + p.value, 0) || 1;
               const percent = (person.value / total) * 100;
               return (
                 <div key={person.name} className="space-y-2">
