@@ -1,9 +1,7 @@
-import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { defineConfig } from "vite";
 
 export default defineConfig({
-  tanstackStart: {
-    router: {
-      ssr: false,
-    },
+  build: {
+    chunkSizeWarningLimit: 1000, // Aumenta o limite para 1 MB
   },
 });
