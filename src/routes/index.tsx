@@ -26,13 +26,13 @@ import {
 } from "recharts";
 import { PageHeader, Panel, StatCard, ProgressBar, Tag, PersonDot } from "@/components/ui-kit";
 import {
-  upcomingBills = [],
-  monthlyEvolution = [],
-  categoryDistribution = [],
-  compositionData = [],
-  splitData = [],
-  appointments = [],
-  goals = [],
+  upcomingBills,
+  monthlyEvolution,
+  categoryDistribution,
+  compositionData,
+  splitData,
+  appointments,
+  goals,
 } from "@/lib/mock-data";
 import { formatCurrency, calculateGoalProgress, calculateBudgetUsage } from "@/lib/finance";
 
