@@ -8,10 +8,12 @@ import {
   LayoutGrid,
   Bell,
   RefreshCw,
+  LogOut,
 } from "lucide-react";
 import { toast } from "sonner";
 import { navGroups, quickAddOptions } from "./nav";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +21,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const bottomItems = [
   { label: "VISÃO", to: "/", icon: LayoutDashboard },
@@ -130,15 +138,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Bell className="h-4 w-4" />
               <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-primary" />
             </button>
-            <div className="flex items-center gap-2">
-              <span className="gradient-primary flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold text-primary-foreground">
-                MA
-              </span>
-              <div className="hidden leading-tight sm:block">
-                <p className="label-caps text-[11px]">MARIA</p>
-                <p className="text-[10px] text-muted-foreground">Casa Barbosa</p>
-              </div>
-            </div>
+            <UserMenu />
           </div>
         </div>
 
@@ -163,6 +163,38 @@ export function AppShell({ children }: { children: ReactNode }) {
         ))}
       </nav>
     </div>
+  );
+}
+
+function UserMenu() {
+  const { profile, user, signOut } = useAuth();
+  const displayName = profile?.name ?? user?.email ?? "Usuário";
+  const initials =
+    profile?.initials ?? displayName.slice(0, 2).toUpperCase();
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button className="flex items-center gap-2 rounded-lg p-1 transition-colors hover:bg-sidebar-accent">
+          <span
+            className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold text-primary-foreground"
+            style={{ backgroundColor: profile?.color ?? "#FF6B00" }}
+          >
+            {initials}
+          </span>
+          <div className="hidden leading-tight sm:block">
+            <p className="label-caps text-[11px]">{displayName}</p>
+            <p className="text-[10px] text-muted-foreground">{user?.email}</p>
+          </div>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => signOut()}>
+          <LogOut className="mr-2 h-4 w-4" />
+          Sair
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

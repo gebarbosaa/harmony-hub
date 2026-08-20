@@ -4,6 +4,8 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
+  useNavigate,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -13,6 +15,9 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AppShell } from "@/components/layout/AppShell";
 import { Toaster } from "@/components/ui/sonner";
+import { AuthProvider, useAuth } from "@/hooks/use-auth";
+
+const PUBLIC_ROUTES = ["/login", "/auth/callback"];
 
 function NotFoundComponent() {
   return (
@@ -124,11 +129,58 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AppShell>
-        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-        <Outlet />
-      </AppShell>
-      <Toaster position="top-center" />
+      <AuthProvider>
+        <AuthGate />
+        <Toaster position="top-center" />
+      </AuthProvider>
     </QueryClientProvider>
+  );
+}
+
+function AuthGate() {
+  const { loading, session, profile } = useAuth();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const navigate = useNavigate();
+  const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
+  const isOnboarding = pathname === "/onboarding";
+
+  useEffect(() => {
+    if (loading) return;
+
+    if (!session && !isPublicRoute) {
+      navigate({ to: "/login" });
+      return;
+    }
+    if (session && isPublicRoute) {
+      navigate({ to: "/" });
+      return;
+    }
+    if (session && !profile?.household_id && !isOnboarding) {
+      navigate({ to: "/onboarding" });
+      return;
+    }
+    if (session && profile?.household_id && isOnboarding) {
+      navigate({ to: "/" });
+    }
+  }, [loading, session, profile, isPublicRoute, isOnboarding, pathname, navigate]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <p className="label-caps text-sm text-muted-foreground">Carregando...</p>
+      </div>
+    );
+  }
+
+  // Public/auth flow pages render without the app chrome.
+  if (isPublicRoute || isOnboarding || !session || !profile?.household_id) {
+    return <Outlet />;
+  }
+
+  return (
+    <AppShell>
+      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+      <Outlet />
+    </AppShell>
   );
 }

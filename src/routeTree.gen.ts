@@ -19,12 +19,15 @@ import { Route as FluxoRouteImport } from './routes/fluxo'
 import { Route as HabitosRouteImport } from './routes/habitos'
 import { Route as InvestimentosRouteImport } from './routes/investimentos'
 import { Route as ListaRouteImport } from './routes/lista'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as MaisRouteImport } from './routes/mais'
 import { Route as MercadoRouteImport } from './routes/mercado'
 import { Route as MetasRouteImport } from './routes/metas'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as OrcamentoRouteImport } from './routes/orcamento'
 import { Route as ParceladosRouteImport } from './routes/parcelados'
 import { Route as TarefasRouteImport } from './routes/tarefas'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -76,6 +79,11 @@ const ListaRoute = ListaRouteImport.update({
   path: '/lista',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MaisRoute = MaisRouteImport.update({
   id: '/mais',
   path: '/mais',
@@ -89,6 +97,11 @@ const MercadoRoute = MercadoRouteImport.update({
 const MetasRoute = MetasRouteImport.update({
   id: '/metas',
   path: '/metas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OrcamentoRoute = OrcamentoRouteImport.update({
@@ -106,6 +119,11 @@ const TarefasRoute = TarefasRouteImport.update({
   path: '/tarefas',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -118,12 +136,15 @@ export interface FileRoutesByFullPath {
   '/habitos': typeof HabitosRoute
   '/investimentos': typeof InvestimentosRoute
   '/lista': typeof ListaRoute
+  '/login': typeof LoginRoute
   '/mais': typeof MaisRoute
   '/mercado': typeof MercadoRoute
   '/metas': typeof MetasRoute
+  '/onboarding': typeof OnboardingRoute
   '/orcamento': typeof OrcamentoRoute
   '/parcelados': typeof ParceladosRoute
   '/tarefas': typeof TarefasRoute
+  '/auth/callback': typeof AuthCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -136,12 +157,15 @@ export interface FileRoutesByTo {
   '/habitos': typeof HabitosRoute
   '/investimentos': typeof InvestimentosRoute
   '/lista': typeof ListaRoute
+  '/login': typeof LoginRoute
   '/mais': typeof MaisRoute
   '/mercado': typeof MercadoRoute
   '/metas': typeof MetasRoute
+  '/onboarding': typeof OnboardingRoute
   '/orcamento': typeof OrcamentoRoute
   '/parcelados': typeof ParceladosRoute
   '/tarefas': typeof TarefasRoute
+  '/auth/callback': typeof AuthCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -155,12 +179,15 @@ export interface FileRoutesById {
   '/habitos': typeof HabitosRoute
   '/investimentos': typeof InvestimentosRoute
   '/lista': typeof ListaRoute
+  '/login': typeof LoginRoute
   '/mais': typeof MaisRoute
   '/mercado': typeof MercadoRoute
   '/metas': typeof MetasRoute
+  '/onboarding': typeof OnboardingRoute
   '/orcamento': typeof OrcamentoRoute
   '/parcelados': typeof ParceladosRoute
   '/tarefas': typeof TarefasRoute
+  '/auth/callback': typeof AuthCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -175,12 +202,15 @@ export interface FileRouteTypes {
     | '/habitos'
     | '/investimentos'
     | '/lista'
+    | '/login'
     | '/mais'
     | '/mercado'
     | '/metas'
+    | '/onboarding'
     | '/orcamento'
     | '/parcelados'
     | '/tarefas'
+    | '/auth/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -193,12 +223,15 @@ export interface FileRouteTypes {
     | '/habitos'
     | '/investimentos'
     | '/lista'
+    | '/login'
     | '/mais'
     | '/mercado'
     | '/metas'
+    | '/onboarding'
     | '/orcamento'
     | '/parcelados'
     | '/tarefas'
+    | '/auth/callback'
   id:
     | '__root__'
     | '/'
@@ -211,12 +244,15 @@ export interface FileRouteTypes {
     | '/habitos'
     | '/investimentos'
     | '/lista'
+    | '/login'
     | '/mais'
     | '/mercado'
     | '/metas'
+    | '/onboarding'
     | '/orcamento'
     | '/parcelados'
     | '/tarefas'
+    | '/auth/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -230,12 +266,15 @@ export interface RootRouteChildren {
   HabitosRoute: typeof HabitosRoute
   InvestimentosRoute: typeof InvestimentosRoute
   ListaRoute: typeof ListaRoute
+  LoginRoute: typeof LoginRoute
   MaisRoute: typeof MaisRoute
   MercadoRoute: typeof MercadoRoute
   MetasRoute: typeof MetasRoute
+  OnboardingRoute: typeof OnboardingRoute
   OrcamentoRoute: typeof OrcamentoRoute
   ParceladosRoute: typeof ParceladosRoute
   TarefasRoute: typeof TarefasRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -310,6 +349,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ListaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/mais': {
       id: '/mais'
       path: '/mais'
@@ -329,6 +375,13 @@ declare module '@tanstack/react-router' {
       path: '/metas'
       fullPath: '/metas'
       preLoaderRoute: typeof MetasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/orcamento': {
@@ -352,6 +405,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TarefasRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -366,12 +426,15 @@ const rootRouteChildren: RootRouteChildren = {
   HabitosRoute: HabitosRoute,
   InvestimentosRoute: InvestimentosRoute,
   ListaRoute: ListaRoute,
+  LoginRoute: LoginRoute,
   MaisRoute: MaisRoute,
   MercadoRoute: MercadoRoute,
   MetasRoute: MetasRoute,
+  OnboardingRoute: OnboardingRoute,
   OrcamentoRoute: OrcamentoRoute,
   ParceladosRoute: ParceladosRoute,
   TarefasRoute: TarefasRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
