@@ -1,88 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { CalendarClock, MapPin } from "lucide-react";
+import { CalendarClock, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { PageHeader, Panel, Tag, PersonDot } from "@/components/ui-kit";
-import { appointments } from "@/lib/mock-data";
-import { cn } from "@/lib/utils";
-
-export const Route = createFileRoute("/agenda")({
-  head: () => ({
-    meta: [
-      { title: "AGENDA E COMPROMISSOS — MULTICAP" },
-      { name: "description", content: "Compromissos do casal por categoria, responsável e sincronização." },
-      { property: "og:title", content: "AGENDA E COMPROMISSOS — MULTICAP" },
-      {
-        property: "og:description",
-        content: "Compromissos do casal por categoria, responsável e sincronização.",
-      },
-    ],
-  }),
-  component: AgendaPage,
-});
-
-const CATEGORIES = [
-  "TODAS",
-  "MERCADO",
-  "CONTAS",
-  "FOLGA",
-  "LAZER",
-  "TRABALHO",
-  "SAÚDE",
-  "FAMÍLIA",
-  "OUTROS",
-];
-
-function AgendaPage() {
-  const [category, setCategory] = useState("TODAS");
-  const list = appointments.filter((a) => category === "TODAS" || a.category === category);
-
-  return (
-    <div className="space-y-5">
-      <PageHeader title="AGENDA E COMPROMISSOS" subtitle="Próximos eventos do casal." />
-
-      <div className="flex flex-wrap gap-2">
-        {CATEGORIES.map((c) => (
-          <button
-            key={c}
-            onClick={() => setCategory(c)}
-            className={cn(
-              "label-caps rounded-lg border px-3 py-1.5 text-[10px]",
-              c === category
-                ? "border-primary bg-primary/15 text-primary"
-                : "border-border text-muted-foreground",
-            )}
-          >
-            {c}
-          </button>
-        ))}
-      </div>
-
-      <Panel title="CRONOLOGIA">
-        <ul className="space-y-3">
-          {list.map((a) => (
-            <li
-              key={a.id}
-              className="flex items-start gap-3 rounded-xl border border-border bg-secondary/30 p-3"
-            >
-              <span className="gradient-soft flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl border border-primary/30 text-[10px] text-primary">
-                <CalendarClock className="h-4 w-4" />
-                {a.time}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="label-caps text-[12px]">{a.title}</p>
-                <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <Tag tone="primary">{a.category}</Tag>
-                  <PersonDot name={a.responsible} />
-                  <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                    <MapPin className="h-3 w-3" /> {a.date}
-                  </span>
-                </div>
-              </div>
-              {a.external ? <Tag tone="info">GOOGLE CALENDAR</Tag> : <Tag>INTERNO</Tag>}
-            </li>
-          ))}
-        </ul>
-      </Panel>
-    </div>
-  );
-}
+import { useHouseholdTable } from "@/hooks/use-household-data";
+import { useAuth } from "@/hooks/use-auth";
+export const Route=createFileRoute("/agenda")({head:()=>({meta:[{title:"AGENDA E COMPROMISSOS — MULTICAP"}]}),component:AgendaPage});
+type Row={id:string;title:string;date:string;time:string|null;category:string;owner_id:string;household_id:string;privacy:string};
+function AgendaPage(){const {user,profile}=useAuth();const {rows,insert,remove,isLoading}=useHouseholdTable<Row>("reminders","id,title,date,time,category,owner_id,privacy,household_id","date");const [title,setTitle]=useState("");const [date,setDate]=useState(new Date().toISOString().slice(0,10));const [time,setTime]=useState("");const [category,setCategory]=useState("OUTROS");async function add(){if(!user||!title.trim())return toast.error("PREENCHA O COMPROMISSO");try{await insert({title:title.trim().toUpperCase(),date,time:time||null,category,owner_id:user.id,privacy:"COMPARTILHADO"});setTitle("");setTime("");toast.success("COMPROMISSO SALVO")}catch(e){toast.error(e instanceof Error?e.message:"Não foi possível salvar")}}async function del(id:string){try{await remove(id)}catch(e){toast.error(e instanceof Error?e.message:"Não foi possível excluir")}}
+return <div className="space-y-5"><PageHeader title="AGENDA E COMPROMISSOS" subtitle={`Compromissos de ${profile?.name||"sua conta"}.`}/><Panel title="NOVO COMPROMISSO"><div className="grid gap-3 md:grid-cols-5"><label className="md:col-span-2"><span className="label-caps text-[10px] text-muted-foreground">TÍTULO</span><input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Ex.: consulta, reunião..." className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm"/></label><label><span className="label-caps text-[10px] text-muted-foreground">DATA</span><input type="date" value={date} onChange={e=>setDate(e.target.value)} className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm"/></label><label><span className="label-caps text-[10px] text-muted-foreground">HORÁRIO</span><input type="time" value={time} onChange={e=>setTime(e.target.value)} className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm"/></label><label><span className="label-caps text-[10px] text-muted-foreground">CATEGORIA</span><select value={category} onChange={e=>setCategory(e.target.value)} className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm"><option>OUTROS</option><option>CONTAS</option><option>TRABALHO</option><option>SAÚDE</option><option>LAZER</option><option>FAMÍLIA</option></select></label><button onClick={add} className="gradient-primary label-caps rounded-xl px-4 py-2.5 text-[11px] text-primary-foreground md:col-span-2">SALVAR COMPROMISSO</button></div></Panel><Panel title="PRÓXIMOS COMPROMISSOS">{isLoading?<p className="py-8 text-center text-sm text-muted-foreground">Carregando...</p>:rows.length===0?<p className="py-8 text-center text-sm text-muted-foreground">Nenhum compromisso cadastrado.</p>:<ul className="space-y-3">{rows.map(a=><li key={a.id} className="flex items-start gap-3 rounded-xl border border-border bg-secondary/30 p-3"><span className="gradient-soft flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl border border-primary/30 text-[10px] text-primary"><CalendarClock className="h-4 w-4"/>{a.time||"--:--"}</span><div className="min-w-0 flex-1"><p className="label-caps text-[12px]">{a.title}</p><div className="mt-1 flex flex-wrap items-center gap-2"><Tag tone="primary">{a.category}</Tag><PersonDot name={profile?.name||"MINHA CONTA"}/><span className="text-[10px] text-muted-foreground">{a.date}</span></div></div><button onClick={()=>del(a.id)} aria-label="Excluir"><Trash2 className="h-4 w-4 text-danger"/></button></li>)}</ul>}</Panel></div>}
