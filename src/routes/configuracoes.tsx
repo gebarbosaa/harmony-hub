@@ -26,6 +26,7 @@ function SettingsPage() {
   const [name, setName] = useState(profile?.name ?? user?.user_metadata?.full_name ?? "");
   const [confirm, setConfirm] = useState("");
   const [saving, setSaving] = useState(false);
+  const [dangerAction, setDangerAction] = useState<string | null>(null);
 
   async function saveProfile() {
     if (!user || !name.trim()) return toast.error("INFORME SEU NOME");
@@ -39,6 +40,45 @@ function SettingsPage() {
       toast.error(e instanceof Error ? e.message : "Não foi possível atualizar o perfil");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function runDangerAction(action: string) {
+    if (confirm !== "EXCLUIR") return;
+    if (dangerAction) return;
+
+    const actionMap: Record<string, string> = {
+      "LIMPAR LANÇAMENTOS": "clear_transactions",
+      "EXCLUIR TODOS OS DADOS": "delete_all_data",
+      "RESTAURAR FÁBRICA": "factory_reset",
+    };
+    const backendAction = actionMap[action];
+
+    if (!backendAction) {
+      toast.info("ENCERRAMENTO DA CONTA AINDA NÃO ESTÁ DISPONÍVEL NESTA ETAPA");
+      return;
+    }
+
+    setDangerAction(action);
+    try {
+      const { data, error } = await supabase.rpc("manage_household_data", {
+        p_action: backendAction,
+        p_confirmation: confirm,
+      });
+      if (error) throw error;
+
+      const messages: Record<string, string> = {
+        TRANSACTIONS_CLEARED: "LANÇAMENTOS EXCLUÍDOS COM SUCESSO",
+        ALL_DATA_DELETED: "TODOS OS DADOS DA CASA FORAM EXCLUÍDOS",
+        FACTORY_RESET: "DADOS EXCLUÍDOS E CONFIGURAÇÃO DE FÁBRICA RESTAURADA",
+      };
+      toast.success(messages[data as string] ?? "AÇÃO CONCLUÍDA");
+      setConfirm("");
+      window.location.reload();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "NÃO FOI POSSÍVEL EXECUTAR A AÇÃO");
+    } finally {
+      setDangerAction(null);
     }
   }
 
@@ -130,11 +170,17 @@ function SettingsPage() {
 
       <Panel title="ZONA DE PERIGO" className="border-danger/50">
         <p className="text-xs text-muted-foreground">Estas ações são irreversíveis. Digite <strong className="text-danger">EXCLUIR</strong> para liberar.</p>
-        <input value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Digite EXCLUIR" className="mt-3 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-danger md:w-64" />
+        <input value={confirm} onChange={(e) => setConfirm(e.target.value.toUpperCase())} placeholder="Digite EXCLUIR" className="mt-3 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-danger md:w-64" />
         <div className="mt-3 flex flex-wrap gap-2">
           {["LIMPAR LANÇAMENTOS", "EXCLUIR TODOS OS DADOS", "RESTAURAR FÁBRICA", "ENCERRAR CONTA"].map((action) => (
-            <button key={action} type="button" disabled={confirm !== "EXCLUIR"} onClick={() => toast.error(`${action} ainda precisa de uma rotina transacional segura no backend`)} className={cn("label-caps rounded-xl border px-3 py-2 text-[10px] transition-colors", confirm === "EXCLUIR" ? "border-danger text-danger hover:bg-danger/10" : "border-border text-muted-foreground opacity-50")}>
-              {action}
+            <button
+              key={action}
+              type="button"
+              disabled={confirm !== "EXCLUIR" || dangerAction !== null}
+              onClick={() => void runDangerAction(action)}
+              className={cn("label-caps rounded-xl border px-3 py-2 text-[10px] transition-colors", confirm === "EXCLUIR" ? "border-danger text-danger hover:bg-danger/10" : "border-border text-muted-foreground opacity-50")}
+            >
+              {dangerAction === action ? "PROCESSANDO..." : action}
             </button>
           ))}
         </div>
