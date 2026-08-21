@@ -1,4 +1,4 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import {
   Plus,
@@ -48,10 +48,19 @@ const quickRoutes: Record<string, string> = {
 
 function QuickAdd({ className }: { className?: string }) {
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
+
+  async function openRegistration(option: string) {
+    const destination = quickRoutes[option] || "/fluxo";
+    setOpen(false);
+    await navigate({ to: destination as never });
+  }
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <button
+          type="button"
           aria-label="Cadastro rápido"
           className={cn(
             "gradient-primary shadow-elegant flex h-14 w-14 items-center justify-center rounded-full text-primary-foreground transition-transform active:scale-95",
@@ -67,14 +76,14 @@ function QuickAdd({ className }: { className?: string }) {
         </DialogHeader>
         <div className="grid grid-cols-2 gap-2">
           {quickAddOptions.map((option) => (
-            <Link
+            <button
               key={option}
-              to={(quickRoutes[option] || "/fluxo") as never}
-              onClick={() => setOpen(false)}
+              type="button"
+              onClick={() => void openRegistration(option)}
               className="label-caps rounded-xl border border-border bg-secondary/60 px-3 py-3 text-center text-[11px] text-foreground transition-colors hover:border-primary hover:text-primary"
             >
               {option}
-            </Link>
+            </button>
           ))}
         </div>
       </DialogContent>
@@ -139,6 +148,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
           <div className="flex items-center gap-3">
             <button
+              type="button"
               aria-label="Notificações"
               className="relative rounded-lg border border-border p-2 text-muted-foreground transition-colors hover:text-primary"
             >
@@ -181,7 +191,7 @@ function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="flex items-center gap-2 rounded-lg p-1 transition-colors hover:bg-sidebar-accent">
+        <button type="button" className="flex items-center gap-2 rounded-lg p-1 transition-colors hover:bg-sidebar-accent">
           <span
             className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold text-primary-foreground"
             style={{ backgroundColor: profile?.color ?? "#FF6B00" }}
@@ -195,7 +205,7 @@ function UserMenu() {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => signOut()}>
+        <DropdownMenuItem onClick={() => void signOut()}>
           <LogOut className="mr-2 h-4 w-4" />
           Sair
         </DropdownMenuItem>
