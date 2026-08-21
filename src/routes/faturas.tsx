@@ -1,103 +1,24 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
+import { toast } from "sonner";
 import { PageHeader, Panel, ProgressBar, StatCard, Tag } from "@/components/ui-kit";
-import { cards } from "@/lib/mock-data";
-import { formatCurrency, calculateInvoiceTotal } from "@/lib/finance";
+import { formatCurrency } from "@/lib/finance";
+import { useHouseholdTable } from "@/hooks/use-household-data";
 
-export const Route = createFileRoute("/faturas")({
-  head: () => ({
-    meta: [
-      { title: "FATURAS — MULTICAP" },
-      { name: "description", content: "Faturas dos cartões com extrato unificado de compras, parcelas e fixos." },
-      { property: "og:title", content: "FATURAS — MULTICAP" },
-      {
-        property: "og:description",
-        content: "Faturas dos cartões com extrato unificado de compras, parcelas e fixos.",
-      },
-    ],
-  }),
-  component: InvoicesPage,
-});
-
-function InvoicesPage() {
-  const total = cards.reduce(
-    (s, c) => s + calculateInvoiceTotal(c.purchases, c.installments, c.fixed),
-    0,
-  );
-
-  return (
-    <div className="space-y-5">
-      <PageHeader title="FATURAS" subtitle="Cartões, limites e extrato unificado do mês." />
-
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-        <StatCard label="TOTAL EM FATURAS" value={formatCurrency(total)} tone="primary" />
-        <StatCard
-          label="LIMITE DISPONÍVEL"
-          value={formatCurrency(cards.reduce((s, c) => s + (c.limit - c.used), 0))}
-          tone="success"
-        />
-        <StatCard label="CARTÕES ATIVOS" value={String(cards.length)} tone="info" />
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        {cards.map((c) => {
-          const invoice = calculateInvoiceTotal(c.purchases, c.installments, c.fixed);
-          return (
-            <Panel key={c.id}>
-              <div className="gradient-primary shadow-elegant rounded-2xl p-4 text-primary-foreground">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="label-caps text-sm">{c.name}</p>
-                    <p className="text-[11px] opacity-80">
-                      {c.brand} · •••• {c.last4}
-                    </p>
-                  </div>
-                  <span className="label-caps rounded-md bg-background/25 px-2 py-1 text-[10px]">
-                    {c.status}
-                  </span>
-                </div>
-                <p className="mt-6 text-2xl font-black">{formatCurrency(invoice)}</p>
-                <p className="text-[11px] opacity-80">
-                  FECHA DIA {c.close} · VENCE DIA {c.due}
-                </p>
-              </div>
-
-              <div className="mt-4 space-y-2">
-                <div className="flex justify-between text-[11px] text-muted-foreground">
-                  <span className="label-caps">LIMITE UTILIZADO</span>
-                  <span>
-                    {formatCurrency(c.used)} / {formatCurrency(c.limit)}
-                  </span>
-                </div>
-                <ProgressBar percent={(c.used / c.limit) * 100} />
-              </div>
-
-              <div className="mt-4 space-y-2">
-                <p className="label-caps text-[10px] text-muted-foreground">EXTRATO UNIFICADO</p>
-                {[
-                  ["COMPRAS À VISTA", c.purchases],
-                  ["PARCELAS ATIVAS", c.installments],
-                  ["CUSTOS FIXOS DO CARTÃO", c.fixed],
-                ].map(([label, value]) => (
-                  <div
-                    key={String(label)}
-                    className="flex items-center justify-between rounded-xl border border-border bg-secondary/30 px-3 py-2"
-                  >
-                    <span className="label-caps text-[10px] text-muted-foreground">{label}</span>
-                    <span className="text-sm font-semibold">{formatCurrency(Number(value))}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-4 flex gap-2">
-                <Tag tone={c.status === "ABERTA" ? "warning" : "info"}>{c.status}</Tag>
-                <button className="label-caps ml-auto rounded-lg border border-primary/60 px-3 py-1.5 text-[10px] text-primary">
-                  MARCAR COMO PAGA
-                </button>
-              </div>
-            </Panel>
-          );
-        })}
-      </div>
-    </div>
-  );
+export const Route = createFileRoute("/faturas")({ head: () => ({ meta: [{ title: "FATURAS — MULTICAP" }] }), component: InvoicesPage });
+type Card={id:string;name:string;brand:string|null;last4:string|null;credit_limit:number;due_day:number;close_day:number;household_id:string};
+type Invoice={id:string;card_id:string|null;period:string;total:number;status:string;household_id:string};
+function InvoicesPage(){
+ const cards=useHouseholdTable<Card>("cards","id,name,brand,last4,credit_limit,due_day,close_day,household_id");
+ const invoices=useHouseholdTable<Invoice>("invoices","id,card_id,period,total,status,household_id","period");
+ const [name,setName]=useState("");const [limit,setLimit]=useState("");const [due,setDue]=useState("5");const [close,setClose]=useState("28");const [brand,setBrand]=useState("");const [last4,setLast4]=useState("");
+ async function addCard(){const value=Number(limit.replace(',','.'));if(!name.trim()||value<=0)return toast.error("PREENCHA NOME E LIMITE");try{await cards.insert({name:name.trim().toUpperCase(),credit_limit:value,due_day:Number(due),close_day:Number(close),brand:brand.trim()||null,last4:last4.trim()||null});setName("");setLimit("");setBrand("");setLast4("");toast.success("CARTÃO SALVO")}catch(e){toast.error(e instanceof Error?e.message:"Não foi possível salvar")}}
+ async function addInvoice(card:Card){const period=new Date().toISOString().slice(0,7);try{await invoices.insert({card_id:card.id,period,total:0,status:"ABERTA"});toast.success("FATURA CRIADA")}catch(e){toast.error(e instanceof Error?e.message:"Não foi possível criar a fatura")}}
+ async function toggle(i:Invoice){try{await invoices.update(i.id,{status:i.status==="PAGA"?"ABERTA":"PAGA"})}catch(e){toast.error(e instanceof Error?e.message:"Não foi possível atualizar")}}
+ return <div className="space-y-5"><PageHeader title="FATURAS" subtitle="Cadastre cartões e acompanhe suas faturas reais."/>
+ <div className="grid grid-cols-2 gap-3 lg:grid-cols-3"><StatCard label="TOTAL EM FATURAS" value={formatCurrency(invoices.rows.reduce((s,i)=>s+Number(i.total),0))} tone="primary"/><StatCard label="LIMITE TOTAL" value={formatCurrency(cards.rows.reduce((s,c)=>s+Number(c.credit_limit),0))} tone="success"/><StatCard label="CARTÕES" value={String(cards.rows.length)} tone="info"/></div>
+ <Panel title="NOVO CARTÃO"><div className="grid gap-3 md:grid-cols-6"><label className="md:col-span-2"><span className="label-caps text-[10px] text-muted-foreground">NOME</span><input value={name} onChange={e=>setName(e.target.value)} placeholder="Nubank" className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm"/></label><label><span className="label-caps text-[10px] text-muted-foreground">LIMITE</span><input value={limit} onChange={e=>setLimit(e.target.value)} inputMode="decimal" placeholder="0,00" className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm"/></label><label><span className="label-caps text-[10px] text-muted-foreground">FECHAMENTO</span><input type="number" min="1" max="31" value={close} onChange={e=>setClose(e.target.value)} className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm"/></label><label><span className="label-caps text-[10px] text-muted-foreground">VENCIMENTO</span><input type="number" min="1" max="31" value={due} onChange={e=>setDue(e.target.value)} className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm"/></label><label><span className="label-caps text-[10px] text-muted-foreground">BANDEIRA</span><input value={brand} onChange={e=>setBrand(e.target.value)} placeholder="Visa" className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm"/></label><label><span className="label-caps text-[10px] text-muted-foreground">4 ÚLTIMOS</span><input maxLength={4} value={last4} onChange={e=>setLast4(e.target.value)} placeholder="1234" className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm"/></label><button onClick={addCard} className="gradient-primary label-caps rounded-xl px-4 py-2.5 text-[11px] text-primary-foreground md:col-span-2">SALVAR CARTÃO</button></div></Panel>
+ <Panel title="CARTÕES E FATURAS">{cards.rows.length===0?<p className="py-8 text-center text-sm text-muted-foreground">Nenhum cartão cadastrado.</p>:<div className="grid gap-3 md:grid-cols-2">{cards.rows.map(c=><div key={c.id} className="rounded-2xl border border-border bg-card p-4"><div className="flex justify-between"><div><p className="label-caps text-sm">{c.name}</p><p className="text-[11px] text-muted-foreground">{c.brand||"Sem bandeira"} · •••• {c.last4||"----"}</p></div><Tag tone="info">LIMITE {formatCurrency(Number(c.credit_limit))}</Tag></div><div className="mt-4"><p className="text-[11px] text-muted-foreground">Fechamento dia {c.close_day} · Vencimento dia {c.due_day}</p><button onClick={()=>addInvoice(c)} className="label-caps mt-3 rounded-lg border border-primary/60 px-3 py-1.5 text-[10px] text-primary">CRIAR FATURA DO MÊS</button></div></div>)}</div>}</Panel>
+ <Panel title="FATURAS CADASTRADAS">{invoices.rows.length===0?<p className="py-8 text-center text-sm text-muted-foreground">Nenhuma fatura cadastrada.</p>:<div className="space-y-2">{invoices.rows.map(i=><div key={i.id} className="flex items-center justify-between rounded-xl border border-border bg-secondary/30 px-3 py-3"><div><p className="label-caps text-[11px]">{i.period}</p><p className="text-xs text-muted-foreground">{cards.rows.find(c=>c.id===i.card_id)?.name||"Cartão"}</p></div><div className="flex items-center gap-3"><span className="font-semibold">{formatCurrency(Number(i.total))}</span><button onClick={()=>toggle(i)}><Tag tone={i.status==="PAGA"?"success":"warning"}>{i.status}</Tag></button></div></div>)}</div>}</Panel>
+ </div>;
 }

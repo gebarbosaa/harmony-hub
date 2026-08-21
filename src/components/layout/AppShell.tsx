@@ -10,7 +10,6 @@ import {
   RefreshCw,
   LogOut,
 } from "lucide-react";
-import { toast } from "sonner";
 import { navGroups, quickAddOptions } from "./nav";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
@@ -35,6 +34,18 @@ const bottomItems = [
   { label: "MAIS", to: "/mais", icon: LayoutGrid },
 ];
 
+const quickRoutes: Record<string, string> = {
+  "DESPESA": "/fluxo?tipo=DESPESA",
+  "RECEITA": "/fluxo?tipo=RECEITA",
+  "TRANSFERÊNCIA": "/fluxo?tipo=TRANSFERENCIA",
+  "CONTA": "/custos-fixos",
+  "COMPRA PARCELADA": "/parcelados",
+  "META": "/metas",
+  "COMPROMISSO": "/agenda",
+  "LEMBRETE": "/agenda",
+  "ITEM DE LISTA": "/lista",
+};
+
 function QuickAdd({ className }: { className?: string }) {
   const [open, setOpen] = useState(false);
   return (
@@ -56,18 +67,14 @@ function QuickAdd({ className }: { className?: string }) {
         </DialogHeader>
         <div className="grid grid-cols-2 gap-2">
           {quickAddOptions.map((option) => (
-            <button
+            <Link
               key={option}
-              onClick={() => {
-                setOpen(false);
-                toast.success(`NOVO REGISTRO: ${option}`, {
-                  description: "Formulário de cadastro em breve.",
-                });
-              }}
-              className="label-caps rounded-xl border border-border bg-secondary/60 px-3 py-3 text-[11px] text-foreground transition-colors hover:border-primary hover:text-primary"
+              to={(quickRoutes[option] || "/fluxo") as never}
+              onClick={() => setOpen(false)}
+              className="label-caps rounded-xl border border-border bg-secondary/60 px-3 py-3 text-center text-[11px] text-foreground transition-colors hover:border-primary hover:text-primary"
             >
               {option}
-            </button>
+            </Link>
           ))}
         </div>
       </DialogContent>
@@ -169,8 +176,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 function UserMenu() {
   const { profile, user, signOut } = useAuth();
   const displayName = profile?.name ?? user?.email ?? "Usuário";
-  const initials =
-    profile?.initials ?? displayName.slice(0, 2).toUpperCase();
+  const initials = profile?.initials ?? displayName.slice(0, 2).toUpperCase();
 
   return (
     <DropdownMenu>
@@ -198,13 +204,7 @@ function UserMenu() {
   );
 }
 
-function BottomLink({
-  item,
-  active,
-}: {
-  item: (typeof bottomItems)[number];
-  active: boolean;
-}) {
+function BottomLink({ item, active }: { item: (typeof bottomItems)[number]; active: boolean }) {
   return (
     <Link
       to={item.to as never}

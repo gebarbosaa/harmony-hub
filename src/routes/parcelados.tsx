@@ -1,102 +1,33 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { PageHeader, Panel, ProgressBar, StatCard, Tag, PersonDot } from "@/components/ui-kit";
-import { installments } from "@/lib/mock-data";
 import { formatCurrency, calculateInstallmentValue } from "@/lib/finance";
+import { useHouseholdTable } from "@/hooks/use-household-data";
+import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/parcelados")({
-  head: () => ({
-    meta: [
-      { title: "PARCELADOS — MULTICAP" },
-      { name: "description", content: "Controle de compras a prazo, parcelas pagas e valor restante." },
-      { property: "og:title", content: "PARCELADOS — MULTICAP" },
-      {
-        property: "og:description",
-        content: "Controle de compras a prazo, parcelas pagas e valor restante.",
-      },
-    ],
-  }),
+  head: () => ({ meta: [{ title: "PARCELADOS — MULTICAP" }] }),
   component: InstallmentsPage,
 });
 
+type Row = { id:string; name:string; category:string; total_amount:number; installments_count:number; paid_count:number; purchase_date:string; responsible:string; card_name:string|null; pay_method:string; household_id:string };
+
 function InstallmentsPage() {
-  const [card, setCard] = useState("TODOS");
-  const list = installments.filter((i) => card === "TODOS" || i.card === card);
-  const active = list.filter((i) => i.paid < i.count);
-  const monthly = active.reduce((s, i) => s + calculateInstallmentValue(i.total, i.count), 0);
-  const remaining = active.reduce(
-    (s, i) => s + calculateInstallmentValue(i.total, i.count) * (i.count - i.paid),
-    0,
-  );
-
-  return (
-    <div className="space-y-5">
-      <PageHeader
-        title="PARCELADOS"
-        subtitle="Compras a prazo e impacto nos próximos meses."
-        action={
-          <select
-            value={card}
-            onChange={(e) => setCard(e.target.value)}
-            className="label-caps rounded-lg border border-input bg-background px-3 py-2 text-[10px]"
-          >
-            {["TODOS", "NUBANK", "INTER"].map((c) => (
-              <option key={c}>{c}</option>
-            ))}
-          </select>
-        }
-      />
-
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-        <StatCard label="PARCELAS DO MÊS" value={formatCurrency(monthly)} tone="primary" />
-        <StatCard label="RESTANTE TOTAL" value={formatCurrency(remaining)} tone="danger" />
-        <StatCard label="COMPRAS ATIVAS" value={String(active.length)} tone="info" />
-      </div>
-
-      <div className="grid gap-3 md:grid-cols-2">
-        {list.map((i) => {
-          const value = calculateInstallmentValue(i.total, i.count);
-          const done = i.paid >= i.count;
-          const percent = (i.paid / i.count) * 100;
-          return (
-            <Panel key={i.id} className={cn(done && "opacity-60")}>
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="label-caps text-sm">{i.name}</p>
-                  <div className="mt-1 flex flex-wrap items-center gap-2">
-                    <Tag tone="primary">{i.card}</Tag>
-                    <Tag>{i.category}</Tag>
-                    <PersonDot name={i.responsible} />
-                  </div>
-                </div>
-                <Tag tone={done ? "success" : "warning"}>
-                  {done ? "QUITADO" : `PARCELA ${i.paid + 1}/${i.count}`}
-                </Tag>
-              </div>
-              <div className="mt-4 space-y-2">
-                <ProgressBar percent={percent} tone="primary" />
-                <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                  <span>{formatCurrency(value)} POR MÊS</span>
-                  <span>
-                    RESTANTE: {formatCurrency(Math.max(value * (i.count - i.paid), 0))}
-                  </span>
-                </div>
-              </div>
-              {!done ? (
-                <div className="mt-3 flex gap-2">
-                  <button className="label-caps rounded-lg border border-primary/60 px-3 py-1.5 text-[10px] text-primary">
-                    MARCAR PARCELA PAGA
-                  </button>
-                  <button className="label-caps rounded-lg border border-border px-3 py-1.5 text-[10px] text-muted-foreground">
-                    ANTECIPAR
-                  </button>
-                </div>
-              ) : null}
-            </Panel>
-          );
-        })}
-      </div>
-    </div>
-  );
+  const { profile } = useAuth();
+  const { rows, insert, update, remove, isLoading } = useHouseholdTable<Row>("installments", "id,name,category,total_amount,installments_count,paid_count,purchase_date,responsible,card_name,pay_method,household_id", "purchase_date");
+  const [name,setName]=useState(""); const [total,setTotal]=useState(""); const [count,setCount]=useState("2"); const [category,setCategory]=useState("OUTROS"); const [card,setCard]=useState(""); const [responsible,setResponsible]=useState("");
+  const active=rows.filter(i=>Number(i.paid_count)<Number(i.installments_count));
+  const monthly=active.reduce((s,i)=>s+calculateInstallmentValue(Number(i.total_amount),Number(i.installments_count)),0);
+  const remaining=active.reduce((s,i)=>s+calculateInstallmentValue(Number(i.total_amount),Number(i.installments_count))*(Number(i.installments_count)-Number(i.paid_count)),0);
+  const cards=useMemo(()=>Array.from(new Set(rows.map(r=>r.card_name).filter(Boolean) as string[])),[rows]);
+  async function add(){const value=Number(total.replace(',','.')); const n=Math.max(1,Number(count)); if(!name.trim()||!value||value<=0)return toast.error("PREENCHA NOME E VALOR"); try{await insert({name:name.trim().toUpperCase(),total_amount:value,installments_count:n,paid_count:0,purchase_date:new Date().toISOString().slice(0,10),category,responsible:responsible.trim()||profile?.name||"",card_name:card.trim()||null,pay_method:"CARTAO"}); setName("");setTotal("");toast.success("PARCELAMENTO SALVO")}catch(e){toast.error(e instanceof Error?e.message:"Não foi possível salvar")}}
+  async function pay(i:Row){try{await update(i.id,{paid_count:Math.min(Number(i.paid_count)+1,Number(i.installments_count))})}catch(e){toast.error(e instanceof Error?e.message:"Não foi possível atualizar")}}
+  async function del(i:Row){if(!confirm(`Excluir ${i.name}?`))return;try{await remove(i.id);toast.success("PARCELAMENTO EXCLUÍDO")}catch(e){toast.error(e instanceof Error?e.message:"Não foi possível excluir")}}
+  return <div className="space-y-5"><PageHeader title="PARCELADOS" subtitle="Cadastre compras parceladas e acompanhe cada parcela."/>
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-3"><StatCard label="PARCELAS DO MÊS" value={formatCurrency(monthly)} tone="primary"/><StatCard label="RESTANTE TOTAL" value={formatCurrency(remaining)} tone="danger"/><StatCard label="COMPRAS ATIVAS" value={String(active.length)} tone="info"/></div>
+    <Panel title="NOVO PARCELAMENTO"><div className="grid gap-3 md:grid-cols-6"><label className="md:col-span-2"><span className="label-caps text-[10px] text-muted-foreground">NOME</span><input value={name} onChange={e=>setName(e.target.value)} placeholder="Ex.: notebook" className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm"/></label><label><span className="label-caps text-[10px] text-muted-foreground">VALOR TOTAL</span><input value={total} onChange={e=>setTotal(e.target.value)} inputMode="decimal" placeholder="0,00" className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm"/></label><label><span className="label-caps text-[10px] text-muted-foreground">PARCELAS</span><input type="number" min="1" value={count} onChange={e=>setCount(e.target.value)} className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm"/></label><label><span className="label-caps text-[10px] text-muted-foreground">CATEGORIA</span><select value={category} onChange={e=>setCategory(e.target.value)} className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm"><option>OUTROS</option><option>CASA</option><option>TECNOLOGIA</option><option>VIAGEM</option><option>SAÚDE</option><option>LAZER</option></select></label><label><span className="label-caps text-[10px] text-muted-foreground">CARTÃO</span><input value={card} onChange={e=>setCard(e.target.value)} list="cards" placeholder="Opcional" className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm"/><datalist id="cards">{cards.map(c=><option key={c}>{c}</option>)}</datalist></label><label className="md:col-span-2"><span className="label-caps text-[10px] text-muted-foreground">RESPONSÁVEL</span><input value={responsible} onChange={e=>setResponsible(e.target.value)} placeholder={profile?.name||"Seu nome"} className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm"/></label><button onClick={add} className="gradient-primary label-caps rounded-xl px-4 py-2.5 text-[11px] text-primary-foreground md:col-span-2">SALVAR PARCELAMENTO</button></div></Panel>
+    <Panel title="PARCELAMENTOS CADASTRADOS">{isLoading?<p className="py-8 text-center text-sm text-muted-foreground">Carregando...</p>:rows.length===0?<p className="py-8 text-center text-sm text-muted-foreground">Nenhum parcelamento cadastrado.</p>:<div className="grid gap-3 md:grid-cols-2">{rows.map(i=>{const value=calculateInstallmentValue(Number(i.total_amount),Number(i.installments_count));const done=Number(i.paid_count)>=Number(i.installments_count);const percent=(Number(i.paid_count)/Math.max(1,Number(i.installments_count)))*100;return <div key={i.id} className={cn("rounded-2xl border border-border bg-card p-4",done&&"opacity-60")}><div className="flex items-start justify-between gap-3"><div><p className="label-caps text-sm">{i.name}</p><div className="mt-1 flex flex-wrap gap-2"><Tag tone="primary">{i.card_name||"SEM CARTÃO"}</Tag><Tag>{i.category}</Tag><PersonDot name={i.responsible||"MINHA CONTA"}/></div></div><Tag tone={done?"success":"warning"}>{done?"QUITADO":`${Number(i.paid_count)+1}/${Number(i.installments_count)}`}</Tag></div><div className="mt-4 space-y-2"><ProgressBar percent={percent} tone="primary"/><div className="flex justify-between text-[11px] text-muted-foreground"><span>{formatCurrency(value)}/mês</span><span>Restante {formatCurrency(value*(Number(i.installments_count)-Number(i.paid_count)))}</span></div></div><div className="mt-3 flex gap-2">{!done&&<button onClick={()=>pay(i)} className="label-caps rounded-lg border border-primary/60 px-3 py-1.5 text-[10px] text-primary">MARCAR PARCELA PAGA</button>}<button onClick={()=>del(i)} className="label-caps rounded-lg border border-danger/50 px-3 py-1.5 text-[10px] text-danger">EXCLUIR</button></div></div>})}</div>}</Panel>
+  </div>;
 }
