@@ -1,0 +1,16 @@
+CREATE TABLE IF NOT EXISTS public.household_categories (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), household_id uuid NOT NULL REFERENCES public.households(id) ON DELETE CASCADE, name text NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), UNIQUE (household_id, name));
+CREATE TABLE IF NOT EXISTS public.household_payment_methods (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), household_id uuid NOT NULL REFERENCES public.households(id) ON DELETE CASCADE, name text NOT NULL, description text, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), UNIQUE (household_id, name));
+ALTER TABLE public.household_categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.household_payment_methods ENABLE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.household_categories TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.household_payment_methods TO authenticated;
+GRANT ALL ON public.household_categories TO service_role;
+GRANT ALL ON public.household_payment_methods TO service_role;
+DROP POLICY IF EXISTS "household categories" ON public.household_categories;
+CREATE POLICY "household categories" ON public.household_categories FOR ALL TO authenticated USING (household_id = public.current_household_id()) WITH CHECK (household_id = public.current_household_id());
+DROP POLICY IF EXISTS "household payment methods" ON public.household_payment_methods;
+CREATE POLICY "household payment methods" ON public.household_payment_methods FOR ALL TO authenticated USING (household_id = public.current_household_id()) WITH CHECK (household_id = public.current_household_id());
+CREATE TRIGGER t_household_categories BEFORE UPDATE ON public.household_categories FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE TRIGGER t_household_payment_methods BEFORE UPDATE ON public.household_payment_methods FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+INSERT INTO public.household_categories (household_id,name) SELECT h.id,v.name FROM public.households h CROSS JOIN (VALUES ('MORADIA'),('ALIMENTAÇÃO'),('TRANSPORTE'),('LAZER'),('SAÚDE'),('IMPOSTOS'),('RENDA'),('OUTROS')) v(name) ON CONFLICT (household_id,name) DO NOTHING;
+INSERT INTO public.household_payment_methods (household_id,name,description) SELECT h.id,v.name,v.description FROM public.households h CROSS JOIN (VALUES ('PIX','Pagamento instantâneo'),('DÉBITO','Conta corrente'),('CRÉDITO','Cartão de crédito'),('REFEIÇÃO / ALIMENTAÇÃO','Vale-refeição ou alimentação'),('DINHEIRO','Pagamento em espécie'),('BOLETO','Cobrança bancária'),('TRANSFERÊNCIA','Transferência bancária')) v(name,description) ON CONFLICT (household_id,name) DO NOTHING;
