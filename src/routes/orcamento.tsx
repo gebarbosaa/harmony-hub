@@ -1,108 +1,116 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { PageHeader, Panel, ProgressBar, StatCard, Tag } from "@/components/ui-kit";
-import { categoryDistribution } from "@/lib/mock-data";
 import { formatCurrency, calculateBudgetUsage } from "@/lib/finance";
+import { useHouseholdTable } from "@/hooks/use-household-data";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/orcamento")({
-  head: () => ({
-    meta: [
-      { title: "ORÇAMENTO MENSAL — MULTICAP" },
-      { name: "description", content: "Tetos de gasto por categoria com alertas configuráveis." },
-      { property: "og:title", content: "ORÇAMENTO MENSAL — MULTICAP" },
-      {
-        property: "og:description",
-        content: "Tetos de gasto por categoria com alertas configuráveis.",
-      },
-    ],
-  }),
+  head: () => ({ meta: [{ title: "ORÇAMENTO MENSAL — MULTICAP" }] }),
   component: BudgetPage,
 });
 
 const ALERTS = [50, 75, 90, 100];
+const DEFAULT_CATEGORIES = ["MORADIA", "ALIMENTAÇÃO", "TRANSPORTE", "LAZER", "SAÚDE", "OUTROS"];
+type Budget = { id: string; category: string; period: string; limit_amount: number; household_id: string };
+type Tx = { amount: number; type: string; category: string; date: string; household_id: string };
 
 function BudgetPage() {
+  const now = new Date();
+  const [period, setPeriod] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
   const [alerts, setAlerts] = useState<number[]>([75, 100]);
-  const spent = categoryDistribution.reduce((s, c) => s + c.value, 0);
-  const budget = categoryDistribution.reduce((s, c) => s + c.budget, 0);
+  const [newCategory, setNewCategory] = useState("");
+  const [newLimit, setNewLimit] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
+  const { rows, insert, update, remove, isLoading } = useHouseholdTable<Budget>("budgets", "id,category,period,limit_amount,household_id", "category");
+  const { rows: transactions } = useHouseholdTable<Tx>("transactions", "amount,type,category,date,household_id", "date");
 
-  return (
-    <div className="space-y-5">
-      <PageHeader title="ORÇAMENTO MENSAL" subtitle="Defina o teto de gastos de cada categoria." />
+  const budgets = useMemo(() => rows.filter((b) => b.period === period), [rows, period]);
+  const categories = useMemo(() => Array.from(new Set([...DEFAULT_CATEGORIES, ...budgets.map((b) => b.category)])), [budgets]);
+  const spentByCategory = useMemo(() => {
+    const map = new Map<string, number>();
+    transactions.filter((t) => t.date.startsWith(period) && t.type === "DESPESA").forEach((t) => map.set(t.category, (map.get(t.category) ?? 0) + Number(t.amount)));
+    return map;
+  }, [transactions, period]);
+  const budgetTotal = budgets.reduce((s, b) => s + Number(b.limit_amount), 0);
+  const spentTotal = Array.from(spentByCategory.values()).reduce((s, v) => s + v, 0);
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="ORÇADO" value={formatCurrency(budget)} tone="primary" />
-        <StatCard label="GASTO" value={formatCurrency(spent)} tone="danger" />
-        <StatCard label="DISPONÍVEL" value={formatCurrency(budget - spent)} tone="success" />
-        <StatCard
-          label="UTILIZADO"
-          value={`${Math.round(calculateBudgetUsage(spent, budget))}%`}
-          tone="info"
-        />
-      </div>
+  async function saveBudget(category: string, value: string) {
+    const limit = Number(value.replace(",", "."));
+    if (!Number.isFinite(limit) || limit < 0) return toast.error("INFORME UM VALOR VÁLIDO");
+    try {
+      const existing = budgets.find((b) => b.category === category);
+      if (existing) await update(existing.id, { limit_amount: limit });
+      else await insert({ category, period, limit_amount: limit });
+      toast.success("ORÇAMENTO SALVO");
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível salvar"); }
+  }
 
-      <Panel title="CATEGORIAS">
-        <div className="space-y-5">
-          {categoryDistribution.map((cat) => {
-            const usage = calculateBudgetUsage(cat.value, cat.budget);
-            const over = cat.value > cat.budget;
-            return (
-              <div key={cat.name} className="space-y-2">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="label-caps text-[11px]">{cat.name}</span>
-                  <span className="text-sm font-semibold">
-                    {formatCurrency(cat.value)}{" "}
-                    <span className="text-muted-foreground">/ {formatCurrency(cat.budget)}</span>
-                  </span>
-                </div>
-                <ProgressBar percent={usage} />
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className={cn(over ? "text-danger" : "text-muted-foreground")}>
-                    {Math.round(usage)}% UTILIZADO
-                  </span>
-                  <span className={over ? "text-danger" : "text-success"}>
-                    {over
-                      ? `EXCEDIDO EM ${formatCurrency(cat.value - cat.budget)}`
-                      : `RESTAM ${formatCurrency(cat.budget - cat.value)}`}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </Panel>
+  async function renameCategory(budget: Budget) {
+    const name = editingName.trim().toUpperCase();
+    if (!name) return toast.error("INFORME O NOME DA CATEGORIA");
+    if (name === budget.category) return setEditingId(null);
+    if (budgets.some((b) => b.id !== budget.id && b.category === name)) return toast.error("ESSA CATEGORIA JÁ EXISTE NESTE MÊS");
+    try {
+      await update(budget.id, { category: name });
+      toast.success("CATEGORIA ATUALIZADA");
+      setEditingId(null);
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível editar a categoria"); }
+  }
 
-      <Panel title="ALERTAS CONFIGURÁVEIS">
-        <div className="flex flex-wrap gap-2">
-          {ALERTS.map((a) => {
-            const active = alerts.includes(a);
-            return (
-              <button
-                key={a}
-                onClick={() =>
-                  setAlerts((prev) => (active ? prev.filter((x) => x !== a) : [...prev, a]))
-                }
-                className={cn(
-                  "label-caps rounded-xl border px-4 py-2 text-[11px] transition-colors",
-                  active
-                    ? "border-primary bg-primary/15 text-primary"
-                    : "border-border text-muted-foreground",
-                )}
-              >
-                {a}%
-              </button>
-            );
-          })}
-        </div>
-        <p className="mt-3 text-xs text-muted-foreground">
-          Você será avisado quando o consumo de qualquer categoria atingir os limites selecionados.
-        </p>
-        <div className="mt-3 flex gap-2">
-          <Tag tone="warning">PRÓXIMO DO LIMITE</Tag>
-          <Tag tone="danger">ACIMA DO ORÇAMENTO</Tag>
-        </div>
-      </Panel>
+  async function addCategory() {
+    const category = newCategory.trim().toUpperCase();
+    if (!category) return toast.error("INFORME A CATEGORIA");
+    if (budgets.some((b) => b.category === category)) return toast.error("ESSA CATEGORIA JÁ EXISTE NESTE MÊS");
+    await saveBudget(category, newLimit || "0");
+    setNewCategory(""); setNewLimit("");
+  }
+
+  async function deleteBudget(budget: Budget) {
+    if (!window.confirm(`Excluir a categoria ${budget.category} deste mês? O histórico de transações não será apagado.`)) return;
+    try { await remove(budget.id); toast.success("CATEGORIA EXCLUÍDA DESTE MÊS"); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível excluir"); }
+  }
+
+  return <div className="space-y-5">
+    <PageHeader title="ORÇAMENTO MENSAL" subtitle="Crie, edite e exclua categorias e defina o limite de cada mês." />
+    <label><span className="label-caps text-[10px] text-muted-foreground">MÊS</span><input type="month" value={period} onChange={e => setPeriod(e.target.value)} className="mt-1 rounded-xl border border-input bg-background px-3 py-2.5 text-sm" /></label>
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <StatCard label="ORÇADO" value={formatCurrency(budgetTotal)} tone="primary" />
+      <StatCard label="GASTO" value={formatCurrency(spentTotal)} tone="danger" />
+      <StatCard label="DISPONÍVEL" value={formatCurrency(budgetTotal - spentTotal)} tone="success" />
+      <StatCard label="UTILIZADO" value={`${budgetTotal ? Math.round(calculateBudgetUsage(spentTotal, budgetTotal)) : 0}%`} tone="info" />
     </div>
-  );
+    <Panel title={`CATEGORIAS — ${period}`}>
+      {isLoading ? <p className="py-8 text-center text-sm text-muted-foreground">Carregando...</p> : <div className="space-y-5">
+        {categories.map(category => {
+          const budget = budgets.find(b => b.category === category);
+          const limit = Number(budget?.limit_amount ?? 0);
+          const spent = spentByCategory.get(category) ?? 0;
+          const usage = limit > 0 ? calculateBudgetUsage(spent, limit) : 0;
+          const over = limit > 0 && spent > limit;
+          return <div key={category} className="space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              {editingId === budget?.id ? <div className="flex gap-2"><input autoFocus value={editingName} onChange={e => setEditingName(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && budget) void renameCategory(budget); if (e.key === "Escape") setEditingId(null); }} className="rounded-lg border border-primary bg-background px-2.5 py-1.5 text-xs" /><button onClick={() => budget && void renameCategory(budget)} className="label-caps rounded-lg bg-primary px-3 py-1.5 text-[10px] text-primary-foreground">SALVAR</button><button onClick={() => setEditingId(null)} className="label-caps rounded-lg border px-3 py-1.5 text-[10px]">CANCELAR</button></div> : <span className="label-caps text-[11px]">{category}</span>}
+              <span className="text-sm font-semibold">{formatCurrency(spent)} <span className="text-muted-foreground">/ {formatCurrency(limit)}</span></span>
+            </div>
+            <ProgressBar percent={usage} />
+            <div className="flex flex-wrap items-center gap-2">
+              {budget ? <>
+                <input defaultValue={limit ? String(limit).replace(".", ",") : ""} placeholder="Definir limite" inputMode="decimal" className="w-36 rounded-lg border border-input bg-background px-2.5 py-1.5 text-xs" id={`budget-${budget.id}`} />
+                <button onClick={() => saveBudget(category, (document.getElementById(`budget-${budget.id}`) as HTMLInputElement)?.value ?? "0")} className="label-caps rounded-lg border border-primary/60 px-3 py-1.5 text-[10px] text-primary">SALVAR LIMITE</button>
+                <button onClick={() => { setEditingId(budget.id); setEditingName(budget.category); }} className="label-caps rounded-lg border border-info/60 px-3 py-1.5 text-[10px] text-info">EDITAR NOME</button>
+                <button onClick={() => void deleteBudget(budget)} className="label-caps rounded-lg border border-danger/50 px-3 py-1.5 text-[10px] text-danger">EXCLUIR</button>
+              </> : <span className="text-[11px] text-muted-foreground">Categoria padrão — defina um limite para adicioná-la ao orçamento.</span>}
+              <span className={cn("text-[11px]", over ? "text-danger" : "text-muted-foreground")}>{limit ? `${Math.round(usage)}% utilizado` : "Sem limite definido"}</span>
+            </div>
+          </div>;
+        })}
+      </div>}
+    </Panel>
+    <Panel title="NOVA CATEGORIA"><div className="flex flex-wrap gap-2"><input value={newCategory} onChange={e => setNewCategory(e.target.value)} placeholder="Ex.: EDUCAÇÃO" className="rounded-xl border border-input bg-background px-3 py-2.5 text-sm" /><input value={newLimit} onChange={e => setNewLimit(e.target.value)} placeholder="Limite mensal" inputMode="decimal" className="w-40 rounded-xl border border-input bg-background px-3 py-2.5 text-sm" /><button onClick={() => void addCategory()} className="gradient-primary rounded-xl px-4 py-2.5 text-[11px] text-primary-foreground">ADICIONAR</button></div></Panel>
+    <Panel title="ALERTAS CONFIGURÁVEIS"><div className="flex flex-wrap gap-2">{ALERTS.map(a => { const active = alerts.includes(a); return <button key={a} onClick={() => setAlerts(p => active ? p.filter(x => x !== a) : [...p, a])} className={cn("label-caps rounded-xl border px-4 py-2 text-[11px]", active ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground")}>{a}%</button>; })}</div><div className="mt-3 flex gap-2"><Tag tone="warning">PRÓXIMO DO LIMITE</Tag><Tag tone="danger">ACIMA DO ORÇAMENTO</Tag></div></Panel>
+  </div>;
 }
