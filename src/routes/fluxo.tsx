@@ -5,6 +5,7 @@ import { PageHeader, Panel, StatCard, Tag, PersonDot } from "@/components/ui-kit
 import { formatCurrency, evaluateAmount } from "@/lib/finance";
 import { cn } from "@/lib/utils";
 import { useHouseholdTable } from "@/hooks/use-household-data";
+import { useHouseholdMembers } from "@/hooks/use-household-members";
 
 export const Route = createFileRoute("/fluxo")({
   head: () => ({ meta: [{ title: "FLUXO MENSAL — MULTICAP" }, { name: "description", content: "Lance receitas, despesas, transferências e investimentos do mês." }] }),
@@ -12,27 +13,25 @@ export const Route = createFileRoute("/fluxo")({
 });
 
 type TxType = "RECEITA" | "DESPESA" | "TRANSFERENCIA" | "INVESTIMENTO";
-type Responsible = "MARIA" | "LUCAS" | "AMBAS";
-type Row = { id: string; date: string; description: string; category: string; pay_method: string; responsible: Responsible; amount: number; type: TxType; paid: boolean; household_id: string };
+type Row = { id: string; date: string; description: string; category: string; pay_method: string; responsible: string; amount: number; type: TxType; paid: boolean; household_id: string };
 const TYPES: TxType[] = ["RECEITA", "DESPESA", "TRANSFERENCIA", "INVESTIMENTO"];
 const typeColor: Record<TxType, string> = { RECEITA: "text-success", DESPESA: "text-danger", TRANSFERENCIA: "text-info", INVESTIMENTO: "text-primary" };
 
 function FlowPage() {
   const { rows, insert, update, remove, isLoading } = useHouseholdTable<Row>("transactions", "id,date,description,category,pay_method,responsible,amount,type,paid,household_id");
+  const { data: members = [] } = useHouseholdMembers();
   const [type, setType] = useState<TxType>("DESPESA");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("ALIMENTAÇÃO");
-  const [responsible, setResponsible] = useState<Responsible>("AMBAS");
+  const [responsible, setResponsible] = useState("AMBAS");
   const [filter, setFilter] = useState<"TODOS" | TxType>("TODOS");
   const [search, setSearch] = useState("");
   const parsed = evaluateAmount(amount);
 
   useEffect(() => {
     const requestedType = new URLSearchParams(window.location.search).get("tipo")?.toUpperCase();
-    if (requestedType === "DESPESA" || requestedType === "RECEITA" || requestedType === "TRANSFERENCIA" || requestedType === "INVESTIMENTO") {
-      setType(requestedType);
-    }
+    if (requestedType === "DESPESA" || requestedType === "RECEITA" || requestedType === "TRANSFERENCIA" || requestedType === "INVESTIMENTO") setType(requestedType);
   }, []);
 
   const totals = useMemo(() => ({
@@ -49,30 +48,19 @@ function FlowPage() {
       setDescription(""); setAmount(""); toast.success("LANÇAMENTO SALVO");
     } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível salvar"); }
   }
-
-  async function togglePaid(t: Row) {
-    try { await update(t.id, { paid: !t.paid }); } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível atualizar"); }
-  }
-  async function removeRow(t: Row) {
-    if (!window.confirm(`Excluir ${t.description}?`)) return;
-    try { await remove(t.id); toast.success("LANÇAMENTO EXCLUÍDO"); } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível excluir"); }
-  }
+  async function togglePaid(t: Row) { try { await update(t.id, { paid: !t.paid }); } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível atualizar"); } }
+  async function removeRow(t: Row) { if (!window.confirm(`Excluir ${t.description}?`)) return; try { await remove(t.id); toast.success("LANÇAMENTO EXCLUÍDO"); } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível excluir"); } }
 
   return <div className="space-y-5">
     <PageHeader title="FLUXO MENSAL" subtitle="Lançamentos à vista, receitas e transferências." />
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      <StatCard label="RECEITAS" value={formatCurrency(totals.income)} tone="success" />
-      <StatCard label="DESPESAS" value={formatCurrency(totals.expense)} tone="danger" />
-      <StatCard label="INVESTIDO" value={formatCurrency(totals.invested)} tone="primary" />
-      <StatCard label="RESULTADO" value={formatCurrency(totals.income - totals.expense)} tone={totals.income - totals.expense >= 0 ? "success" : "danger"} />
-    </div>
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4"><StatCard label="RECEITAS" value={formatCurrency(totals.income)} tone="success" /><StatCard label="DESPESAS" value={formatCurrency(totals.expense)} tone="danger" /><StatCard label="INVESTIDO" value={formatCurrency(totals.invested)} tone="primary" /><StatCard label="RESULTADO" value={formatCurrency(totals.income - totals.expense)} tone={totals.income - totals.expense >= 0 ? "success" : "danger"} /></div>
     <Panel title="CADASTRO RÁPIDO">
       <div className="mb-3 flex flex-wrap gap-2">{TYPES.map(t => <button key={t} type="button" onClick={() => setType(t)} className={cn("label-caps rounded-lg border px-3 py-1.5 text-[10px]", type === t ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground")}>{t}</button>)}</div>
       <div className="grid gap-3 md:grid-cols-4">
         <label className="md:col-span-2"><span className="label-caps text-[10px] text-muted-foreground">DESCRIÇÃO</span><input value={description} onChange={e=>setDescription(e.target.value)} placeholder="Mercado, salário, aluguel…" className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-primary" /></label>
         <label><span className="label-caps text-[10px] text-muted-foreground">VALOR</span><input value={amount} onChange={e=>setAmount(e.target.value)} placeholder="120 / 3" inputMode="text" className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-primary" />{parsed !== null && <span className="mt-1 block text-[10px] text-primary">= {formatCurrency(parsed)}</span>}</label>
         <label><span className="label-caps text-[10px] text-muted-foreground">CATEGORIA</span><select value={category} onChange={e=>setCategory(e.target.value)} className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm"><option>ALIMENTAÇÃO</option><option>MORADIA</option><option>TRANSPORTE</option><option>LAZER</option><option>SAÚDE</option><option>RENDA</option><option>OUTROS</option></select></label>
-        <label><span className="label-caps text-[10px] text-muted-foreground">RESPONSÁVEL</span><select value={responsible} onChange={e=>setResponsible(e.target.value as Responsible)} className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm"><option>AMBAS</option><option>MARIA</option><option>LUCAS</option></select></label>
+        <label><span className="label-caps text-[10px] text-muted-foreground">RESPONSÁVEL</span><select value={responsible} onChange={e=>setResponsible(e.target.value)} className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm"><option value="AMBAS">AMBOS / COMPARTILHADO</option>{members.map(m => <option key={m.id} value={m.name}>{m.name}</option>)}</select></label>
         <button type="button" onClick={add} className="gradient-primary label-caps mt-auto rounded-xl px-4 py-2.5 text-[11px] text-primary-foreground md:col-span-2">SALVAR LANÇAMENTO</button>
       </div>
     </Panel>
