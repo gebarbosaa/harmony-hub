@@ -1,58 +1,162 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { Check, ChevronDown, Minus, Plus, ShoppingCart, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Plus, Pencil, Trash2, Check, X } from "lucide-react";
 import { toast } from "sonner";
-import { PageHeader, Panel, StatCard, Tag } from "@/components/ui-kit";
+import { PageHeader, Panel, StatCard } from "@/components/ui-kit";
 import { formatCurrency } from "@/lib/finance";
 import { useHouseholdTable } from "@/hooks/use-household-data";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/mercado")({ head: () => ({ meta: [{ title: "MERCADO — HARMONY HUB" }] }), component: MarketPage });
+export const Route = createFileRoute("/mercado")({
+  head: () => ({ meta: [{ title: "MERCADO — HARMONY HUB" }] }),
+  component: MarketPage,
+});
 
-type List = { id:string; name:string; archived:boolean; household_id:string };
-type Item = { id:string; list_id:string; name:string; category:string; qty:number|null; unit:string; price:number|null; priority:string; done:boolean; household_id:string };
-type Tab = "mercado" | "modo";
-type Unit = {value:string; label:string};
-const UNITS:Unit[]=[
- {value:"UN",label:"UNIDADE"},{value:"PACOTE",label:"PACOTE"},{value:"CAIXA",label:"CAIXA"},{value:"FARDO",label:"FARDO"},{value:"KG",label:"KG"},{value:"G",label:"GRAMAS"},{value:"L",label:"LITRO"},{value:"ML",label:"ML"},{value:"DUZIA",label:"DÚZIA"},{value:"BANDEJA",label:"BANDEJA"},{value:"POTE",label:"POTE"},{value:"GARRAFA",label:"GARRAFA"},{value:"LATA",label:"LATA"},{value:"BISNAGA",label:"BISNAGA"},{value:"ROLO",label:"ROLO"},{value:"PAR",label:"PAR"}
-];
-const SECTORS=[
- ["HORTIFRUTI","🥬",1],["PADARIA","🥖",2],["MERCEARIA","🥫",3],["BEBIDAS","🥤",4],["AÇOUGUE","🥩",5],["PEIXARIA","🐟",6],["LATICÍNIOS & REFRIGERADOS","🥛",7],["CONGELADOS","🧊",8],["LIMPEZA","🧹",9],["HIGIENE & BELEZA","🧴",10],["PAPEL & DESCARTÁVEIS","🧻",11],["PET","🐶",12],["OUTROS","🛒",99]
-] as const;
-function normalize(value:string){return value.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();}
-function classifyProduct(product:string){const p=normalize(product);const rules:[string,string[]][]=[
- ["HORTIFRUTI",["banana","maca","laranja","limao","mamao","manga","uva","abacaxi","melancia","morango","tomate","cebola","alho","batata","cenoura","alface","couve","brocolis","abobrinha","pepino","pimentao"]],
- ["PADARIA",["pao","bolo","torta","croissant","sonho","rosca","baguete","padaria"]],
- ["MERCEARIA",["arroz","feijao","macarrao","massa","farinha","acucar","sal","cafe","achocolatado","aveia","cereal","molho","extrato","milho","ervilha","azeite","oleo","vinagre","biscoito","bolacha","tempero","maionese","ketchup","mostarda","enlatado","conserva","geleia"]],
- ["BEBIDAS",["refrigerante","coca","guarana","pepsi","suco","agua","energetico","cha","isotonico","bebida"]],
- ["AÇOUGUE",["carne","bife","picanha","alcatra","patinho","acem","fraldinha","maminha","costela","contra-file","contrafile","file mignon","frango","peito de frango","coxa","sobrecoxa","asa","linguica","salsicha"]],
- ["PEIXARIA",["peixe","tilapia","salmao","sardinha","bacalhau","camarao","lula","polvo"]],
- ["LATICÍNIOS & REFRIGERADOS",["leite","queijo","mussarela","presunto","mortadela","iogurte","manteiga","margarina","requeijao","creme de leite","nata"]],
- ["CONGELADOS",["pizza congelada","nuggets","batata congelada","lasanha congelada","hamburguer congelado","legumes congelados","sorvete","picole"]],
- ["LIMPEZA",["detergente","sabao","amaciante","desinfetante","agua sanitaria","alvejante","esponja","multiuso","vassoura","rodo","balde","saco de lixo"]],
- ["HIGIENE & BELEZA",["shampoo","condicionador","sabonete","desodorante","pasta de dente","escova de dente","fio dental","absorvente","fralda","barbeador","lamina","creme corporal","hidratante","protetor solar","cosmetico","maquiagem"]],
- ["PAPEL & DESCARTÁVEIS",["papel higienico","papel toalha","guardanapo","lenco","papel aluminio","papel filme","copo descartavel","prato descartavel","talher descartavel"]],
- ["PET",["racao","petisco","areia para gato","areia gato","tapete higienico","cachorro","gato"]]
- ];for(const [sector,keywords] of rules)if(keywords.some(k=>p.includes(normalize(k))))return sector;return "OUTROS";}
-function suggestUnit(product:string){const p=normalize(product);if(/banana|maca|laranja|limao|mamao|manga|uva|abacaxi|melancia|morango|tomate|cebola|batata|cenoura|alface|couve|brocolis|abobrinha|pepino|pimentao|carne|bife|picanha|alcatra|patinho|frango|peixe|tilapia|salmao|sardinha|camarao/.test(p))return "KG";if(/arroz|feijao|macarrao|farinha|acucar|sal|cafe|biscoito|bolacha|racao|papel higienico|papel toalha/.test(p))return "PACOTE";if(/ovo|ovos/.test(p))return "DUZIA";return "UN";}
-function sectorMeta(name:string){return SECTORS.find(s=>s[0]===name)||SECTORS[SECTORS.length-1];}
-function unitLabel(value:string){return UNITS.find(u=>u.value===value)?.label||value;}
+type List = { id: string; name: string; archived: boolean; household_id: string };
+type Item = {
+  id: string; list_id: string; name: string; category: string; qty: number | null;
+  unit: string; price: number | null; priority: string; done: boolean; household_id: string;
+};
 
-function MarketPage(){
- const lists=useHouseholdTable<List>("shopping_lists","id,name,archived,household_id");
- const items=useHouseholdTable<Item>("shopping_items","id,list_id,name,category,qty,unit,price,priority,done,household_id");
- const [tab,setTab]=useState<Tab>("mercado");const [active,setActive]=useState("");const [showForm,setShowForm]=useState(false);const [name,setName]=useState("");const [listName,setListName]=useState("");const [saving,setSaving]=useState(false);const [expanded,setExpanded]=useState<Record<string,boolean>>({});
- const current=active?lists.rows.find(x=>x.id===active):lists.rows[0];const currentItems=current?items.rows.filter(i=>i.list_id===current.id):[];
- const grouped=useMemo(()=>{const map=new Map<string,Item[]>();currentItems.forEach(item=>{const sector=item.category&&item.category!=="OUTROS"?item.category:classifyProduct(item.name);if(!map.has(sector))map.set(sector,[]);map.get(sector)!.push(item);});return [...map.entries()].sort((a,b)=>Number(sectorMeta(a[0])[2])-Number(sectorMeta(b[0])[2]));},[currentItems]);
- const liveTotal=currentItems.reduce((s,i)=>s+(Number(i.qty)||0)*(Number(i.price)||0),0);
- function openAdd(){setName("");setListName("");setShowForm(true);}function closeAdd(){if(!saving)setShowForm(false);}
- async function addItem(){if(saving)return;const product=name.trim();if(!product)return toast.error("INFORME O PRODUTO");setSaving(true);try{let target=current;if(!target){target=await lists.insert({name:(listName.trim()||"MINHA LISTA").toUpperCase(),archived:false});setActive(target.id);}const sector=classifyProduct(product);await items.insert({list_id:target.id,name:product.toUpperCase(),price:null,qty:null,unit:suggestUnit(product),category:sector,priority:"MÉDIA",done:false});setShowForm(false);await Promise.all([lists.refetch(),items.refetch()]);toast.success(`${product.toUpperCase()} ADICIONADO EM ${sector}`);}catch(e){toast.error(`NÃO FOI POSSÍVEL ADICIONAR: ${e instanceof Error?e.message:"ERRO DESCONHECIDO"}`);}finally{setSaving(false);}}
- async function updateItem(id:string,values:Record<string,unknown>){try{await items.update(id,values);await items.refetch();}catch(e){toast.error(e instanceof Error?e.message:"NÃO FOI POSSÍVEL ATUALIZAR");}}
- async function changeQty(item:Item,delta:number){await updateItem(item.id,{qty:Math.max((Number(item.qty)||0)+delta,1)});}async function toggleDone(item:Item){await updateItem(item.id,{done:!item.done});}
- return <div className="space-y-5 pb-8">
-  <PageHeader title={tab==="mercado"?"MERCADO":"MODO MERCADO"} subtitle={tab==="mercado"?"MONTE SUA LISTA. O HARMONY ORGANIZA AUTOMATICAMENTE POR SETOR.":"FAÇA A COMPRA, ESCOLHA UNIDADE, QUANTIDADE E PREÇO E ACOMPANHE O TOTAL AO VIVO."} action={tab==="mercado"?<button type="button" onClick={openAdd} aria-label="ADICIONAR PRODUTO" title="ADICIONAR PRODUTO" className="gradient-primary flex h-11 w-11 items-center justify-center rounded-full text-primary-foreground shadow-lg"><Plus className="h-5 w-5"/></button>:undefined}/>
-  <div className="flex w-fit gap-1 rounded-xl border border-border bg-secondary/30 p-1"><button type="button" onClick={()=>setTab("mercado")} className={cn("label-caps rounded-lg px-4 py-2 text-[11px]",tab==="mercado"?"bg-background text-foreground shadow-sm":"text-muted-foreground")}>MERCADO</button><button type="button" onClick={()=>setTab("modo")} className={cn("label-caps rounded-lg px-4 py-2 text-[11px]",tab==="modo"?"bg-background text-foreground shadow-sm":"text-muted-foreground")}>MODO MERCADO</button></div>
-  {showForm&&<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onMouseDown={e=>{if(e.currentTarget===e.target)closeAdd();}}><div className="w-full max-w-lg rounded-2xl border border-border bg-background p-5 shadow-xl"><div className="mb-5 flex items-center justify-between"><div><h2 className="label-caps text-sm font-semibold">ADICIONAR PRODUTO</h2><p className="mt-1 text-xs text-muted-foreground">ADICIONE SOMENTE O PRODUTO. PREÇO, QUANTIDADE E UNIDADE FICAM PARA O MODO MERCADO.</p></div><button type="button" onClick={closeAdd} className="rounded-lg p-2 text-muted-foreground hover:bg-muted"><X className="h-4 w-4"/></button></div><div className="grid gap-3">{!current&&<input autoFocus value={listName} onChange={e=>setListName(e.target.value)} placeholder="NOME DA LISTA (OPCIONAL)" className="rounded-xl border border-input bg-background px-3 py-3 text-sm"/>}<input autoFocus={Boolean(current)} value={name} onChange={e=>setName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")void addItem();}} placeholder="PRODUTO — EX.: ARROZ, SHAMPOO, FRANGO" className="rounded-xl border border-input bg-background px-3 py-3 text-sm"/><div className="rounded-xl bg-secondary/30 p-3 text-xs text-muted-foreground">🧠 O Harmony identifica o setor e sugere a unidade automaticamente.</div><button type="button" disabled={saving} onClick={()=>void addItem()} className="gradient-primary rounded-xl px-4 py-3 text-[11px] text-primary-foreground disabled:opacity-60">{saving?"SALVANDO...":"ADICIONAR PRODUTO"}</button></div></div></div>}
-  {tab==="mercado"?<><div className="grid grid-cols-2 gap-3 lg:grid-cols-3"><StatCard label="LISTAS" value={String(lists.rows.length)} tone="info"/><StatCard label="ITENS" value={String(items.rows.length)} tone="primary"/><StatCard label="COMPRADOS" value={String(items.rows.filter(i=>i.done).length)} tone="success"/></div><Panel title="SUAS LISTAS DE COMPRAS"><div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">{lists.rows.map(list=><button type="button" key={list.id} onClick={()=>setActive(list.id)} className={cn("rounded-2xl border p-4 text-left transition",current?.id===list.id?"border-primary bg-primary/5":"border-border hover:border-primary/50")}><p className="label-caps text-sm">{list.name}</p><p className="mt-2 text-xs text-muted-foreground">{items.rows.filter(i=>i.list_id===list.id).length} ITENS</p></button>)}{!lists.rows.length&&<div className="md:col-span-2 lg:col-span-3 py-10 text-center text-sm text-muted-foreground">NENHUMA LISTA CADASTRADA. CLIQUE NO + PARA COMEÇAR.</div>}</div></Panel></>:<><div className="grid grid-cols-2 gap-3 lg:grid-cols-3"><StatCard label="ITENS" value={String(currentItems.length)} tone="info"/><StatCard label="COMPRADOS" value={String(currentItems.filter(i=>i.done).length)} tone="success"/><StatCard label="TOTAL AO VIVO" value={formatCurrency(liveTotal)} tone="primary"/></div>{current?<Panel title={`ROTA DA COMPRA — ${current.name}`}><div className="mb-4 flex items-center gap-2 text-xs text-muted-foreground"><ShoppingCart className="h-4 w-4"/> SETORES NA ORDEM DO SUPERMERCADO</div><div className="space-y-3">{grouped.map(([sector,sectorItems])=>{const meta=sectorMeta(sector);const open=expanded[sector]!==false;const sectorTotal=sectorItems.reduce((s,i)=>s+(Number(i.qty)||0)*(Number(i.price)||0),0);return <div key={sector} className="overflow-hidden rounded-2xl border border-border"><button type="button" onClick={()=>setExpanded(v=>({...v,[sector]:!open}))} className="flex w-full items-center gap-3 p-4 text-left hover:bg-secondary/30"><span className="text-xl">{meta[1]}</span><span className="flex-1"><span className="label-caps block text-sm font-semibold">{sector}</span><span className="mt-1 block text-xs text-muted-foreground">{sectorItems.length} {sectorItems.length===1?"ITEM":"ITENS"}{sectorTotal?` · ${formatCurrency(sectorTotal)}`:""}</span></span><ChevronDown className={cn("h-4 w-4 transition-transform",open&&"rotate-180")}/></button>{open&&<div className="divide-y divide-border border-t border-border">{sectorItems.map(item=><div key={item.id} className={cn("p-4",item.done&&"bg-primary/5")}><div className="flex items-start gap-3"><button type="button" onClick={()=>void toggleDone(item)} className={cn("mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border",item.done?"gradient-primary border-transparent text-primary-foreground":"border-border text-transparent")}><Check className="h-5 w-5"/></button><div className="min-w-0 flex-1"><p className={cn("label-caps text-sm font-semibold",item.done&&"line-through opacity-60")}>{item.name}</p><div className="mt-3 grid gap-3 sm:grid-cols-3"><div><label className="label-caps mb-1 block text-[10px] text-muted-foreground">UNIDADE</label><select value={item.unit||"UN"} onChange={e=>void updateItem(item.id,{unit:e.target.value})} className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm">{UNITS.map(u=><option key={u.value} value={u.value}>{u.label}</option>)}</select></div><div><label className="label-caps mb-1 block text-[10px] text-muted-foreground">QUANTIDADE</label><div className="flex items-center gap-2"><button type="button" onClick={()=>void changeQty(item,-1)} className="flex h-10 w-10 items-center justify-center rounded-xl border border-border"><Minus className="h-4 w-4"/></button><input type="number" min="0.01" step="0.01" value={item.qty??""} onChange={e=>{const v=e.currentTarget.value;if(v==="")void updateItem(item.id,{qty:null});else if(/^\d*(\.\d*)?$/.test(v))void updateItem(item.id,{qty:Number(v)});}} placeholder="QTD" className="min-w-0 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-center text-sm"/><button type="button" onClick={()=>void changeQty(item,1)} className="flex h-10 w-10 items-center justify-center rounded-xl border border-border"><Plus className="h-4 w-4"/></button></div></div><div><label className="label-caps mb-1 block text-[10px] text-muted-foreground">PREÇO / UNIDADE</label><input inputMode="decimal" placeholder="R$ 0,00" value={item.price==null?"":String(item.price).replace(".",",")} onChange={e=>{const value=e.currentTarget.value.replace(/[^0-9,\.]/g,"").replace(",",".");if(value===""||/^\d*(\.\d*)?$/.test(value))void updateItem(item.id,{price:value===""?null:Number(value)});}} className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm"/></div></div><div className="mt-3 flex items-center justify-between"><Tag>{item.qty==null?"SEM QTD":`${item.qty} ${unitLabel(item.unit)}`}</Tag><span className="text-sm font-semibold">TOTAL: {formatCurrency((Number(item.qty)||0)*(Number(item.price)||0))}</span></div></div></div></div>)}</div>}</div>})}{!grouped.length&&<div className="py-10 text-center text-sm text-muted-foreground">NENHUM PRODUTO NESTA LISTA.</div>}</div></Panel>:<Panel title="MODO MERCADO"><div className="py-10 text-center text-sm text-muted-foreground">VOLTE À ABA MERCADO E ADICIONE PRODUTOS À SUA LISTA.</div></Panel>}</>}
- </div>;
+function MarketPage() {
+  const lists = useHouseholdTable<List>("shopping_lists", "id,name,archived,household_id");
+  const items = useHouseholdTable<Item>("shopping_items", "id,list_id,name,category,qty,unit,price,priority,done,household_id");
+  const [active, setActive] = useState("");
+  const [showListForm, setShowListForm] = useState(false);
+  const [listName, setListName] = useState("");
+  const [product, setProduct] = useState("");
+  const [qty, setQty] = useState("1");
+  const [price, setPrice] = useState("");
+  const [editing, setEditing] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editQty, setEditQty] = useState("1");
+  const [editPrice, setEditPrice] = useState("");
+
+  useEffect(() => {
+    if (!active && lists.rows.length) setActive(lists.rows[0].id);
+    if (active && !lists.rows.some((list) => list.id === active)) setActive(lists.rows[0]?.id ?? "");
+  }, [active, lists.rows]);
+
+  const current = lists.rows.find((list) => list.id === active) ?? lists.rows[0];
+  const currentItems = current ? items.rows.filter((item) => item.list_id === current.id) : [];
+  const total = currentItems.reduce((sum, item) => sum + Number(item.qty || 0) * Number(item.price || 0), 0);
+
+  function openNewList() { setListName(""); setShowListForm(true); }
+
+  async function createList() {
+    const clean = listName.trim();
+    if (!clean) return toast.error("INFORME O NOME DA LISTA");
+    if (lists.rows.some((list) => list.name.toLowerCase() === clean.toLowerCase())) return toast.error("ESSA LISTA JÁ EXISTE");
+    try {
+      const created = await lists.insert({ name: clean.toUpperCase(), archived: false });
+      await lists.refetch();
+      setActive(created.id);
+      setShowListForm(false);
+      toast.success("LISTA CRIADA");
+    } catch (error) { toast.error(error instanceof Error ? error.message : "NÃO FOI POSSÍVEL CRIAR A LISTA"); }
+  }
+
+  async function renameList(list: List) {
+    const value = window.prompt("NOVO NOME DA LISTA", list.name)?.trim();
+    if (!value || value.toLowerCase() === list.name.toLowerCase()) return;
+    try { await lists.update(list.id, { name: value.toUpperCase() }); await lists.refetch(); toast.success("LISTA RENOMEADA"); }
+    catch (error) { toast.error(error instanceof Error ? error.message : "NÃO FOI POSSÍVEL RENOMEAR"); }
+  }
+
+  async function removeList(list: List) {
+    if (!window.confirm(`EXCLUIR A LISTA “${list.name}” E SEUS ITENS?`)) return;
+    try {
+      for (const item of items.rows.filter((row) => row.list_id === list.id)) await items.remove(item.id);
+      await lists.remove(list.id);
+      await Promise.all([lists.refetch(), items.refetch()]);
+      toast.success("LISTA EXCLUÍDA");
+    } catch (error) { toast.error(error instanceof Error ? error.message : "NÃO FOI POSSÍVEL EXCLUIR"); }
+  }
+
+  async function addItem() {
+    if (!current) return toast.error("CRIE UMA LISTA PRIMEIRO");
+    if (!product.trim()) return toast.error("INFORME O PRODUTO");
+    try {
+      await items.insert({ list_id: current.id, name: product.trim().toUpperCase(), category: "OUTROS", qty: Number(qty) || 1, unit: "UN", price: Number(price.replace(",", ".")) || 0, priority: "MÉDIA", done: false });
+      await items.refetch(); setProduct(""); setQty("1"); setPrice(""); toast.success("ITEM ADICIONADO");
+    } catch (error) { toast.error(error instanceof Error ? error.message : "NÃO FOI POSSÍVEL ADICIONAR"); }
+  }
+
+  function startEdit(item: Item) { setEditing(item.id); setEditName(item.name); setEditQty(String(item.qty ?? 1)); setEditPrice(String(item.price ?? 0)); }
+
+  async function saveEdit(item: Item) {
+    if (!editName.trim()) return toast.error("INFORME O PRODUTO");
+    try { await items.update(item.id, { name: editName.trim().toUpperCase(), qty: Number(editQty) || 1, price: Number(editPrice.replace(",", ".")) || 0 }); await items.refetch(); setEditing(null); toast.success("ITEM EDITADO"); }
+    catch (error) { toast.error(error instanceof Error ? error.message : "NÃO FOI POSSÍVEL EDITAR"); }
+  }
+
+  async function removeItem(item: Item) {
+    if (!window.confirm(`EXCLUIR “${item.name}”?`)) return;
+    try { await items.remove(item.id); await items.refetch(); toast.success("ITEM EXCLUÍDO"); }
+    catch (error) { toast.error(error instanceof Error ? error.message : "NÃO FOI POSSÍVEL EXCLUIR"); }
+  }
+
+  async function toggle(item: Item) {
+    try { await items.update(item.id, { done: !item.done }); await items.refetch(); }
+    catch (error) { toast.error(error instanceof Error ? error.message : "NÃO FOI POSSÍVEL ATUALIZAR"); }
+  }
+
+  return (
+    <div className="space-y-5 pb-8">
+      <PageHeader
+        title="MERCADO"
+        subtitle="ESCOLHA UMA LISTA PARA VER, ADICIONAR, EDITAR OU EXCLUIR SEUS ITENS."
+        action={<button type="button" onClick={openNewList} aria-label="CRIAR NOVA LISTA" title="CRIAR NOVA LISTA" className="gradient-primary flex h-11 w-11 items-center justify-center rounded-full text-primary-foreground shadow-lg"><Plus className="h-5 w-5" /></button>}
+      />
+
+      {showListForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onMouseDown={(e) => { if (e.currentTarget === e.target) setShowListForm(false); }}>
+          <div className="w-full max-w-md rounded-2xl border border-border bg-background p-5 shadow-xl">
+            <div className="mb-4 flex items-center justify-between"><div><h2 className="label-caps text-sm font-semibold">NOVA LISTA</h2><p className="mt-1 text-xs text-muted-foreground">CRIE UMA LISTA SEPARADA.</p></div><button type="button" onClick={() => setShowListForm(false)} className="rounded-lg p-2 hover:bg-muted"><X className="h-4 w-4" /></button></div>
+            <input autoFocus value={listName} onChange={(e) => setListName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void createList(); }} placeholder="NOME DA LISTA" className="mb-3 w-full rounded-xl border border-input bg-background px-3 py-3 text-sm" />
+            <button type="button" onClick={() => void createList()} className="gradient-primary w-full rounded-xl px-4 py-3 text-[11px] text-primary-foreground">CRIAR LISTA</button>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+        <StatCard label="LISTAS" value={String(lists.rows.length)} tone="info" />
+        <StatCard label="ITENS" value={String(currentItems.length)} tone="primary" />
+        <StatCard label="TOTAL" value={formatCurrency(total)} tone="success" />
+      </div>
+
+      <Panel title="LISTAS">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {lists.rows.map((list) => {
+            const count = items.rows.filter((item) => item.list_id === list.id).length;
+            return <div key={list.id} className={cn("rounded-2xl border p-4", current?.id === list.id ? "border-primary bg-primary/5" : "border-border")}>
+              <button type="button" onClick={() => setActive(list.id)} className="w-full text-left"><p className="label-caps text-sm font-semibold">{list.name}</p><p className="mt-2 text-xs text-muted-foreground">{count} {count === 1 ? "ITEM" : "ITENS"}</p></button>
+              <div className="mt-3 flex gap-2 border-t border-border pt-3"><button type="button" onClick={() => renameList(list)} className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-[10px] label-caps"><Pencil className="h-3.5 w-3.5" /> EDITAR</button><button type="button" onClick={() => void removeList(list)} className="flex items-center gap-1 rounded-lg border border-destructive/30 px-2.5 py-1.5 text-[10px] label-caps text-destructive"><Trash2 className="h-3.5 w-3.5" /> EXCLUIR</button></div>
+            </div>;
+          })}
+          {!lists.rows.length && <div className="sm:col-span-2 lg:col-span-3 py-10 text-center text-sm text-muted-foreground">NENHUMA LISTA. CLIQUE NO + PARA CRIAR.</div>}
+        </div>
+      </Panel>
+
+      {current && <>
+        <Panel title={`ADICIONAR ITEM — ${current.name}`}>
+          <div className="grid gap-3 md:grid-cols-4">
+            <input value={product} onChange={(e) => setProduct(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void addItem(); }} placeholder="PRODUTO" className="rounded-xl border border-input bg-background px-3 py-2.5 text-sm md:col-span-2" />
+            <input value={qty} onChange={(e) => setQty(e.target.value)} type="number" min="1" placeholder="QTD" className="rounded-xl border border-input bg-background px-3 py-2.5 text-sm" />
+            <input value={price} onChange={(e) => setPrice(e.target.value)} inputMode="decimal" placeholder="PREÇO" className="rounded-xl border border-input bg-background px-3 py-2.5 text-sm" />
+            <button type="button" onClick={() => void addItem()} className="gradient-primary label-caps rounded-xl px-4 py-2.5 text-[10px] text-primary-foreground md:col-span-2">ADICIONAR ITEM</button>
+          </div>
+        </Panel>
+
+        <Panel title={`ITENS — ${current.name}`}>
+          <ul className="divide-y divide-border">
+            {currentItems.map((item) => <li key={item.id} className="py-4">
+              {editing === item.id ? <div className="grid gap-2 md:grid-cols-[1fr_100px_140px_auto_auto]"><input value={editName} onChange={(e) => setEditName(e.target.value)} className="rounded-lg border border-input bg-background px-3 py-2 text-sm" /><input value={editQty} onChange={(e) => setEditQty(e.target.value)} type="number" min="1" className="rounded-lg border border-input bg-background px-3 py-2 text-sm" /><input value={editPrice} onChange={(e) => setEditPrice(e.target.value)} inputMode="decimal" className="rounded-lg border border-input bg-background px-3 py-2 text-sm" /><button type="button" onClick={() => void saveEdit(item)} className="rounded-lg bg-primary px-3 py-2 text-[10px] label-caps text-primary-foreground">SALVAR</button><button type="button" onClick={() => setEditing(null)} className="rounded-lg border border-border px-3 py-2 text-[10px] label-caps">CANCELAR</button></div> : <div className="flex items-center gap-3"><button type="button" onClick={() => void toggle(item)} className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border", item.done ? "gradient-primary border-transparent text-primary-foreground" : "border-border text-transparent")}><Check className="h-4 w-4" /></button><div className="min-w-0 flex-1"><p className={cn("label-caps text-[11px]", item.done && "line-through opacity-60")}>{item.name}</p><p className="mt-1 text-xs text-muted-foreground">{item.qty} UN · {formatCurrency(Number(item.price || 0))}</p></div><span className="hidden text-sm font-semibold sm:block">{formatCurrency(Number(item.qty || 0) * Number(item.price || 0))}</span><button type="button" onClick={() => startEdit(item)} title="EDITAR" className="rounded-lg border border-border p-2"><Pencil className="h-4 w-4" /></button><button type="button" onClick={() => void removeItem(item)} title="EXCLUIR" className="rounded-lg border border-destructive/30 p-2 text-destructive"><Trash2 className="h-4 w-4" /></button></div>}
+            </li>)}
+            {!currentItems.length && <li className="py-10 text-center text-sm text-muted-foreground">NENHUM ITEM NESTA LISTA.</li>}
+          </ul>
+        </Panel>
+      </>}
+    </div>
+  );
 }
