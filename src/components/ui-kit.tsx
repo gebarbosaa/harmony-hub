@@ -1,22 +1,12 @@
 import type { ReactNode } from "react";
-import { Plus } from "lucide-react";
+import { Plus, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 function CreateButton({ title }: { title: string }) {
   function handleClick() {
-    const target = document.getElementById("novo-registro") ?? document.querySelector("[data-create-form]");
-    if (target instanceof HTMLElement) {
-      target.scrollIntoView({ behavior: "smooth", block: "center" });
-      window.setTimeout(() => target.querySelector<HTMLElement>("input, select, textarea, button")?.focus(), 350);
-      return;
-    }
-    const form = document.querySelector("form");
-    if (form instanceof HTMLElement) {
-      form.scrollIntoView({ behavior: "smooth", block: "center" });
-      form.querySelector<HTMLElement>("input, select, textarea, button")?.focus();
-    }
+    window.dispatchEvent(new CustomEvent("multicap:open-create", { detail: { title } }));
   }
-
   return <button type="button" onClick={handleClick} aria-label={`ADICIONAR ${title}`} title={`ADICIONAR ${title}`} className="group flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground shadow-sm transition-all hover:border-primary/50 hover:bg-primary/5 hover:text-primary active:scale-95"><Plus className="h-5 w-5 transition-transform group-hover:rotate-90" strokeWidth={2} /></button>;
 }
 
@@ -24,9 +14,27 @@ export function PageHeader({ title, subtitle, action }: { title: string; subtitl
   return <header className="flex flex-wrap items-end justify-between gap-3"><div><h1 className="label-caps text-2xl text-foreground md:text-3xl">{title}</h1>{subtitle ? <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p> : null}</div>{action ?? <CreateButton title={title} />}</header>;
 }
 
+function CreatePanel({ title, children, className, aside }: { title: string; children: ReactNode; className?: string; aside?: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const openHandler = () => setOpen(true);
+    window.addEventListener("multicap:open-create", openHandler);
+    return () => window.removeEventListener("multicap:open-create", openHandler);
+  }, []);
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [open]);
+  if (!open) return null;
+  return <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-3 backdrop-blur-sm sm:p-5" onMouseDown={() => setOpen(false)}><section id="novo-registro" data-create-form="true" className={cn("max-h-[88vh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-border bg-card p-4 shadow-2xl md:p-5", className)} onMouseDown={event => event.stopPropagation()}><div className="mb-4 flex items-center justify-between gap-3"><h2 className="label-caps text-xs text-muted-foreground">{title}</h2><div className="flex items-center gap-2">{aside}<button type="button" onClick={() => setOpen(false)} aria-label="Fechar" title="Fechar" className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"><X className="h-4 w-4" /></button></div></div>{children}</section></div>;
+}
+
 export function Panel({ children, className, title, aside }: { children: ReactNode; className?: string; title?: string; aside?: ReactNode }) {
   const isCreatePanel = !!title && /^(NOVO|ADICIONAR|CADASTRO|REGISTRAR)/i.test(title.trim());
-  return <section id={isCreatePanel ? "novo-registro" : undefined} data-create-form={isCreatePanel ? "true" : undefined} className={cn("rounded-2xl border border-border bg-card p-4 shadow-[0_10px_30px_-24px_rgba(0,0,0,0.9)] md:p-5", className)}>{title || aside ? <div className="mb-4 flex items-center justify-between gap-3">{title ? <h2 className="label-caps text-xs text-muted-foreground">{title}</h2> : <span />}{aside}</div> : null}{children}</section>;
+  if (isCreatePanel) return <CreatePanel title={title} className={className} aside={aside}>{children}</CreatePanel>;
+  return <section className={cn("rounded-2xl border border-border bg-card p-4 shadow-[0_10px_30px_-24px_rgba(0,0,0,0.9)] md:p-5", className)}>{title || aside ? <div className="mb-4 flex items-center justify-between gap-3">{title ? <h2 className="label-caps text-xs text-muted-foreground">{title}</h2> : <span />}{aside}</div> : null}{children}</section>;
 }
 
 export function StatCard({ label, value, delta, icon, tone = "default" }: { label: string; value: string; delta?: string; icon?: ReactNode; tone?: "default" | "primary" | "success" | "danger" | "info" }) {
