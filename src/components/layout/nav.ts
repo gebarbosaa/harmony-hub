@@ -7,13 +7,13 @@ import {
   CreditCard,
   ReceiptText,
   ShoppingCart,
-  Store,
   CalendarClock,
-  Target,
   TrendingUp,
   Settings,
   Flame,
   ListChecks,
+  FileText,
+  KeyRound,
   LayoutGrid,
 } from "lucide-react";
 
@@ -23,30 +23,34 @@ export const navGroups: { group: string; items: NavItem[] }[] = [
   {
     group: "PRINCIPAL",
     items: [
-      { label: "VISÃO GERAL", to: "/", icon: LayoutDashboard },
+      { label: "INÍCIO", to: "/", icon: LayoutDashboard },
       { label: "CALENDÁRIO", to: "/calendario", icon: CalendarDays },
-      { label: "FLUXO MENSAL", to: "/fluxo", icon: ArrowLeftRight },
     ],
   },
   {
-    group: "FINANÇAS",
+    group: "FINANCEIRO",
     items: [
+      { label: "MOVIMENTAÇÕES", to: "/fluxo", icon: ArrowLeftRight },
       { label: "ORÇAMENTO", to: "/orcamento", icon: Wallet },
-      { label: "CUSTOS FIXOS", to: "/custos-fixos", icon: Repeat },
-      { label: "PARCELADOS", to: "/parcelados", icon: CreditCard },
-      { label: "FATURAS", to: "/faturas", icon: ReceiptText },
-      { label: "METAS", to: "/metas", icon: Target },
+      { label: "CARTÕES E FATURAS", to: "/faturas", icon: ReceiptText },
+      { label: "CUSTOS FIXOS E ASSINATURAS", to: "/custos-fixos", icon: Repeat },
+      { label: "PARCELAS", to: "/parcelados", icon: CreditCard },
       { label: "INVESTIMENTOS", to: "/investimentos", icon: TrendingUp },
+    ],
+  },
+  {
+    group: "CASA",
+    items: [
+      { label: "TAREFAS", to: "/tarefas", icon: ListChecks },
+      { label: "ROTINA DA CASA", to: "/tarefas-domesticas", icon: CalendarClock },
+      { label: "MERCADO", to: "/mercado", icon: ShoppingCart },
     ],
   },
   {
     group: "ROTINA",
     items: [
-      { label: "LISTA DE COMPRAS", to: "/lista", icon: ShoppingCart },
-      { label: "MODO MERCADO", to: "/mercado", icon: Store },
-      { label: "AGENDA", to: "/agenda", icon: CalendarClock },
       { label: "HÁBITOS", to: "/habitos", icon: Flame },
-      { label: "TAREFAS", to: "/tarefas", icon: ListChecks },
+      { label: "ANOTAÇÕES", to: "/anotacoes", icon: FileText },
     ],
   },
   {
@@ -59,13 +63,17 @@ export const navGroups: { group: string; items: NavItem[] }[] = [
 ];
 
 export const quickAddOptions = [
-  "DESPESA",
-  "RECEITA",
-  "TRANSFERÊNCIA",
-  "CONTA",
-  "COMPRA PARCELADA",
-  "META",
-  "COMPROMISSO",
-  "LEMBRETE",
-  "ITEM DE LISTA",
-];
+  { label: "NOVO GASTO", icon: ArrowLeftRight, kind: "GASTO" },
+  { label: "NOVA RECEITA", icon: TrendingUp, kind: "RECEITA" },
+  { label: "NOVA PARCELA", icon: CreditCard, kind: "PARCELA" },
+  { label: "NOVA ASSINATURA", icon: Repeat, kind: "ASSINATURA" },
+  { label: "NOVO INVESTIMENTO", icon: TrendingUp, kind: "INVESTIMENTO" },
+  { label: "NOVO RESGATE", icon: TrendingUp, kind: "RESGATE" },
+  { label: "NOVA TAREFA", icon: ListChecks, kind: "TAREFA" },
+  { label: "NOVO HÁBITO", icon: Flame, kind: "HABITO" },
+  { label: "ITEM NO MERCADO", icon: ShoppingCart, kind: "MERCADO" },
+  { label: "NOVO EVENTO", icon: CalendarDays, kind: "EVENTO" },
+  { label: "NOVA ANOTAÇÃO", icon: FileText, kind: "ANOTACAO" },
+  { label: "NOVA CONTA", icon: Wallet, kind: "CONTA" },
+  { label: "NOVA CHAVE PIX", icon: KeyRound, kind: "PIX" },
+] as const;
