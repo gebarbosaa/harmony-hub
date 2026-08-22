@@ -15,7 +15,6 @@ export const navGroups: { group: string; items: NavItem[] }[] = [
     { label: "INVESTIMENTOS", to: "/investimentos", icon: TrendingUp },
   ] },
   { group: "CASA", items: [
-    { label: "TAREFAS", to: "/tarefas", icon: ListChecks },
     { label: "TAREFAS DOMÉSTICAS", to: "/tarefas-domesticas", icon: CalendarClock },
     { label: "MERCADO", to: "/mercado", icon: ShoppingCart },
   ] },
