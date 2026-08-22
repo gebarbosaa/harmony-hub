@@ -11,7 +11,8 @@ function CreateButton({ title }: { title: string }) {
 }
 
 export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: ReactNode }) {
-  return <header className="flex flex-wrap items-end justify-between gap-3"><div><h1 className="label-caps text-2xl text-foreground md:text-3xl">{title}</h1>{subtitle ? <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p> : null}</div>{action ?? <CreateButton title={title} />}</header>;
+  const hideDefaultCreate = title.trim().toUpperCase() === "MODO MERCADO";
+  return <header className="flex flex-wrap items-end justify-between gap-3"><div><h1 className="label-caps text-2xl text-foreground md:text-3xl">{title}</h1>{subtitle ? <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p> : null}</div>{action ?? (hideDefaultCreate ? null : <CreateButton title={title} />)}</header>;
 }
 
 function CreatePanel({ title, children, className, aside }: { title: string; children: ReactNode; className?: string; aside?: ReactNode }) {
