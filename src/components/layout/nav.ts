@@ -24,7 +24,6 @@ export const navGroups: { group: string; items: NavItem[] }[] = [
     group: "PRINCIPAL",
     items: [
       { label: "INÍCIO", to: "/", icon: LayoutDashboard },
-      { label: "CALENDÁRIO", to: "/calendario", icon: CalendarDays },
     ],
   },
   {
@@ -50,6 +49,12 @@ export const navGroups: { group: string; items: NavItem[] }[] = [
     group: "ROTINA",
     items: [
       { label: "HÁBITOS", to: "/habitos", icon: Flame },
+    ],
+  },
+  {
+    group: "ORGANIZAÇÃO",
+    items: [
+      { label: "CALENDÁRIO", to: "/calendario", icon: CalendarDays },
       { label: "ANOTAÇÕES", to: "/anotacoes", icon: FileText },
     ],
   },
