@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Check, Pencil, Trash2, X } from "lucide-react";
+import { Check, Pencil, Trash2, X, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader, Panel, StatCard, Tag } from "@/components/ui-kit";
 import { formatCurrency } from "@/lib/finance";
@@ -34,6 +34,7 @@ function ShoppingPage() {
   );
   const [active, setActive] = useState("");
   const [showListForm, setShowListForm] = useState(false);
+  const [showItemForm, setShowItemForm] = useState(false);
   const [listName, setListName] = useState("");
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
@@ -57,6 +58,14 @@ function ShoppingPage() {
   function openCreateList() {
     setListName("");
     setShowListForm(true);
+  }
+
+  function openAddItem() {
+    if (!current) return toast.error("CRIE OU SELECIONE UMA LISTA");
+    setName("");
+    setPrice("");
+    setQty("1");
+    setShowItemForm(true);
   }
 
   async function addList() {
@@ -125,6 +134,7 @@ function ShoppingPage() {
       setName("");
       setPrice("");
       setQty("1");
+      setShowItemForm(false);
       toast.success("ITEM ADICIONADO");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "NÃO FOI POSSÍVEL SALVAR O ITEM");
@@ -192,24 +202,35 @@ function ShoppingPage() {
               </div>
               <button type="button" onClick={() => setShowListForm(false)} className="rounded-lg p-2 text-muted-foreground hover:bg-muted"><X className="h-4 w-4" /></button>
             </div>
-            <input
-              autoFocus
-              value={listName}
-              onChange={(event) => setListName(event.target.value)}
-              onKeyDown={(event) => { if (event.key === "Enter") void addList(); }}
-              placeholder="NOME DA LISTA"
-              className="mb-3 w-full rounded-xl border border-input bg-background px-3 py-3 text-sm"
-            />
+            <input autoFocus value={listName} onChange={(event) => setListName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void addList(); }} placeholder="NOME DA LISTA" className="mb-3 w-full rounded-xl border border-input bg-background px-3 py-3 text-sm" />
             <button type="button" onClick={() => void addList()} className="gradient-primary w-full rounded-xl px-4 py-3 text-[11px] text-primary-foreground">CRIAR LISTA</button>
+          </div>
+        </div>
+      )}
+
+      {showItemForm && current && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onMouseDown={(event) => { if (event.currentTarget === event.target) setShowItemForm(false); }}>
+          <div className="w-full max-w-lg rounded-2xl border border-border bg-background p-5 shadow-xl">
+            <div className="mb-5 flex items-center justify-between">
+              <div>
+                <h2 className="label-caps text-sm font-semibold">ADICIONAR ITEM</h2>
+                <p className="mt-1 text-xs text-muted-foreground">ADICIONANDO NA LISTA “{current.name}”.</p>
+              </div>
+              <button type="button" onClick={() => setShowItemForm(false)} className="rounded-lg p-2 text-muted-foreground hover:bg-muted"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <input autoFocus value={name} onChange={(event) => setName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void addItem(); }} placeholder="PRODUTO" className="rounded-xl border border-input bg-background px-3 py-3 text-sm sm:col-span-2" />
+              <input value={qty} onChange={(event) => setQty(event.target.value)} type="number" min="1" placeholder="QUANTIDADE" className="rounded-xl border border-input bg-background px-3 py-3 text-sm" />
+              <input value={price} onChange={(event) => setPrice(event.target.value)} placeholder="PREÇO" inputMode="decimal" className="rounded-xl border border-input bg-background px-3 py-3 text-sm" />
+              <button type="button" onClick={() => void addItem()} className="gradient-primary label-caps rounded-xl px-4 py-3 text-[10px] text-primary-foreground sm:col-span-2">ADICIONAR ITEM</button>
+            </div>
           </div>
         </div>
       )}
 
       <Panel title="SUAS LISTAS — CLIQUE PARA ABRIR">
         <div className="mb-4 flex justify-end">
-          <button type="button" onClick={openCreateList} className="gradient-primary label-caps rounded-xl px-4 py-2.5 text-[10px] text-primary-foreground">
-            NOVA LISTA
-          </button>
+          <button type="button" onClick={openCreateList} className="gradient-primary label-caps rounded-xl px-4 py-2.5 text-[10px] text-primary-foreground">NOVA LISTA</button>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {lists.rows.map((list) => {
@@ -228,11 +249,7 @@ function ShoppingPage() {
               </div>
             );
           })}
-          {lists.rows.length === 0 && (
-            <div className="sm:col-span-2 lg:col-span-3 py-10 text-center text-sm text-muted-foreground">
-              NENHUMA LISTA CRIADA AINDA. USE O BOTÃO NOVA LISTA ACIMA.
-            </div>
-          )}
+          {lists.rows.length === 0 && <div className="sm:col-span-2 lg:col-span-3 py-10 text-center text-sm text-muted-foreground">NENHUMA LISTA CRIADA AINDA. USE O BOTÃO NOVA LISTA ACIMA.</div>}
         </div>
       </Panel>
 
@@ -244,12 +261,15 @@ function ShoppingPage() {
             <StatCard label="TOTAL ESTIMADO" value={formatCurrency(total)} tone="primary" />
           </div>
 
-          <Panel title={`ADICIONAR ITEM — ${current.name}`}>
-            <div className="grid gap-3 md:grid-cols-4">
-              <input value={name} onChange={(event) => setName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void addItem(); }} placeholder="PRODUTO" className="rounded-xl border border-input bg-background px-3 py-2.5 text-sm md:col-span-2" />
-              <input value={qty} onChange={(event) => setQty(event.target.value)} type="number" min="1" placeholder="QTD" className="rounded-xl border border-input bg-background px-3 py-2.5 text-sm" />
-              <input value={price} onChange={(event) => setPrice(event.target.value)} placeholder="PREÇO" inputMode="decimal" className="rounded-xl border border-input bg-background px-3 py-2.5 text-sm" />
-              <button type="button" onClick={() => void addItem()} className="gradient-primary label-caps rounded-xl px-4 py-2.5 text-[10px] text-primary-foreground md:col-span-2">ADICIONAR ITEM</button>
+          <Panel title={`LISTA ATUAL — ${current.name}`}>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="label-caps text-sm font-semibold">{current.name}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{currentItems.length} {currentItems.length === 1 ? "ITEM" : "ITENS"}</p>
+              </div>
+              <button type="button" onClick={openAddItem} aria-label="ADICIONAR ITEM À LISTA" title="ADICIONAR ITEM À LISTA" className="gradient-primary flex h-11 w-11 items-center justify-center rounded-full text-primary-foreground shadow-elegant transition-transform active:scale-95">
+                <Plus className="h-5 w-5" />
+              </button>
             </div>
           </Panel>
 
@@ -267,9 +287,7 @@ function ShoppingPage() {
                     </div>
                   ) : (
                     <div className="flex items-center gap-3">
-                      <button type="button" onClick={() => void toggle(item)} aria-label={item.done ? "DESMARCAR ITEM" : "MARCAR ITEM"} className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border", item.done ? "gradient-primary border-transparent text-primary-foreground" : "border-border text-transparent")}>
-                        <Check className="h-4 w-4" />
-                      </button>
+                      <button type="button" onClick={() => void toggle(item)} aria-label={item.done ? "DESMARCAR ITEM" : "MARCAR ITEM"} className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border", item.done ? "gradient-primary border-transparent text-primary-foreground" : "border-border text-transparent")}><Check className="h-4 w-4" /></button>
                       <div className="min-w-0 flex-1">
                         <p className={cn("label-caps text-[11px]", item.done && "line-through opacity-60")}>{item.name}</p>
                         <div className="mt-1 flex gap-2"><Tag>{item.qty} {item.unit}</Tag><Tag>{item.priority}</Tag></div>
@@ -281,7 +299,7 @@ function ShoppingPage() {
                   )}
                 </li>
               ))}
-              {currentItems.length === 0 && <li className="py-10 text-center text-sm text-muted-foreground">ESTA LISTA ESTÁ VAZIA. ADICIONE O PRIMEIRO ITEM ACIMA.</li>}
+              {currentItems.length === 0 && <li className="py-10 text-center text-sm text-muted-foreground">ESTA LISTA ESTÁ VAZIA. CLIQUE NO + PARA ADICIONAR O PRIMEIRO ITEM.</li>}
             </ul>
           </Panel>
         </>
