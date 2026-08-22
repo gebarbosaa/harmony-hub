@@ -1,6 +1,6 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
-import { Plus, LayoutDashboard, ArrowLeftRight, CalendarDays, LayoutGrid, Bell, RefreshCw, LogOut, Calendar, Wallet, CreditCard, Repeat, TrendingUp, ListChecks, ShoppingCart, Flame, FileText, KeyRound, Settings } from "lucide-react";
+import { Plus, LayoutDashboard, ArrowLeftRight, CalendarDays, LayoutGrid, Bell, RefreshCw, LogOut, Calendar, Wallet, CreditCard, Repeat, TrendingUp, ListChecks, ShoppingCart, Flame, FileText, Settings, Store } from "lucide-react";
 import { navGroups, quickAddOptions } from "./nav";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
@@ -12,23 +12,34 @@ const bottomItems = [{ label: "VISÃO", to: "/", icon: LayoutDashboard }, { labe
 const quickRoutes: Record<string, string> = { "DESPESA": "/fluxo?tipo=DESPESA", "RECEITA": "/fluxo?tipo=RECEITA", "TRANSFERÊNCIA": "/fluxo?tipo=TRANSFERENCIA", "CONTA": "/custos-fixos", "COMPRA PARCELADA": "/parcelados", "META": "/metas", "COMPROMISSO": "/agenda", "LEMBRETE": "/agenda", "ITEM DE LISTA": "/lista" };
 
 const moreGroups = [
-  { title: "FINANCEIRO", items: [{ label: "ORÇAMENTO", to: "/orcamento", icon: Wallet }, { label: "CARTÕES E FATURAS", to: "/faturas", icon: CreditCard }, { label: "CUSTOS FIXOS E ASSINATURAS", to: "/custos-fixos", icon: Repeat }, { label: "INVESTIMENTOS", to: "/investimentos", icon: TrendingUp }] },
-  { title: "CASA", items: [{ label: "TAREFAS", to: "/tarefas", icon: ListChecks }, { label: "ROTINA DA CASA", to: "/tarefas-domesticas", icon: Calendar }, { label: "MERCADO", to: "/mercado", icon: ShoppingCart }] },
-  { title: "ROTINA", items: [{ label: "HÁBITOS", to: "/habitos", icon: Flame }] },
-  { title: "ORGANIZAÇÃO", items: [{ label: "CALENDÁRIO", to: "/calendario", icon: CalendarDays }, { label: "ANOTAÇÕES", to: "/anotacoes", icon: FileText }] },
-  { title: "SISTEMA", items: [{ label: "CONFIGURAÇÕES", to: "/configuracoes", icon: Settings }] },
+  { title: "FINANCEIRO", description: "CONTROLE DO SEU DINHEIRO", icon: Wallet, items: [{ label: "ORÇAMENTO", to: "/orcamento", icon: Wallet }, { label: "CARTÕES E FATURAS", to: "/faturas", icon: CreditCard }, { label: "CUSTOS FIXOS E ASSINATURAS", to: "/custos-fixos", icon: Repeat }, { label: "INVESTIMENTOS", to: "/investimentos", icon: TrendingUp }] },
+  { title: "CASA", description: "ORGANIZE SUA ROTINA", icon: Store, items: [{ label: "TAREFAS", to: "/tarefas", icon: ListChecks }, { label: "ROTINA DA CASA", to: "/tarefas-domesticas", icon: Calendar }, { label: "MERCADO", to: "/mercado", icon: ShoppingCart }] },
+  { title: "ROTINA", description: "CUIDE DOS SEUS HÁBITOS", icon: Flame, items: [{ label: "HÁBITOS", to: "/habitos", icon: Flame }] },
+  { title: "ORGANIZAÇÃO", description: "TENHA TUDO EM ORDEM", icon: CalendarDays, items: [{ label: "CALENDÁRIO", to: "/calendario", icon: CalendarDays }, { label: "ANOTAÇÕES", to: "/anotacoes", icon: FileText }] },
+  { title: "SISTEMA", description: "CONFIGURAÇÕES DO APLICATIVO", icon: Settings, items: [{ label: "CONFIGURAÇÕES", to: "/configuracoes", icon: Settings }] },
 ];
 
 function MoreMenu({ className }: { className?: string }) {
   const [open, setOpen] = useState(false);
-  return <Dialog open={open} onOpenChange={setOpen}><DialogTrigger asChild><button type="button" aria-label="MAIS" className={cn("label-caps flex items-center gap-2 rounded-xl px-3 py-2 text-[11px] text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground", className)}><LayoutGrid className="h-4 w-4" />MAIS</button></DialogTrigger><DialogContent className="max-h-[80vh] max-w-lg overflow-y-auto"><DialogHeader><DialogTitle className="label-caps">MAIS OPÇÕES</DialogTitle></DialogHeader><div className="space-y-5">{moreGroups.map(group => <section key={group.title}><p className="label-caps mb-2 text-[10px] text-muted-foreground">{group.title}</p><div className="grid gap-2 sm:grid-cols-2">{group.items.map(item => <Link key={item.to} to={item.to as never} onClick={() => setOpen(false)} className="label-caps flex items-center gap-3 rounded-xl border border-border bg-secondary/50 px-3 py-3 text-[11px] text-foreground transition-colors hover:border-primary hover:text-primary"><item.icon className="h-4 w-4" />{item.label}</Link>)}</div></section>)}</div></DialogContent></Dialog>;
+  return <Dialog open={open} onOpenChange={setOpen}>
+    <DialogTrigger asChild><button type="button" aria-label="MAIS" className={cn("label-caps flex items-center gap-2 rounded-xl px-3 py-2 text-[11px] text-muted-foreground transition-all hover:bg-sidebar-accent hover:text-foreground", className)}><LayoutGrid className="h-4 w-4" />MAIS</button></DialogTrigger>
+    <DialogContent className="max-h-[86vh] max-w-2xl overflow-y-auto rounded-3xl p-5 sm:p-7">
+      <DialogHeader className="mb-2"><DialogTitle className="label-caps text-lg tracking-wide">MAIS</DialogTitle><p className="text-xs text-muted-foreground">ACESSO RÁPIDO A TODAS AS ÁREAS DO APLICATIVO.</p></DialogHeader>
+      <div className="space-y-6">
+        {moreGroups.map(group => <section key={group.title}>
+          <div className="mb-3 flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary"><group.icon className="h-5 w-5" /></div><div><p className="label-caps text-xs font-semibold">{group.title}</p><p className="text-[10px] text-muted-foreground">{group.description}</p></div></div>
+          <div className="grid grid-cols-2 gap-3">
+            {group.items.map(item => <Link key={item.to} to={item.to as never} onClick={() => setOpen(false)} className="group flex min-h-[78px] items-center gap-3 rounded-2xl border border-border bg-card p-3 transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:bg-primary/5 hover:shadow-sm">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-muted-foreground transition-colors group-hover:bg-primary/10 group-hover:text-primary"><item.icon className="h-5 w-5" /></span><span className="label-caps text-[10px] leading-tight text-foreground group-hover:text-primary">{item.label}</span>
+            </Link>)}
+          </div>
+        </section>)}
+      </div>
+    </DialogContent>
+  </Dialog>;
 }
 
-function QuickAdd({ className }: { className?: string }) {
-  const [open, setOpen] = useState(false); const navigate = useNavigate();
-  async function openRegistration(option: string) { setOpen(false); await navigate({ to: (quickRoutes[option] || "/fluxo") as never }); }
-  return <Dialog open={open} onOpenChange={setOpen}><DialogTrigger asChild><button type="button" aria-label="CADASTRO RÁPIDO" className={cn("gradient-primary shadow-elegant flex h-14 w-14 items-center justify-center rounded-full text-primary-foreground transition-transform active:scale-95", className)}><Plus className="h-7 w-7" strokeWidth={2.5} /></button></DialogTrigger><DialogContent className="max-w-md"><DialogHeader><DialogTitle className="label-caps text-base">CADASTRO RÁPIDO</DialogTitle></DialogHeader><div className="grid grid-cols-2 gap-2">{quickAddOptions.map(option => <button key={option.label} type="button" onClick={() => void openRegistration(option.label)} className="label-caps rounded-xl border border-border bg-secondary/60 px-3 py-3 text-center text-[11px] text-foreground transition-colors hover:border-primary hover:text-primary">{option.label}</button>)}</div></DialogContent></Dialog>;
-}
+function QuickAdd({ className }: { className?: string }) { const [open, setOpen] = useState(false); const navigate = useNavigate(); async function openRegistration(option: string) { setOpen(false); await navigate({ to: (quickRoutes[option] || "/fluxo") as never }); } return <Dialog open={open} onOpenChange={setOpen}><DialogTrigger asChild><button type="button" aria-label="CADASTRO RÁPIDO" className={cn("gradient-primary shadow-elegant flex h-14 w-14 items-center justify-center rounded-full text-primary-foreground transition-transform active:scale-95", className)}><Plus className="h-7 w-7" strokeWidth={2.5} /></button></DialogTrigger><DialogContent className="max-w-md"><DialogHeader><DialogTitle className="label-caps text-base">CADASTRO RÁPIDO</DialogTitle></DialogHeader><div className="grid grid-cols-2 gap-2">{quickAddOptions.map(option => <button key={option.label} type="button" onClick={() => void openRegistration(option.label)} className="label-caps rounded-xl border border-border bg-secondary/60 px-3 py-3 text-center text-[11px] text-foreground transition-colors hover:border-primary hover:text-primary">{option.label}</button>)}</div></DialogContent></Dialog>; }
 
 function MonthSelector() { const { month, setMonth } = useGlobalMonth(); const now = new Date(); const options = Array.from({ length: 25 }, (_, index) => { const date = new Date(now.getFullYear(), now.getMonth() - 12 + index, 1); return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`; }); return <label className="flex items-center gap-2 rounded-xl border border-border bg-background/70 px-3 py-2"><Calendar className="h-4 w-4 text-primary" /><span className="label-caps hidden text-[9px] text-muted-foreground sm:inline">MÊS</span><select aria-label="MÊS GLOBAL" value={month} onChange={e => setMonth(e.target.value)} className="max-w-[150px] bg-transparent text-[11px] font-semibold uppercase outline-none"><option value={month}>{formatGlobalMonth(month)}</option>{options.filter(option => option !== month).map(option => <option key={option} value={option}>{formatGlobalMonth(option)}</option>)}</select></label>; }
 
