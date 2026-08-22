@@ -1,162 +1,40 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, Check, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Plus, Pencil, Trash2, Check, X, ShoppingCart, History, ListChecks } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader, Panel, StatCard } from "@/components/ui-kit";
 import { formatCurrency } from "@/lib/finance";
 import { useHouseholdTable } from "@/hooks/use-household-data";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-
-export const Route = createFileRoute("/mercado")({
-  head: () => ({ meta: [{ title: "MERCADO — HARMONY HUB" }] }),
-  component: MarketPage,
-});
-
-type List = { id: string; name: string; archived: boolean; household_id: string };
-type Item = {
-  id: string; list_id: string; name: string; category: string; qty: number | null;
-  unit: string; price: number | null; priority: string; done: boolean; household_id: string;
-};
-
-function MarketPage() {
-  const lists = useHouseholdTable<List>("shopping_lists", "id,name,archived,household_id");
-  const items = useHouseholdTable<Item>("shopping_items", "id,list_id,name,category,qty,unit,price,priority,done,household_id");
-  const [active, setActive] = useState("");
-  const [showListForm, setShowListForm] = useState(false);
-  const [listName, setListName] = useState("");
-  const [product, setProduct] = useState("");
-  const [qty, setQty] = useState("1");
-  const [price, setPrice] = useState("");
-  const [editing, setEditing] = useState<string | null>(null);
-  const [editName, setEditName] = useState("");
-  const [editQty, setEditQty] = useState("1");
-  const [editPrice, setEditPrice] = useState("");
-
-  useEffect(() => {
-    if (!active && lists.rows.length) setActive(lists.rows[0].id);
-    if (active && !lists.rows.some((list) => list.id === active)) setActive(lists.rows[0]?.id ?? "");
-  }, [active, lists.rows]);
-
-  const current = lists.rows.find((list) => list.id === active) ?? lists.rows[0];
-  const currentItems = current ? items.rows.filter((item) => item.list_id === current.id) : [];
-  const total = currentItems.reduce((sum, item) => sum + Number(item.qty || 0) * Number(item.price || 0), 0);
-
-  function openNewList() { setListName(""); setShowListForm(true); }
-
-  async function createList() {
-    const clean = listName.trim();
-    if (!clean) return toast.error("INFORME O NOME DA LISTA");
-    if (lists.rows.some((list) => list.name.toLowerCase() === clean.toLowerCase())) return toast.error("ESSA LISTA JÁ EXISTE");
-    try {
-      const created = await lists.insert({ name: clean.toUpperCase(), archived: false });
-      await lists.refetch();
-      setActive(created.id);
-      setShowListForm(false);
-      toast.success("LISTA CRIADA");
-    } catch (error) { toast.error(error instanceof Error ? error.message : "NÃO FOI POSSÍVEL CRIAR A LISTA"); }
-  }
-
-  async function renameList(list: List) {
-    const value = window.prompt("NOVO NOME DA LISTA", list.name)?.trim();
-    if (!value || value.toLowerCase() === list.name.toLowerCase()) return;
-    try { await lists.update(list.id, { name: value.toUpperCase() }); await lists.refetch(); toast.success("LISTA RENOMEADA"); }
-    catch (error) { toast.error(error instanceof Error ? error.message : "NÃO FOI POSSÍVEL RENOMEAR"); }
-  }
-
-  async function removeList(list: List) {
-    if (!window.confirm(`EXCLUIR A LISTA “${list.name}” E SEUS ITENS?`)) return;
-    try {
-      for (const item of items.rows.filter((row) => row.list_id === list.id)) await items.remove(item.id);
-      await lists.remove(list.id);
-      await Promise.all([lists.refetch(), items.refetch()]);
-      toast.success("LISTA EXCLUÍDA");
-    } catch (error) { toast.error(error instanceof Error ? error.message : "NÃO FOI POSSÍVEL EXCLUIR"); }
-  }
-
-  async function addItem() {
-    if (!current) return toast.error("CRIE UMA LISTA PRIMEIRO");
-    if (!product.trim()) return toast.error("INFORME O PRODUTO");
-    try {
-      await items.insert({ list_id: current.id, name: product.trim().toUpperCase(), category: "OUTROS", qty: Number(qty) || 1, unit: "UN", price: Number(price.replace(",", ".")) || 0, priority: "MÉDIA", done: false });
-      await items.refetch(); setProduct(""); setQty("1"); setPrice(""); toast.success("ITEM ADICIONADO");
-    } catch (error) { toast.error(error instanceof Error ? error.message : "NÃO FOI POSSÍVEL ADICIONAR"); }
-  }
-
-  function startEdit(item: Item) { setEditing(item.id); setEditName(item.name); setEditQty(String(item.qty ?? 1)); setEditPrice(String(item.price ?? 0)); }
-
-  async function saveEdit(item: Item) {
-    if (!editName.trim()) return toast.error("INFORME O PRODUTO");
-    try { await items.update(item.id, { name: editName.trim().toUpperCase(), qty: Number(editQty) || 1, price: Number(editPrice.replace(",", ".")) || 0 }); await items.refetch(); setEditing(null); toast.success("ITEM EDITADO"); }
-    catch (error) { toast.error(error instanceof Error ? error.message : "NÃO FOI POSSÍVEL EDITAR"); }
-  }
-
-  async function removeItem(item: Item) {
-    if (!window.confirm(`EXCLUIR “${item.name}”?`)) return;
-    try { await items.remove(item.id); await items.refetch(); toast.success("ITEM EXCLUÍDO"); }
-    catch (error) { toast.error(error instanceof Error ? error.message : "NÃO FOI POSSÍVEL EXCLUIR"); }
-  }
-
-  async function toggle(item: Item) {
-    try { await items.update(item.id, { done: !item.done }); await items.refetch(); }
-    catch (error) { toast.error(error instanceof Error ? error.message : "NÃO FOI POSSÍVEL ATUALIZAR"); }
-  }
-
-  return (
-    <div className="space-y-5 pb-8">
-      <PageHeader
-        title="MERCADO"
-        subtitle="ESCOLHA UMA LISTA PARA VER, ADICIONAR, EDITAR OU EXCLUIR SEUS ITENS."
-        action={<button type="button" onClick={openNewList} aria-label="CRIAR NOVA LISTA" title="CRIAR NOVA LISTA" className="gradient-primary flex h-11 w-11 items-center justify-center rounded-full text-primary-foreground shadow-lg"><Plus className="h-5 w-5" /></button>}
-      />
-
-      {showListForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onMouseDown={(e) => { if (e.currentTarget === e.target) setShowListForm(false); }}>
-          <div className="w-full max-w-md rounded-2xl border border-border bg-background p-5 shadow-xl">
-            <div className="mb-4 flex items-center justify-between"><div><h2 className="label-caps text-sm font-semibold">NOVA LISTA</h2><p className="mt-1 text-xs text-muted-foreground">CRIE UMA LISTA SEPARADA.</p></div><button type="button" onClick={() => setShowListForm(false)} className="rounded-lg p-2 hover:bg-muted"><X className="h-4 w-4" /></button></div>
-            <input autoFocus value={listName} onChange={(e) => setListName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void createList(); }} placeholder="NOME DA LISTA" className="mb-3 w-full rounded-xl border border-input bg-background px-3 py-3 text-sm" />
-            <button type="button" onClick={() => void createList()} className="gradient-primary w-full rounded-xl px-4 py-3 text-[11px] text-primary-foreground">CRIAR LISTA</button>
-          </div>
-        </div>
-      )}
-
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-        <StatCard label="LISTAS" value={String(lists.rows.length)} tone="info" />
-        <StatCard label="ITENS" value={String(currentItems.length)} tone="primary" />
-        <StatCard label="TOTAL" value={formatCurrency(total)} tone="success" />
-      </div>
-
-      <Panel title="LISTAS">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {lists.rows.map((list) => {
-            const count = items.rows.filter((item) => item.list_id === list.id).length;
-            return <div key={list.id} className={cn("rounded-2xl border p-4", current?.id === list.id ? "border-primary bg-primary/5" : "border-border")}>
-              <button type="button" onClick={() => setActive(list.id)} className="w-full text-left"><p className="label-caps text-sm font-semibold">{list.name}</p><p className="mt-2 text-xs text-muted-foreground">{count} {count === 1 ? "ITEM" : "ITENS"}</p></button>
-              <div className="mt-3 flex gap-2 border-t border-border pt-3"><button type="button" onClick={() => renameList(list)} className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-[10px] label-caps"><Pencil className="h-3.5 w-3.5" /> EDITAR</button><button type="button" onClick={() => void removeList(list)} className="flex items-center gap-1 rounded-lg border border-destructive/30 px-2.5 py-1.5 text-[10px] label-caps text-destructive"><Trash2 className="h-3.5 w-3.5" /> EXCLUIR</button></div>
-            </div>;
-          })}
-          {!lists.rows.length && <div className="sm:col-span-2 lg:col-span-3 py-10 text-center text-sm text-muted-foreground">NENHUMA LISTA. CLIQUE NO + PARA CRIAR.</div>}
-        </div>
-      </Panel>
-
-      {current && <>
-        <Panel title={`ADICIONAR ITEM — ${current.name}`}>
-          <div className="grid gap-3 md:grid-cols-4">
-            <input value={product} onChange={(e) => setProduct(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void addItem(); }} placeholder="PRODUTO" className="rounded-xl border border-input bg-background px-3 py-2.5 text-sm md:col-span-2" />
-            <input value={qty} onChange={(e) => setQty(e.target.value)} type="number" min="1" placeholder="QTD" className="rounded-xl border border-input bg-background px-3 py-2.5 text-sm" />
-            <input value={price} onChange={(e) => setPrice(e.target.value)} inputMode="decimal" placeholder="PREÇO" className="rounded-xl border border-input bg-background px-3 py-2.5 text-sm" />
-            <button type="button" onClick={() => void addItem()} className="gradient-primary label-caps rounded-xl px-4 py-2.5 text-[10px] text-primary-foreground md:col-span-2">ADICIONAR ITEM</button>
-          </div>
-        </Panel>
-
-        <Panel title={`ITENS — ${current.name}`}>
-          <ul className="divide-y divide-border">
-            {currentItems.map((item) => <li key={item.id} className="py-4">
-              {editing === item.id ? <div className="grid gap-2 md:grid-cols-[1fr_100px_140px_auto_auto]"><input value={editName} onChange={(e) => setEditName(e.target.value)} className="rounded-lg border border-input bg-background px-3 py-2 text-sm" /><input value={editQty} onChange={(e) => setEditQty(e.target.value)} type="number" min="1" className="rounded-lg border border-input bg-background px-3 py-2 text-sm" /><input value={editPrice} onChange={(e) => setEditPrice(e.target.value)} inputMode="decimal" className="rounded-lg border border-input bg-background px-3 py-2 text-sm" /><button type="button" onClick={() => void saveEdit(item)} className="rounded-lg bg-primary px-3 py-2 text-[10px] label-caps text-primary-foreground">SALVAR</button><button type="button" onClick={() => setEditing(null)} className="rounded-lg border border-border px-3 py-2 text-[10px] label-caps">CANCELAR</button></div> : <div className="flex items-center gap-3"><button type="button" onClick={() => void toggle(item)} className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border", item.done ? "gradient-primary border-transparent text-primary-foreground" : "border-border text-transparent")}><Check className="h-4 w-4" /></button><div className="min-w-0 flex-1"><p className={cn("label-caps text-[11px]", item.done && "line-through opacity-60")}>{item.name}</p><p className="mt-1 text-xs text-muted-foreground">{item.qty} UN · {formatCurrency(Number(item.price || 0))}</p></div><span className="hidden text-sm font-semibold sm:block">{formatCurrency(Number(item.qty || 0) * Number(item.price || 0))}</span><button type="button" onClick={() => startEdit(item)} title="EDITAR" className="rounded-lg border border-border p-2"><Pencil className="h-4 w-4" /></button><button type="button" onClick={() => void removeItem(item)} title="EXCLUIR" className="rounded-lg border border-destructive/30 p-2 text-destructive"><Trash2 className="h-4 w-4" /></button></div>}
-            </li>)}
-            {!currentItems.length && <li className="py-10 text-center text-sm text-muted-foreground">NENHUM ITEM NESTA LISTA.</li>}
-          </ul>
-        </Panel>
-      </>}
-    </div>
-  );
-}
+export const Route=createFileRoute("/mercado")({head:()=>({meta:[{title:"MERCADO — HARMONY HUB"}]}),component:MarketPage});
+type List={id:string;name:string;archived:boolean;household_id:string;completed_at:string|null;transaction_id:string|null;created_at:string};
+type Item={id:string;list_id:string;name:string;category:string;qty:number|null;unit:string;price:number|null;actual_price:number|null;actual_qty:number|null;priority:string;done:boolean;household_id:string};
+type Tx={id:string;amount:number;pay_method:string;date:string;description:string};
+const money=(v:string)=>Number(v.replace(/\./g,"").replace(",","."))||0;
+const sector=(n:string)=>{n=n.toUpperCase();if(/ARROZ|FEIJ|MACARR|FARINHA|AÇÚCAR|CAFÉ|LEITE|ÓLEO|MOLHO|BISCOITO/.test(n))return"MERCEARIA";if(/CARNE|FRANGO|PEIXE|LINGUIÇA/.test(n))return"AÇOUGUE";if(/QUEIJO|IOGURTE|MANTEIGA|REQUEIJÃO/.test(n))return"LATICÍNIOS";if(/MAÇÃ|BANANA|LARANJA|FRUTA|VERDURA|LEGUME|ALFACE|TOMATE|CEBOLA/.test(n))return"HORTIFRUTI";if(/SABÃO|DETERGENTE|LIMPEZA|ESPONJA|DESINFETANTE/.test(n))return"LIMPEZA";if(/SHAMPOO|SABONETE|CREME|HIGIENE|PASTA DE DENTE/.test(n))return"HIGIENE";return"OUTROS"};
+function MarketPage(){
+ const lists=useHouseholdTable<List>("shopping_lists","id,name,archived,completed_at,transaction_id,created_at");const items=useHouseholdTable<Item>("shopping_items","id,list_id,name,category,qty,unit,price,actual_price,actual_qty,priority,done,household_id");const txs=useHouseholdTable<Tx>("transactions","id,amount,pay_method,date,description");
+ const [tab,setTab]=useState<"planning"|"market"|"history">("planning"),[active,setActive]=useState(""),[showList,setShowList]=useState(false),[listName,setListName]=useState(""),[product,setProduct]=useState(""),[qty,setQty]=useState("1"),[price,setPrice]=useState(""),[editing,setEditing]=useState<string|null>(null),[editName,setEditName]=useState(""),[editQty,setEditQty]=useState("1"),[editPrice,setEditPrice]=useState(""),[finalize,setFinalize]=useState(false),[pay,setPay]=useState("ALIMENTACAO"),[responsible,setResponsible]=useState("AMBAS"),[finalValue,setFinalValue]=useState("");
+ const activeLists=lists.rows.filter(l=>!l.archived),history=lists.rows.filter(l=>l.archived).sort((a,b)=>new Date(b.completed_at||b.created_at).getTime()-new Date(a.completed_at||a.created_at).getTime());
+ useEffect(()=>{if(!active&&activeLists.length)setActive(activeLists[0].id);if(active&&!activeLists.some(l=>l.id===active))setActive(activeLists[0]?.id||"")},[active,activeLists]);
+ const current=activeLists.find(l=>l.id===active), currentItems=current?items.rows.filter(i=>i.list_id===current.id):[], estimated=currentItems.reduce((s,i)=>s+Number(i.qty||0)*Number(i.price||0),0), real=currentItems.filter(i=>i.done).reduce((s,i)=>s+Number(i.actual_qty??i.qty??0)*Number(i.actual_price||0),0), bought=currentItems.filter(i=>i.done).length, percent=estimated?(real-estimated)/estimated*100:0;
+ const grouped=useMemo(()=>{const m:Record<string,Item[]>={};currentItems.forEach(i=>(m[i.category||"OUTROS"]??=[]).push(i));return m},[currentItems]);
+ async function createList(){const n=listName.trim();if(!n)return toast.error("INFORME O NOME DA LISTA");try{const x=await lists.insert({name:n.toUpperCase(),archived:false});setActive(x.id);setShowList(false);setListName("");toast.success("LISTA CRIADA")}catch(e){toast.error(e instanceof Error?e.message:"ERRO AO CRIAR LISTA")}}
+ async function addItem(){if(!current)return toast.error("CRIE UMA LISTA PRIMEIRO");if(!product.trim())return toast.error("INFORME O PRODUTO");try{await items.insert({list_id:current.id,name:product.trim().toUpperCase(),category:sector(product),qty:Number(qty)||1,unit:"UN",price:money(price),priority:"MÉDIA",done:false,actual_price:null,actual_qty:null});setProduct("");setQty("1");setPrice("");toast.success("ITEM ADICIONADO")}catch(e){toast.error(e instanceof Error?e.message:"ERRO AO ADICIONAR")}}
+ function edit(i:Item){setEditing(i.id);setEditName(i.name);setEditQty(String(i.qty??1));setEditPrice(String(i.price??0))}
+ async function saveEdit(i:Item){try{await items.update(i.id,{name:editName.trim().toUpperCase(),category:sector(editName),qty:Number(editQty)||1,price:money(editPrice)});setEditing(null)}catch(e){toast.error(e instanceof Error?e.message:"ERRO AO EDITAR")}}
+ async function toggle(i:Item){try{const done=!i.done;await items.update(i.id,{done,actual_qty:done?(i.actual_qty??i.qty??1):null})}catch(e){toast.error(e instanceof Error?e.message:"ERRO AO ATUALIZAR")}}
+ async function realEdit(i:Item,k:"actual_qty"|"actual_price",v:string){try{await items.update(i.id,{[k]:k==="actual_qty"?Number(v)||0:money(v)})}catch(e){toast.error(e instanceof Error?e.message:"ERRO AO SALVAR")}}
+ async function removeItem(i:Item){if(!confirm(`EXCLUIR “${i.name}”?`))return;try{await items.remove(i.id)}catch(e){toast.error(e instanceof Error?e.message:"ERRO AO EXCLUIR")}}
+ async function removeList(l:List){if(!confirm(`EXCLUIR A LISTA “${l.name}”?`))return;try{for(const i of items.rows.filter(x=>x.list_id===l.id))await items.remove(i.id);await lists.remove(l.id)}catch(e){toast.error(e instanceof Error?e.message:"ERRO AO EXCLUIR LISTA")}}
+ async function finish(){const amount=money(finalValue||String(real));if(!current||bought===0||amount<=0)return toast.error("O TOTAL REAL PRECISA SER MAIOR QUE R$ 0,00");try{const {error}=await supabase.rpc("finalize_shopping_list",{p_list_id:current.id,p_pay_method:pay,p_responsible:responsible,p_amount_override:amount});if(error)throw error;toast.success("COMPRA FINALIZADA — LANÇAMENTO CRIADO NO FLUXO MENSAL");setFinalize(false);setTab("history");await Promise.all([lists.refetch(),items.refetch(),txs.refetch()])}catch(e){toast.error(e instanceof Error?e.message:"ERRO AO FINALIZAR COMPRA")}}
+ async function duplicate(l:List){try{const x=await lists.insert({name:l.name,archived:false});for(const i of items.rows.filter(i=>i.list_id===l.id))await items.insert({list_id:x.id,name:i.name,category:i.category,qty:i.qty,unit:i.unit,price:i.price,priority:i.priority,done:false,actual_price:null,actual_qty:null});setActive(x.id);setTab("planning");toast.success("LISTA DUPLICADA")}catch(e){toast.error(e instanceof Error?e.message:"ERRO AO DUPLICAR")}}
+ return <div className="space-y-5 pb-36"><PageHeader title="MERCADO" subtitle="PLANEJE, COMPRE AO VIVO E CONSULTE SUAS COMPRAS FINALIZADAS." action={<button onClick={()=>setShowList(true)} className="gradient-primary flex h-11 w-11 items-center justify-center rounded-full text-primary-foreground"><Plus className="h-5 w-5"/></button>}/>
+ <div className="grid grid-cols-3 rounded-2xl border bg-muted/30 p-1">{[["planning","PLANEJAMENTO",ListChecks],["market","MODO MERCADO",ShoppingCart],["history","HISTÓRICO",History]].map(([id,label,I])=><button key={id as string} onClick={()=>setTab(id as typeof tab)} className={cn("flex items-center justify-center gap-2 rounded-xl px-2 py-3 text-[10px] label-caps",tab===id&&"bg-background text-primary shadow-sm")}><I className="h-4 w-4"/>{label as string}</button>)}</div>
+ {showList&&<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"><div className="w-full max-w-md rounded-2xl bg-background p-5"><div className="mb-4 flex justify-between"><b className="label-caps">NOVA LISTA</b><button onClick={()=>setShowList(false)}><X/></button></div><input autoFocus value={listName} onChange={e=>setListName(e.target.value)} placeholder="NOME DA LISTA" className="mb-3 w-full rounded-xl border px-3 py-3"/><button onClick={()=>void createList()} className="gradient-primary w-full rounded-xl px-4 py-3 text-xs text-primary-foreground">CRIAR LISTA</button></div></div>}
+ {tab==="planning"&&<><div className="grid grid-cols-2 gap-3 lg:grid-cols-3"><StatCard label="LISTAS ATIVAS" value={String(activeLists.length)} tone="info"/><StatCard label="ITENS" value={String(currentItems.length)} tone="primary"/><StatCard label="TOTAL ESTIMADO" value={formatCurrency(estimated)} tone="success"/></div><Panel title="LISTAS"><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{activeLists.map(l=><div key={l.id} className={cn("rounded-2xl border p-4",current?.id===l.id&&"border-primary bg-primary/5")}><button onClick={()=>setActive(l.id)} className="w-full text-left"><b>{l.name}</b><p className="text-xs text-muted-foreground">{items.rows.filter(i=>i.list_id===l.id).length} ITENS</p></button><div className="mt-3 flex gap-2"><button disabled={!items.rows.some(i=>i.list_id===l.id)} onClick={()=>{setActive(l.id);setTab("market")}} className="flex-1 rounded-lg bg-primary px-2 py-2 text-[10px] text-primary-foreground disabled:opacity-40">IR AO MERCADO</button><button onClick={()=>void removeList(l)} className="rounded-lg border p-2 text-destructive"><Trash2 className="h-4 w-4"/></button></div></div>)}</div></Panel>{current&&<><Panel title={`ADICIONAR ITEM — ${current.name}`}><div className="grid gap-3 md:grid-cols-4"><input value={product} onChange={e=>setProduct(e.target.value)} placeholder="PRODUTO" className="rounded-xl border px-3 py-2.5 md:col-span-2"/><input value={qty} onChange={e=>setQty(e.target.value)} type="number" min="1" placeholder="QTD" className="rounded-xl border px-3 py-2.5"/><input value={price} onChange={e=>setPrice(e.target.value)} placeholder="PREÇO ESTIMADO" className="rounded-xl border px-3 py-2.5"/><button onClick={()=>void addItem()} className="gradient-primary rounded-xl px-4 py-2.5 text-[10px] text-primary-foreground">ADICIONAR ITEM</button></div></Panel><Panel title={`ITENS — ${current.name}`}><ul className="divide-y">{currentItems.map(i=><li key={i.id} className="py-3">{editing===i.id?<div className="grid gap-2 md:grid-cols-[1fr_100px_140px_auto]"><input value={editName} onChange={e=>setEditName(e.target.value)} className="rounded-lg border px-3 py-2"/><input value={editQty} onChange={e=>setEditQty(e.target.value)} className="rounded-lg border px-3 py-2"/><input value={editPrice} onChange={e=>setEditPrice(e.target.value)} className="rounded-lg border px-3 py-2"/><button onClick={()=>void saveEdit(i)} className="rounded-lg bg-primary px-3 py-2 text-xs text-primary-foreground">SALVAR</button></div>:<div className="flex items-center gap-3"><div className="min-w-0 flex-1"><b>{i.name}</b><p className="text-xs text-muted-foreground">{i.qty} {i.unit} · {formatCurrency(Number(i.price||0))} · {i.category}</p></div><button onClick={()=>edit(i)} className="rounded-lg border p-2"><Pencil className="h-4 w-4"/></button><button onClick={()=>void removeItem(i)} className="rounded-lg border p-2 text-destructive"><Trash2 className="h-4 w-4"/></button></div>}</li>)}</ul></Panel></>}</>}
+ {tab==="market"&&current&&<><div className="sticky top-0 z-20 rounded-2xl border border-orange-300 bg-orange-500 p-4 text-white"><div className="flex items-center justify-between"><div><p className="text-xs">MODO MERCADO</p><b className="text-lg">{current.name}</b></div><b>{bought} de {currentItems.length} itens</b></div></div><Panel title="ITENS POR SETOR"><div className="space-y-4">{Object.entries(grouped).map(([cat,rows])=><div key={cat}><p className="mb-2 text-[10px] font-semibold text-muted-foreground">{cat}</p>{rows.map(i=>{const sub=Number(i.actual_qty??i.qty??0)*Number(i.actual_price||0);return <div key={i.id} className="mb-2 rounded-xl border p-3"><button onClick={()=>void toggle(i)} className="flex w-full items-center gap-3 text-left"><span className={cn("flex h-7 w-7 items-center justify-center rounded-lg border",i.done&&"bg-primary text-primary-foreground")}>{i.done&&<Check className="h-4 w-4"/>}</span><b className="flex-1">{i.name}</b><span className="text-xs text-muted-foreground">{i.qty} {i.unit}</span></button>{i.done&&<div className="mt-3 grid gap-2 sm:grid-cols-3"><label className="text-[10px]">QTD REAL<input value={i.actual_qty??i.qty??""} onChange={e=>void realEdit(i,"actual_qty",e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2"/></label><label className="text-[10px]">PREÇO REAL<input value={i.actual_price??""} onChange={e=>void realEdit(i,"actual_price",e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2" placeholder="0,00"/></label><div><p className="text-[10px]">SUBTOTAL</p><b>{formatCurrency(sub)}</b></div></div>}</div>})}</div></div></Panel><div className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 p-3 backdrop-blur"><div className="mx-auto flex max-w-4xl items-center justify-between gap-3"><div><p className="text-[10px] text-muted-foreground">TOTAL ESTIMADO</p><b>{formatCurrency(estimated)}</b><p className={cn("text-[10px] font-semibold",percent>0?"text-danger":"text-success")}>TOTAL REAL {formatCurrency(real)} · {percent>0?`▲ ${percent.toFixed(1)}% ACIMA`:`✓ ${Math.abs(percent).toFixed(1)}% DENTRO`}</p></div><button disabled={bought===0||real<=0} onClick={()=>{setFinalValue(real.toFixed(2));setFinalize(true)}} className="gradient-primary rounded-xl px-4 py-3 text-xs font-bold text-primary-foreground disabled:opacity-40">FINALIZAR COMPRA</button></div></div></>}
+ {tab==="history"&&<Panel title="COMPRAS FINALIZADAS"><div className="space-y-3">{history.map(l=>{const t=txs.rows.find(x=>x.id===l.transaction_id);return <div key={l.id} className="rounded-2xl border p-4"><div className="flex justify-between"><div><b>{l.name}</b><p className="text-xs text-muted-foreground">{l.completed_at?new Date(l.completed_at).toLocaleString("pt-BR"):""}</p></div><b>{formatCurrency(Number(t?.amount||0))}</b></div><div className="mt-3 flex items-center justify-between"><span className="rounded-full bg-success/10 px-2 py-1 text-[10px] text-success">✓ LANÇADO NO FLUXO · {t?.pay_method||""}</span><button onClick={()=>void duplicate(l)} className="rounded-lg border px-3 py-2 text-[10px]">DUPLICAR LISTA</button></div></div>})}{!history.length&&<p className="py-10 text-center text-sm text-muted-foreground">NENHUMA COMPRA FINALIZADA.</p>}</div></Panel>}
+ {finalize&&current&&<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"><div className="w-full max-w-md rounded-2xl bg-background p-5"><div className="mb-4 flex justify-between"><b>FINALIZAR COMPRA</b><button onClick={()=>setFinalize(false)}><X/></button></div><label className="mb-3 block text-xs">FORMA DE PAGAMENTO<select value={pay} onChange={e=>setPay(e.target.value)} className="mt-1 w-full rounded-xl border px-3 py-3"><option value="ALIMENTACAO">CARTÃO DE ALIMENTAÇÃO</option><option value="PIX">PIX</option><option value="CREDITO">CARTÃO DE CRÉDITO</option></select></label><label className="mb-3 block text-xs">RESPONSÁVEL<select value={responsible} onChange={e=>setResponsible(e.target.value)} className="mt-1 w-full rounded-xl border px-3 py-3"><option>AMBAS</option><option>MARIA</option><option>LUCAS</option></select></label><label className="block text-xs">TOTAL REAL<input value={finalValue} onChange={e=>setFinalValue(e.target.value)} className="mt-1 w-full rounded-xl border px-3 py-3 text-lg font-bold"/></label><button onClick={()=>void finish()} className="gradient-primary mt-4 w-full rounded-xl px-4 py-3 text-xs font-bold text-primary-foreground">CONFIRMAR E LANÇAR NO FLUXO</button></div></div>}
+ </div>}
