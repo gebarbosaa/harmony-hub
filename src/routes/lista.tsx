@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Check, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Check, Pencil, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader, Panel, StatCard, Tag } from "@/components/ui-kit";
 import { formatCurrency } from "@/lib/finance";
@@ -180,17 +180,6 @@ function ShoppingPage() {
       <PageHeader
         title="LISTA DE COMPRAS"
         subtitle="CLIQUE EM UMA LISTA PARA ABRIR TODOS OS ITENS. ADICIONE, EDITE OU EXCLUA O QUE PRECISAR."
-        action={
-          <button
-            type="button"
-            onClick={openCreateList}
-            aria-label="CRIAR NOVA LISTA"
-            title="CRIAR NOVA LISTA"
-            className="gradient-primary flex h-11 w-11 items-center justify-center rounded-full text-primary-foreground shadow-lg"
-          >
-            <Plus className="h-5 w-5" />
-          </button>
-        }
       />
 
       {showListForm && (
@@ -217,6 +206,11 @@ function ShoppingPage() {
       )}
 
       <Panel title="SUAS LISTAS — CLIQUE PARA ABRIR">
+        <div className="mb-4 flex justify-end">
+          <button type="button" onClick={openCreateList} className="gradient-primary label-caps rounded-xl px-4 py-2.5 text-[10px] text-primary-foreground">
+            NOVA LISTA
+          </button>
+        </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {lists.rows.map((list) => {
             const listItems = items.rows.filter((item) => item.list_id === list.id);
@@ -234,7 +228,11 @@ function ShoppingPage() {
               </div>
             );
           })}
-          {lists.rows.length === 0 && <div className="sm:col-span-2 lg:col-span-3 py-10 text-center text-sm text-muted-foreground">NENHUMA LISTA. CLIQUE NO BOTÃO + ACIMA PARA CRIAR A PRIMEIRA.</div>}
+          {lists.rows.length === 0 && (
+            <div className="sm:col-span-2 lg:col-span-3 py-10 text-center text-sm text-muted-foreground">
+              NENHUMA LISTA CRIADA AINDA. USE O BOTÃO NOVA LISTA ACIMA.
+            </div>
+          )}
         </div>
       </Panel>
 
@@ -251,7 +249,7 @@ function ShoppingPage() {
               <input value={name} onChange={(event) => setName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void addItem(); }} placeholder="PRODUTO" className="rounded-xl border border-input bg-background px-3 py-2.5 text-sm md:col-span-2" />
               <input value={qty} onChange={(event) => setQty(event.target.value)} type="number" min="1" placeholder="QTD" className="rounded-xl border border-input bg-background px-3 py-2.5 text-sm" />
               <input value={price} onChange={(event) => setPrice(event.target.value)} placeholder="PREÇO" inputMode="decimal" className="rounded-xl border border-input bg-background px-3 py-2.5 text-sm" />
-              <button onClick={() => void addItem()} className="gradient-primary label-caps rounded-xl px-4 py-2.5 text-[10px] text-primary-foreground md:col-span-2">ADICIONAR ITEM</button>
+              <button type="button" onClick={() => void addItem()} className="gradient-primary label-caps rounded-xl px-4 py-2.5 text-[10px] text-primary-foreground md:col-span-2">ADICIONAR ITEM</button>
             </div>
           </Panel>
 
@@ -269,7 +267,7 @@ function ShoppingPage() {
                     </div>
                   ) : (
                     <div className="flex items-center gap-3">
-                      <button onClick={() => void toggle(item)} className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border", item.done ? "gradient-primary border-transparent text-primary-foreground" : "border-border text-transparent")}>
+                      <button type="button" onClick={() => void toggle(item)} aria-label={item.done ? "DESMARCAR ITEM" : "MARCAR ITEM"} className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border", item.done ? "gradient-primary border-transparent text-primary-foreground" : "border-border text-transparent")}>
                         <Check className="h-4 w-4" />
                       </button>
                       <div className="min-w-0 flex-1">
@@ -277,8 +275,8 @@ function ShoppingPage() {
                         <div className="mt-1 flex gap-2"><Tag>{item.qty} {item.unit}</Tag><Tag>{item.priority}</Tag></div>
                       </div>
                       <span className="hidden text-sm font-semibold sm:block">{formatCurrency(Number(item.qty) * Number(item.price))}</span>
-                      <button type="button" onClick={() => startEdit(item)} title="EDITAR ITEM" className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted hover:text-foreground"><Pencil className="h-4 w-4" /></button>
-                      <button type="button" onClick={() => void deleteItem(item)} title="EXCLUIR ITEM" className="rounded-lg border border-destructive/30 p-2 text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></button>
+                      <button type="button" onClick={() => startEdit(item)} title="EDITAR ITEM" aria-label="EDITAR ITEM" className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted hover:text-foreground"><Pencil className="h-4 w-4" /></button>
+                      <button type="button" onClick={() => void deleteItem(item)} title="EXCLUIR ITEM" aria-label="EXCLUIR ITEM" className="rounded-lg border border-destructive/30 p-2 text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></button>
                     </div>
                   )}
                 </li>
@@ -289,7 +287,10 @@ function ShoppingPage() {
         </>
       ) : (
         <Panel title="COMECE UMA LISTA">
-          <p className="py-6 text-center text-sm text-muted-foreground">CLIQUE NO BOTÃO + PARA CRIAR UMA LISTA DIFERENTE.</p>
+          <div className="py-6 text-center">
+            <p className="mb-4 text-sm text-muted-foreground">CRIE UMA LISTA PARA COMEÇAR A ADICIONAR SEUS ITENS.</p>
+            <button type="button" onClick={openCreateList} className="gradient-primary label-caps rounded-xl px-4 py-2.5 text-[10px] text-primary-foreground">NOVA LISTA</button>
+          </div>
         </Panel>
       )}
     </div>
