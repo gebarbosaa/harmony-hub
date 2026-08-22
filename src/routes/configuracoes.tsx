@@ -2,102 +2,40 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { PageHeader, Panel, Tag } from "@/components/ui-kit";
-import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useHouseholdMembers } from "@/hooks/use-household-members";
 import { useHouseholdTable } from "@/hooks/use-household-data";
 import { supabase } from "@/integrations/supabase/client";
 
-export const Route = createFileRoute("/configuracoes")({
-  head: () => ({ meta: [{ title: "CONFIGURAÇÕES — MULTICAP" }, { name: "description", content: "Perfil, membros, cartões, categorias, formas de pagamento e gestão de dados." }] }),
-  component: SettingsPage,
-});
-
-const CATEGORIES = ["MORADIA", "ALIMENTAÇÃO", "TRANSPORTE", "LAZER", "SAÚDE", "IMPOSTOS", "RENDA"];
-const PAYMENT_TYPES = [
-  { value: "PIX", label: "PIX", description: "Pagamento instantâneo" },
-  { value: "DEBITO", label: "DÉBITO", description: "Conta corrente" },
-  { value: "CREDITO", label: "CRÉDITO", description: "Cartão de crédito" },
-  { value: "ALIMENTACAO", label: "REFEIÇÃO / ALIMENTAÇÃO", description: "Vale-refeição ou alimentação" },
-  { value: "DINHEIRO", label: "DINHEIRO", description: "Pagamento em espécie" },
-  { value: "BOLETO", label: "BOLETO", description: "Cobrança bancária" },
-  { value: "TRANSFERENCIA", label: "TRANSFERÊNCIA", description: "Transferência bancária" },
-];
-
-type CardRow = { id: string; name: string; brand: string | null; last4: string | null; credit_limit: number; close_day: number; due_day: number; household_id: string };
-
-function SettingsPage() {
-  const { user, profile, refreshProfile } = useAuth();
-  const { data: members = [], isLoading: membersLoading } = useHouseholdMembers();
-  const cards = useHouseholdTable<CardRow>("cards", "*", "created_at");
-  const [name, setName] = useState(profile?.name ?? user?.user_metadata?.full_name ?? "");
-  const [confirm, setConfirm] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [dangerAction, setDangerAction] = useState<string | null>(null);
-  const [cardName, setCardName] = useState("");
-  const [cardBrand, setCardBrand] = useState("");
-  const [last4, setLast4] = useState("");
-  const [limit, setLimit] = useState("");
-  const [closeDay, setCloseDay] = useState("28");
-  const [dueDay, setDueDay] = useState("5");
-  const [showCardForm, setShowCardForm] = useState(false);
-
-  async function saveProfile() {
-    if (!user || !name.trim()) return toast.error("INFORME SEU NOME");
-    setSaving(true);
-    try { const { error } = await supabase.from("profiles").update({ name: name.trim() }).eq("id", user.id); if (error) throw error; await refreshProfile(); toast.success("PERFIL ATUALIZADO"); }
-    catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível atualizar o perfil"); }
-    finally { setSaving(false); }
-  }
-
-  async function addCard() {
-    if (!cardName.trim()) return toast.error("INFORME O NOME DO CARTÃO");
-    if (last4 && !/^\d{4}$/.test(last4)) return toast.error("OS ÚLTIMOS 4 DÍGITOS DEVEM TER 4 NÚMEROS");
-    try {
-      await cards.insert({ name: cardName.trim(), brand: cardBrand.trim() || null, last4: last4 || null, credit_limit: Number(limit.replace(",", ".")) || 0, close_day: Number(closeDay), due_day: Number(dueDay) });
-      setCardName(""); setCardBrand(""); setLast4(""); setLimit(""); setCloseDay("28"); setDueDay("5"); setShowCardForm(false); toast.success("CARTÃO CADASTRADO");
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível cadastrar o cartão"); }
-  }
-
-  async function runDangerAction(action: string) {
-    if (confirm !== "EXCLUIR" || dangerAction) return;
-    const actionMap: Record<string, string> = { "LIMPAR LANÇAMENTOS": "clear_transactions", "EXCLUIR TODOS OS DADOS": "delete_all_data", "RESTAURAR FÁBRICA": "factory_reset" };
-    const backendAction = actionMap[action]; if (!backendAction) return toast.info("ENCERRAMENTO DA CONTA AINDA NÃO ESTÁ DISPONÍVEL NESTA ETAPA");
-    setDangerAction(action);
-    try { const { data, error } = await supabase.rpc("manage_household_data", { p_action: backendAction, p_confirmation: confirm }); if (error) throw error; const messages: Record<string,string> = { TRANSACTIONS_CLEARED: "LANÇAMENTOS EXCLUÍDOS COM SUCESSO", ALL_DATA_DELETED: "TODOS OS DADOS DA CASA FORAM EXCLUÍDOS", FACTORY_RESET: "DADOS EXCLUÍDOS E CONFIGURAÇÃO DE FÁBRICA RESTAURADA" }; toast.success(messages[data as string] ?? "AÇÃO CONCLUÍDA"); setConfirm(""); window.location.reload(); }
-    catch (e) { toast.error(e instanceof Error ? e.message : "NÃO FOI POSSÍVEL EXECUTAR A AÇÃO"); }
-    finally { setDangerAction(null); }
-  }
-
-  return <div className="space-y-5">
-    <PageHeader title="CONFIGURAÇÕES" subtitle="Perfil, membros, cartões e regras de pagamento da casa." />
-    <div className="grid gap-4 lg:grid-cols-2">
-      <Panel title="PERFIL"><div className="space-y-3">
-        <label className="block"><span className="label-caps text-[10px] text-muted-foreground">NOME</span><input value={name} onChange={e=>setName(e.target.value)} className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-primary" /></label>
-        <label className="block"><span className="label-caps text-[10px] text-muted-foreground">E-MAIL</span><input value={user?.email ?? ""} readOnly className="mt-1 w-full rounded-xl border border-input bg-secondary/40 px-3 py-2.5 text-sm text-muted-foreground outline-none" /></label>
-        <label className="block"><span className="label-caps text-[10px] text-muted-foreground">MOEDA</span><input value="BRL — Real" readOnly className="mt-1 w-full rounded-xl border border-input bg-secondary/40 px-3 py-2.5 text-sm text-muted-foreground outline-none" /></label>
-        <button type="button" disabled={saving} onClick={()=>void saveProfile()} className="gradient-primary label-caps w-full rounded-xl px-4 py-2.5 text-[11px] text-primary-foreground disabled:opacity-60">{saving ? "SALVANDO..." : "SALVAR PERFIL"}</button>
-      </div></Panel>
-
-      <Panel title="MEMBROS DA CASA"><div className="space-y-3">{membersLoading ? <p className="py-6 text-center text-sm text-muted-foreground">Carregando membros...</p> : members.length === 0 ? <p className="py-6 text-center text-sm text-muted-foreground">Nenhum membro cadastrado.</p> : members.map(m=><div key={m.id} className="flex items-center justify-between rounded-xl border border-border bg-secondary/30 px-3 py-3"><div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-full text-[11px] font-bold text-primary-foreground" style={{background:m.color}}>{m.initials ?? m.name.slice(0,2).toUpperCase()}</span><div><p className="label-caps text-[11px]">{m.name}</p><p className="text-[10px] text-muted-foreground">Membro da casa</p></div></div><Tag tone="primary">ATIVO</Tag></div>)}</div></Panel>
-
-      <Panel title="CARTÕES"><div className="space-y-3">
-        <div className="flex items-center justify-between"><p className="text-xs text-muted-foreground">Cadastre seus cartões para que lançamentos em CRÉDITO sejam vinculados ao cartão correto.</p><button type="button" onClick={()=>setShowCardForm(v=>!v)} className="gradient-primary label-caps shrink-0 rounded-xl px-3 py-2 text-[10px] text-primary-foreground">{showCardForm ? "FECHAR" : "+ ADICIONAR"}</button></div>
-        {showCardForm && <div className="rounded-xl border border-border bg-secondary/20 p-3"><div className="grid gap-2 sm:grid-cols-2">
-          <input placeholder="Nome do cartão*" value={cardName} onChange={e=>setCardName(e.target.value)} className="rounded-xl border border-input bg-background px-3 py-2.5 text-sm" />
-          <input placeholder="Bandeira (Visa, Mastercard...)" value={cardBrand} onChange={e=>setCardBrand(e.target.value)} className="rounded-xl border border-input bg-background px-3 py-2.5 text-sm" />
-          <input inputMode="numeric" maxLength={4} placeholder="Últimos 4 dígitos" value={last4} onChange={e=>setLast4(e.target.value.replace(/\D/g,""))} className="rounded-xl border border-input bg-background px-3 py-2.5 text-sm" />
-          <input inputMode="decimal" placeholder="Limite (R$)" value={limit} onChange={e=>setLimit(e.target.value)} className="rounded-xl border border-input bg-background px-3 py-2.5 text-sm" />
-          <input type="number" min="1" max="31" placeholder="Dia de fechamento" value={closeDay} onChange={e=>setCloseDay(e.target.value)} className="rounded-xl border border-input bg-background px-3 py-2.5 text-sm" />
-          <input type="number" min="1" max="31" placeholder="Dia de vencimento" value={dueDay} onChange={e=>setDueDay(e.target.value)} className="rounded-xl border border-input bg-background px-3 py-2.5 text-sm" />
-        </div><button type="button" onClick={()=>void addCard()} className="mt-2 gradient-primary label-caps w-full rounded-xl px-4 py-2.5 text-[10px] text-primary-foreground">SALVAR CARTÃO</button></div>}
-        {cards.isLoading ? <p className="py-4 text-center text-xs text-muted-foreground">Carregando cartões...</p> : cards.rows.length === 0 ? <p className="py-4 text-center text-xs text-muted-foreground">Nenhum cartão cadastrado.</p> : cards.rows.map(c=><div key={c.id} className="flex items-center justify-between rounded-xl border border-border bg-background px-3 py-3"><div><p className="label-caps text-[11px]">{c.name}{c.last4 ? ` •••• ${c.last4}` : ""}</p><p className="text-[10px] text-muted-foreground">{c.brand || "Sem bandeira"} · Fecha dia {c.close_day} · Vence dia {c.due_day}</p></div><button type="button" onClick={()=>void cards.remove(c.id).then(()=>toast.success("CARTÃO EXCLUÍDO")).catch(e=>toast.error(e instanceof Error?e.message:"Erro ao excluir"))} className="label-caps text-[10px] text-danger">EXCLUIR</button></div>)}
-      </div></Panel>
-
-      <Panel title="GERENCIADOR GLOBAL"><p className="label-caps mb-2 text-[10px] text-muted-foreground">CATEGORIAS</p><div className="flex flex-wrap gap-2">{CATEGORIES.map(c=><span key={c} className="label-caps rounded-lg border border-primary/50 bg-background px-3 py-1.5 text-[10px]">{c}</span>)}</div><p className="label-caps mb-2 mt-4 text-[10px] text-muted-foreground">FORMAS DE PAGAMENTO</p><div className="space-y-2">{PAYMENT_TYPES.map(p=><div key={p.value} className="flex items-center justify-between rounded-xl border border-border bg-background px-3 py-2.5"><div><p className="label-caps text-[10px]">{p.label}</p><p className="text-[10px] text-muted-foreground">{p.description}</p></div><Tag tone={p.value === "CREDITO" || p.value === "ALIMENTACAO" ? "primary" : "neutral"}>{p.value}</Tag></div>)}</div></Panel>
-
-      <Panel title="BACKUP E EXPORTAÇÃO"><p className="text-xs text-muted-foreground">As exportações serão ligadas aos dados reais da casa na próxima etapa.</p><div className="mt-4 grid grid-cols-2 gap-2">{["EXCEL","CSV","JSON","PDF"].map(f=><button key={f} type="button" onClick={()=>toast.info(`EXPORTAÇÃO ${f} SERÁ CONECTADA AO BACKEND`)} className="label-caps rounded-xl border border-border px-3 py-2.5 text-[10px] transition-colors hover:border-primary hover:text-primary">EXPORTAR {f}</button>)}</div></Panel>
-    </div>
-    <Panel title="ZONA DE PERIGO" className="border-danger/50"><p className="text-xs text-muted-foreground">Estas ações são irreversíveis. Digite <strong className="text-danger">EXCLUIR</strong> para liberar.</p><input value={confirm} onChange={e=>setConfirm(e.target.value.toUpperCase())} placeholder="Digite EXCLUIR" className="mt-3 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-danger md:w-64" /><div className="mt-3 flex flex-wrap gap-2">{["LIMPAR LANÇAMENTOS","EXCLUIR TODOS OS DADOS","RESTAURAR FÁBRICA","ENCERRAR CONTA"].map(action=><button key={action} type="button" disabled={confirm!=="EXCLUIR"||dangerAction!==null} onClick={()=>void runDangerAction(action)} className={cn("label-caps rounded-xl border px-3 py-2 text-[10px] transition-colors",confirm==="EXCLUIR"?"border-danger text-danger hover:bg-danger/10":"border-border text-muted-foreground opacity-50")}>{dangerAction===action?"PROCESSANDO...":action}</button>)}</div></Panel>
-  </div>;
+export const Route = createFileRoute("/configuracoes")({ head: () => ({ meta: [{ title: "CONFIGURAÇÕES — MULTICAP" }] }), component: SettingsPage });
+type Card={id:string;name:string;brand:string|null;last4:string|null;credit_limit:number;close_day:number;due_day:number;household_id:string};
+type Category={id:string;name:string;kind:string;household_id:string};
+type Payment={id:string;name:string;description:string|null;household_id:string};
+const defaultCategories=["MORADIA","ALIMENTAÇÃO","TRANSPORTE","LAZER","SAÚDE","IMPOSTOS","RENDA","OUTROS"];
+const defaultPayments=["PIX","DÉBITO","CRÉDITO","REFEIÇÃO / ALIMENTAÇÃO","DINHEIRO","BOLETO","TRANSFERÊNCIA"];
+function SettingsPage(){
+ const {user,profile,refreshProfile}=useAuth(); const {data:members=[],isLoading:membersLoading}=useHouseholdMembers();
+ const cards=useHouseholdTable<Card>("cards","id,name,brand,last4,credit_limit,close_day,due_day,household_id");
+ const categories=useHouseholdTable<Category>("categories","id,name,kind,household_id","name");
+ const payments=useHouseholdTable<Payment>("household_payment_methods","id,name,description,household_id","name");
+ const [name,setName]=useState(profile?.name??user?.user_metadata?.full_name??""); const [saving,setSaving]=useState(false);
+ const [cardName,setCardName]=useState("");const [brand,setBrand]=useState("");const [last4,setLast4]=useState("");const [limit,setLimit]=useState("");const [close,setClose]=useState("28");const [due,setDue]=useState("5");const [cardOpen,setCardOpen]=useState(false);
+ const [cat,setCat]=useState("");const [catEdit,setCatEdit]=useState<string|null>(null);const [catName,setCatName]=useState("");
+ const [pay,setPay]=useState("");const [payDesc,setPayDesc]=useState("");const [payEdit,setPayEdit]=useState<string|null>(null);const [payName,setPayName]=useState("");const [payDescEdit,setPayDescEdit]=useState("");
+ async function saveProfile(){if(!user||!name.trim())return toast.error("INFORME SEU NOME");setSaving(true);try{const{error}=await supabase.from("profiles").update({name:name.trim()}).eq("id",user.id);if(error)throw error;await refreshProfile();toast.success("PERFIL ATUALIZADO")}catch(e){toast.error(e instanceof Error?e.message:"ERRO AO ATUALIZAR") }finally{setSaving(false)}}
+ async function addCard(){const value=Number(limit.replace(",","."));if(!cardName.trim()||value<0)return toast.error("PREENCHA O CARTÃO E O LIMITE");if(last4&&!/^\d{4}$/.test(last4))return toast.error("OS ÚLTIMOS 4 DÍGITOS DEVEM TER 4 NÚMEROS");try{await cards.insert({name:cardName.trim().toUpperCase(),brand:brand.trim()||null,last4:last4||null,credit_limit:value,close_day:Number(close),due_day:Number(due)});setCardName("");setBrand("");setLast4("");setLimit("");setCardOpen(false);toast.success("CARTÃO CADASTRADO")}catch(e){toast.error(e instanceof Error?e.message:"ERRO AO CADASTRAR CARTÃO")}}
+ async function addCategory(){const n=cat.trim().toUpperCase();if(!n)return toast.error("INFORME A CATEGORIA");if([...defaultCategories,...categories.rows.map(x=>x.name)].some(x=>x.toUpperCase()===n))return toast.error("ESSA CATEGORIA JÁ EXISTE");try{await categories.insert({name:n,kind:"DESPESA"});setCat("");toast.success("CATEGORIA ADICIONADA")}catch(e){toast.error(e instanceof Error?e.message:"ERRO AO ADICIONAR")}}
+ async function editCategory(id:string){const n=catName.trim().toUpperCase();if(!n)return;try{await categories.update(id,{name:n});setCatEdit(null);toast.success("CATEGORIA ATUALIZADA")}catch(e){toast.error(e instanceof Error?e.message:"ERRO AO EDITAR")}}
+ async function deleteCategory(id:string){if(!window.confirm("Excluir esta categoria? Lançamentos antigos serão preservados."))return;try{await categories.remove(id);toast.success("CATEGORIA EXCLUÍDA")}catch(e){toast.error(e instanceof Error?e.message:"ERRO AO EXCLUIR")}}
+ async function addPayment(){const n=pay.trim().toUpperCase();if(!n)return toast.error("INFORME A FORMA DE PAGAMENTO");try{await payments.insert({name:n,description:payDesc.trim()||null});setPay("");setPayDesc("");toast.success("FORMA DE PAGAMENTO ADICIONADA")}catch(e){toast.error(e instanceof Error?e.message:"ERRO AO ADICIONAR")}}
+ async function editPayment(id:string){const n=payName.trim().toUpperCase();if(!n)return;try{await payments.update(id,{name:n,description:payDescEdit.trim()||null});setPayEdit(null);toast.success("FORMA DE PAGAMENTO ATUALIZADA")}catch(e){toast.error(e instanceof Error?e.message:"ERRO AO EDITAR")}}
+ async function deletePayment(id:string){if(!window.confirm("Excluir esta forma de pagamento?"))return;try{await payments.remove(id);toast.success("FORMA DE PAGAMENTO EXCLUÍDA")}catch(e){toast.error(e instanceof Error?e.message:"ERRO AO EXCLUIR")}}
+ return <div className="space-y-5"><PageHeader title="CONFIGURAÇÕES" subtitle="Perfil, membros, cartões, categorias e formas de pagamento reais."/>
+ <div className="grid gap-4 lg:grid-cols-2">
+ <Panel title="PERFIL"><div className="space-y-3"><label className="block"><span className="label-caps text-[10px] text-muted-foreground">NOME</span><input value={name} onChange={e=>setName(e.target.value)} className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm"/></label><label className="block"><span className="label-caps text-[10px] text-muted-foreground">E-MAIL</span><input value={user?.email??""} readOnly className="mt-1 w-full rounded-xl border bg-secondary/40 px-3 py-2.5 text-sm text-muted-foreground"/></label><button disabled={saving} onClick={()=>void saveProfile()} className="gradient-primary w-full rounded-xl px-4 py-2.5 text-[11px] text-primary-foreground">{saving?"SALVANDO...":"SALVAR PERFIL"}</button></div></Panel>
+ <Panel title="MEMBROS DA CASA"><div className="space-y-2">{membersLoading?<p>Carregando...</p>:members.length===0?<p className="text-sm text-muted-foreground">Nenhum membro cadastrado.</p>:members.map(m=><div key={m.id} className="flex items-center justify-between rounded-xl border p-3"><span className="label-caps text-[11px]">{m.name}</span><Tag tone="primary">ATIVO</Tag></div>)}</div></Panel>
+ <Panel title="CARTÕES"><div className="space-y-3"><button onClick={()=>setCardOpen(v=>!v)} className="gradient-primary rounded-xl px-3 py-2 text-[10px] text-primary-foreground">{cardOpen?"FECHAR":"+ ADICIONAR CARTÃO"}</button>{cardOpen&&<div className="grid gap-2 sm:grid-cols-2"><input placeholder="Nome do cartão" value={cardName} onChange={e=>setCardName(e.target.value)} className="rounded-xl border p-2.5"/><input placeholder="Bandeira" value={brand} onChange={e=>setBrand(e.target.value)} className="rounded-xl border p-2.5"/><input maxLength={4} placeholder="Últimos 4 dígitos" value={last4} onChange={e=>setLast4(e.target.value.replace(/\D/g,""))} className="rounded-xl border p-2.5"/><input placeholder="Limite" value={limit} onChange={e=>setLimit(e.target.value)} className="rounded-xl border p-2.5"/><input type="number" min="1" max="31" value={close} onChange={e=>setClose(e.target.value)} className="rounded-xl border p-2.5"/><input type="number" min="1" max="31" value={due} onChange={e=>setDue(e.target.value)} className="rounded-xl border p-2.5"/><button onClick={()=>void addCard()} className="gradient-primary rounded-xl p-2.5 text-primary-foreground sm:col-span-2">SALVAR CARTÃO</button></div>}{cards.rows.map(c=><div key={c.id} className="flex items-center justify-between rounded-xl border p-3"><div><p className="label-caps text-[11px]">{c.name}{c.last4?` •••• ${c.last4}`:""}</p><p className="text-[10px] text-muted-foreground">{c.brand||"Sem bandeira"} · Limite {Number(c.credit_limit).toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</p></div><button onClick={()=>void cards.remove(c.id).then(()=>toast.success("CARTÃO EXCLUÍDO"))} className="text-[10px] text-danger">EXCLUIR</button></div>)}</div></Panel>
+ <Panel title="CATEGORIAS"><div className="space-y-2"><div className="flex gap-2"><input value={cat} onChange={e=>setCat(e.target.value)} placeholder="Nova categoria" className="min-w-0 flex-1 rounded-xl border p-2.5"/><button onClick={()=>void addCategory()} className="gradient-primary rounded-xl px-3 text-[10px] text-primary-foreground">ADICIONAR</button></div><div className="grid gap-2 sm:grid-cols-2">{defaultCategories.map(n=><div key={n} className="rounded-xl border p-3 text-xs">{n}<span className="ml-2 text-[9px] text-muted-foreground">PADRÃO</span></div>)}{categories.rows.map(c=><div key={c.id} className="rounded-xl border p-3">{catEdit===c.id?<div className="flex gap-2"><input value={catName} onChange={e=>setCatName(e.target.value)} className="min-w-0 flex-1 rounded-lg border p-2"/><button onClick={()=>void editCategory(c.id)} className="text-primary">SALVAR</button></div>:<div className="flex items-center justify-between"><span className="text-xs">{c.name}</span><span className="flex gap-2"><button onClick={()=>{setCatEdit(c.id);setCatName(c.name)}} className="text-[10px] text-primary">EDITAR</button><button onClick={()=>void deleteCategory(c.id)} className="text-[10px] text-danger">EXCLUIR</button></span></div>}</div>)}</div></div></Panel>
+ <Panel title="FORMAS DE PAGAMENTO"><div className="space-y-2"><div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]"><input value={pay} onChange={e=>setPay(e.target.value)} placeholder="Nova forma" className="rounded-xl border p-2.5"/><input value={payDesc} onChange={e=>setPayDesc(e.target.value)} placeholder="Descrição" className="rounded-xl border p-2.5"/><button onClick={()=>void addPayment()} className="gradient-primary rounded-xl px-3 text-[10px] text-primary-foreground">ADICIONAR</button></div>{defaultPayments.map(n=><div key={n} className="flex items-center justify-between rounded-xl border p-3"><span className="text-xs">{n}</span><span className="text-[9px] text-muted-foreground">PADRÃO</span></div>)}{payments.rows.map(p=><div key={p.id} className="rounded-xl border p-3">{payEdit===p.id?<div className="space-y-2"><input value={payName} onChange={e=>setPayName(e.target.value)} className="w-full rounded-lg border p-2"/><input value={payDescEdit} onChange={e=>setPayDescEdit(e.target.value)} className="w-full rounded-lg border p-2"/><button onClick={()=>void editPayment(p.id)} className="text-primary">SALVAR</button></div>:<div className="flex items-center justify-between"><div><p className="text-xs">{p.name}</p><p className="text-[10px] text-muted-foreground">{p.description||"Sem descrição"}</p></div><span className="flex gap-2"><button onClick={()=>{setPayEdit(p.id);setPayName(p.name);setPayDescEdit(p.description??"")}} className="text-[10px] text-primary">EDITAR</button><button onClick={()=>void deletePayment(p.id)} className="text-[10px] text-danger">EXCLUIR</button></span></div>}</div>)}</div></Panel>
+ </div></div>;
 }
