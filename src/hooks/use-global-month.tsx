@@ -1,41 +1,10 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
-function currentMonth() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-}
-
-type GlobalMonthContextValue = {
-  month: string;
-  setMonth: (month: string) => void;
-};
-
+function currentMonth() { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`; }
+type GlobalMonthContextValue = { month: string; setMonth: (month: string) => void };
 const GlobalMonthContext = createContext<GlobalMonthContextValue | null>(null);
-
-export function GlobalMonthProvider({ children }: { children: ReactNode }) {
-  const [month, setMonth] = useState(() => {
-    if (typeof window === "undefined") return currentMonth();
-    return localStorage.getItem("harmony-global-month") || currentMonth();
-  });
-
-  const value = useMemo(() => ({
-    month,
-    setMonth: (next: string) => {
-      setMonth(next);
-      if (typeof window !== "undefined") localStorage.setItem("harmony-global-month", next);
-    },
-  }), [month]);
-
-  return <GlobalMonthContext.Provider value={value}>{children}</GlobalMonthContext.Provider>;
-}
-
-export function useGlobalMonth() {
-  const context = useContext(GlobalMonthContext);
-  if (!context) throw new Error("useGlobalMonth must be used inside GlobalMonthProvider");
-  return context;
-}
-
-export function formatGlobalMonth(month: string) {
-  const [year, monthNumber] = month.split("-").map(Number);
-  return new Date(year, monthNumber - 1, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" }).toUpperCase();
-}
+export function GlobalMonthProvider({ children }: { children: ReactNode }) { const [month,setMonth]=useState(()=>currentMonth()); return <GlobalMonthContext.Provider value={useMemo(()=>({month,setMonth}),[month])}>{children}</GlobalMonthContext.Provider>; }
+export function useGlobalMonth(scope="global") { const context=useContext(GlobalMonthContext); if(!context) throw new Error("useGlobalMonth must be used inside GlobalMonthProvider"); const storageKey=`harmony-month-${scope}`; const [month,setMonthState]=useState(()=>typeof window==="undefined"?currentMonth():localStorage.getItem(storageKey)||currentMonth()); return { month, setMonth:(next:string)=>{setMonthState(next);if(typeof window!=="undefined")localStorage.setItem(storageKey,next);} }; }
+export function formatGlobalMonth(month:string) { const [year,monthNumber]=month.split("-").map(Number); return new Date(year,monthNumber-1,1).toLocaleDateString("pt-BR",{month:"long",year:"numeric"}).toUpperCase(); }
+export function MonthSelector({ month, setMonth, className }: { month:string; setMonth:(month:string)=>void; className?:string }) { const [year]=month.split("-").map(Number); const options=Array.from({length:24},(_,i)=>{const d=new Date(year-1,i,1);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;}); const unique=[...new Set([...options,month])].sort(); return <select aria-label="SELECIONAR MÊS" value={month} onChange={e=>setMonth(e.target.value)} className={cn("rounded-xl border border-input bg-background px-3 py-2 text-xs font-semibold uppercase",className)}>{unique.map(v=><option key={v} value={v}>{formatGlobalMonth(v)}</option>)}</select>; }
