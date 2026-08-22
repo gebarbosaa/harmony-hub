@@ -75,10 +75,10 @@ function TasksPage() {
   }
 
   return <div className="space-y-5 pb-6">
-    <PageHeader title="TAREFAS" subtitle="Organize suas tarefas e divida as responsabilidades da casa." />
-    <div className="flex items-center justify-between">
-      <div><p className="label-caps text-[10px] text-muted-foreground">LISTA DE TAREFAS</p><p className="text-xs text-muted-foreground">Organize por prioridade.</p></div>
-      <button type="button" aria-label="NOVA TAREFA" onClick={() => setShowForm(true)} className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors hover:border-primary/40 hover:bg-secondary hover:text-primary"><Plus className="h-5 w-5" /></button>
+    <PageHeader title="TAREFAS" subtitle="Organize suas tarefas e divida as responsabilidades da casa." action={<button type="button" aria-label="NOVA TAREFA" onClick={() => setShowForm(true)} className="group flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground shadow-sm transition-all hover:border-primary/50 hover:bg-primary/5 hover:text-primary active:scale-95"><Plus className="h-5 w-5 transition-transform group-hover:rotate-90" strokeWidth={2} /></button>} />
+    <div>
+      <p className="label-caps text-[10px] text-muted-foreground">LISTA DE TAREFAS</p>
+      <p className="text-xs text-muted-foreground">Organize por prioridade.</p>
     </div>
     {showForm && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4" onMouseDown={e => { if (e.target === e.currentTarget) setShowForm(false); }}>
       <div role="dialog" aria-modal="true" aria-label="NOVA TAREFA" className="w-full max-w-3xl rounded-3xl border border-border bg-background p-5 shadow-2xl sm:p-7">
