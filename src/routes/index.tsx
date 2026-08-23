@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
 import { Wallet, CreditCard, Repeat, Coins, AlertTriangle, ArrowRight, CalendarClock } from "lucide-react";
-import { Area, AreaChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Bar, BarChart } from "recharts";
+import { Area, AreaChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { PageHeader, Panel, StatCard, ProgressBar, Tag, PersonDot } from "@/components/ui-kit";
 import { formatCurrency, calculateGoalProgress, calculateBudgetUsage } from "@/lib/finance";
 import { useAuth } from "@/hooks/use-auth";
@@ -23,7 +23,16 @@ type Reminder = { id:string; title:string; date:string; time:string|null; catego
 function Dashboard() {
   const { profile } = useAuth();
   const [isMounted, setIsMounted] = useState(false);
-  useEffect(() => setIsMounted(true), []);
+  const [currentHour, setCurrentHour] = useState(() => new Date().getHours());
+  useEffect(() => {
+    setIsMounted(true);
+    const updateGreeting = () => setCurrentHour(new Date().getHours());
+    updateGreeting();
+    const interval = window.setInterval(updateGreeting, 60_000);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  const greeting = currentHour < 12 ? "BOM DIA" : currentHour < 18 ? "BOA TARDE" : "BOA NOITE";
 
   const tx = useHouseholdTable<Tx>("transactions", "id,date,description,category,amount,type,paid,household_id", "date");
   const fixed = useHouseholdTable<Fixed>("fixed_costs", "id,name,category,amount,due_day,months,responsible,household_id");
@@ -72,7 +81,7 @@ function Dashboard() {
   }, [currentTx]);
 
   return <div className="space-y-5">
-    <PageHeader title={`BOM DIA, ${profile?.name?.split(" ")[0]?.toUpperCase() || ""}`} subtitle={`Veja como estão as finanças de ${monthName.toLowerCase()}.`} action={<Tag tone="primary">{monthName}</Tag>} />
+    <PageHeader title={`${greeting}, ${profile?.name?.split(" ")[0]?.toUpperCase() || ""}`} subtitle={`Veja como estão as finanças de ${monthName.toLowerCase()}.`} action={<Tag tone="primary">{monthName}</Tag>} />
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <StatCard label="TOTAL DO MÊS" value={formatCurrency(income + expenses + installmentTotal + fixedTotal)} delta={`${currentTx.length} lançamentos`} tone="primary" icon={<Wallet className="h-4 w-4"/>}/>
       <StatCard label="À VISTA" value={formatCurrency(expenses)} delta={`${currentTx.filter(t=>t.type==="DESPESA").length} despesas`} tone="danger" icon={<Coins className="h-4 w-4"/>}/>
