@@ -5,6 +5,10 @@ import { useAuth } from "@/hooks/use-auth";
 
 export type HouseholdRow = Record<string, unknown> & { id: string; household_id: string };
 
+function emitSyncEvent(type: "syncing" | "synced" | "error") {
+  if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent(`harmony:sync:${type}`));
+}
+
 export function useHouseholdId() {
   const { profile } = useAuth();
   return profile?.household_id ?? null;
@@ -24,13 +28,18 @@ export function useHouseholdTable<T extends HouseholdRow = HouseholdRow>(
     enabled: Boolean(householdId),
     queryFn: async () => {
       if (!householdId) return [] as T[];
-      const { data, error } = await supabase
-        .from(table)
-        .select(select)
-        .eq("household_id", householdId)
-        .order(orderBy, { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as T[];
+      try {
+        const { data, error } = await supabase
+          .from(table)
+          .select(select)
+          .eq("household_id", householdId)
+          .order(orderBy, { ascending: false });
+        if (error) throw error;
+        return (data ?? []) as T[];
+      } catch (error) {
+        emitSyncEvent("error");
+        throw error;
+      }
     },
   });
 
@@ -52,14 +61,21 @@ export function useHouseholdTable<T extends HouseholdRow = HouseholdRow>(
   const insert = useCallback(
     async (values: Record<string, unknown>) => {
       if (!householdId) throw new Error("Nenhum grupo familiar configurado.");
-      const { data, error } = await supabase
-        .from(table)
-        .insert({ ...values, household_id: householdId })
-        .select()
-        .single();
-      if (error) throw error;
-      await queryClient.invalidateQueries({ queryKey });
-      return data as T;
+      emitSyncEvent("syncing");
+      try {
+        const { data, error } = await supabase
+          .from(table)
+          .insert({ ...values, household_id: householdId })
+          .select()
+          .single();
+        if (error) throw error;
+        await queryClient.invalidateQueries({ queryKey });
+        emitSyncEvent("synced");
+        return data as T;
+      } catch (error) {
+        emitSyncEvent("error");
+        throw error;
+      }
     },
     [householdId, table, queryClient, queryKey.join("|")],
   );
@@ -67,16 +83,23 @@ export function useHouseholdTable<T extends HouseholdRow = HouseholdRow>(
   const update = useCallback(
     async (id: string, values: Record<string, unknown>) => {
       if (!householdId) throw new Error("Nenhum grupo familiar configurado.");
-      const { data, error } = await supabase
-        .from(table)
-        .update(values)
-        .eq("id", id)
-        .eq("household_id", householdId)
-        .select()
-        .single();
-      if (error) throw error;
-      await queryClient.invalidateQueries({ queryKey });
-      return data as T;
+      emitSyncEvent("syncing");
+      try {
+        const { data, error } = await supabase
+          .from(table)
+          .update(values)
+          .eq("id", id)
+          .eq("household_id", householdId)
+          .select()
+          .single();
+        if (error) throw error;
+        await queryClient.invalidateQueries({ queryKey });
+        emitSyncEvent("synced");
+        return data as T;
+      } catch (error) {
+        emitSyncEvent("error");
+        throw error;
+      }
     },
     [householdId, table, queryClient, queryKey.join("|")],
   );
@@ -84,13 +107,20 @@ export function useHouseholdTable<T extends HouseholdRow = HouseholdRow>(
   const remove = useCallback(
     async (id: string) => {
       if (!householdId) throw new Error("Nenhum grupo familiar configurado.");
-      const { error } = await supabase
-        .from(table)
-        .delete()
-        .eq("id", id)
-        .eq("household_id", householdId);
-      if (error) throw error;
-      await queryClient.invalidateQueries({ queryKey });
+      emitSyncEvent("syncing");
+      try {
+        const { error } = await supabase
+          .from(table)
+          .delete()
+          .eq("id", id)
+          .eq("household_id", householdId);
+        if (error) throw error;
+        await queryClient.invalidateQueries({ queryKey });
+        emitSyncEvent("synced");
+      } catch (error) {
+        emitSyncEvent("error");
+        throw error;
+      }
     },
     [householdId, table, queryClient, queryKey.join("|")],
   );
