@@ -12,6 +12,7 @@ export const Route = createFileRoute("/assinatura")({
 });
 
 type FixedCost = { id: string; name: string; amount: number; category: string; due_day: number; months: boolean[]; responsible: string; pay_method: string; household_id: string };
+const MONTHS = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <label className="block"><span className="label-caps mb-1.5 block text-[9px] font-semibold tracking-[0.12em] text-muted-foreground">{label}</span>{children}</label>;
@@ -27,20 +28,28 @@ function SubscriptionPage() {
   const [category, setCategory] = useState("ASSINATURAS");
   const [payMethod, setPayMethod] = useState("");
   const [responsible, setResponsible] = useState("AMBAS");
+  const [selectedMonths, setSelectedMonths] = useState<boolean[]>(Array(12).fill(true));
 
   useEffect(() => {
     if (!payMethod && payments.options[0]) setPayMethod(payments.options[0].value);
   }, [payMethod, payments.options]);
 
+  function toggleMonth(index: number) {
+    setSelectedMonths(current => current.map((checked, i) => i === index ? !checked : checked));
+  }
+
+  function selectAllMonths() { setSelectedMonths(Array(12).fill(true)); }
+  function clearMonths() { setSelectedMonths(Array(12).fill(false)); }
+
   async function save() {
     const value = Number(amount.replace(",", "."));
     if (!name.trim() || !value || value <= 0) return toast.error("PREENCHA NOME E VALOR");
     if (!payMethod) return toast.error("CADASTRE UMA FORMA DE PAGAMENTO EM CONFIGURAÇÕES");
+    if (!selectedMonths.some(Boolean)) return toast.error("SELECIONE PELO MENOS UM MÊS DE COBRANÇA");
     const dueDay = Math.max(1, Math.min(31, Number(day) || 5));
-    const months = billing === "MENSAL" ? Array(12).fill(true) : Array(12).fill(false);
     try {
-      await insert({ name: name.trim().toUpperCase(), amount: value, category, due_day: dueDay, months, responsible, pay_method: payMethod });
-      setName(""); setAmount("");
+      await insert({ name: name.trim().toUpperCase(), amount: value, category, due_day: dueDay, months: selectedMonths, responsible, pay_method: payMethod });
+      setName(""); setAmount(""); setSelectedMonths(Array(12).fill(true));
       toast.success("ASSINATURA SALVA");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "NÃO FOI POSSÍVEL SALVAR A ASSINATURA");
@@ -48,7 +57,7 @@ function SubscriptionPage() {
   }
 
   return <div className="space-y-5">
-    <PageHeader title="NOVA ASSINATURA" subtitle="CADASTRE UMA ASSINATURA RECORRENTE E MANTENHA O PAGAMENTO ORGANIZADO." />
+    <PageHeader title="NOVA ASSINATURA" subtitle="CADASTRE UMA ASSINATURA RECORRENTE E ESCOLHA EM QUAIS MESES ELA SERÁ COBRADA." />
     <Panel title="FORMULÁRIO DE ASSINATURA">
       <div className="grid gap-4 md:grid-cols-6">
         <Field label="NOME DA ASSINATURA"><input value={name} onChange={e => setName(e.target.value)} placeholder="Ex.: NETFLIX" className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm" /></Field>
@@ -58,7 +67,11 @@ function SubscriptionPage() {
         <Field label="FORMA DE PAGAMENTO"><select value={payMethod} onChange={e => setPayMethod(e.target.value)} className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm"><option value="">SELECIONE</option>{payments.options.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}</select></Field>
         <Field label="RESPONSÁVEL"><select value={responsible} onChange={e => setResponsible(e.target.value)} className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm"><option value="AMBAS">AMBOS / COMPARTILHADO</option><option value="MARIA">MARIA</option><option value="LUCAS">LUCAS</option></select></Field>
       </div>
-      <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-secondary/30 p-3"><p className="text-xs text-muted-foreground">VALOR CADASTRADO: <strong className="text-foreground">{amount ? formatCurrency(Number(amount.replace(",", ".")) || 0) : "R$ 0,00"}</strong></p><button type="button" onClick={() => void save()} className="gradient-primary w-fit rounded-xl px-4 py-2 text-[10px] font-semibold text-primary-foreground">SALVAR ASSINATURA</button></div>
+      <div className="mt-5 rounded-2xl border border-border/70 bg-secondary/30 p-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><div><p className="label-caps text-[10px] font-semibold">MESES DE COBRANÇA</p><p className="text-[10px] text-muted-foreground">Marque os meses em que esta assinatura será cobrada.</p></div><div className="flex gap-2"><button type="button" onClick={selectAllMonths} className="rounded-lg border border-border px-2.5 py-1.5 text-[9px] font-semibold">TODOS</button><button type="button" onClick={clearMonths} className="rounded-lg border border-border px-2.5 py-1.5 text-[9px] font-semibold text-muted-foreground">LIMPAR</button></div></div>
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12">{MONTHS.map((month, index) => <label key={month} className="flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-background px-2.5 py-2.5 transition hover:border-primary/50"><input type="checkbox" checked={selectedMonths[index]} onChange={() => toggleMonth(index)} className="h-4 w-4 accent-primary" /><span className="label-caps text-[9px]">{month}</span></label>)}</div>
+      </div>
+      <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-secondary/30 p-3"><p className="text-xs text-muted-foreground">{selectedMonths.filter(Boolean).length} MÊS(ES) SELECIONADO(S) · VALOR: <strong className="text-foreground">{amount ? formatCurrency(Number(amount.replace(",", ".")) || 0) : "R$ 0,00"}</strong></p><button type="button" onClick={() => void save()} className="gradient-primary w-fit rounded-xl px-4 py-2 text-[10px] font-semibold text-primary-foreground">SALVAR ASSINATURA</button></div>
     </Panel>
   </div>;
 }
