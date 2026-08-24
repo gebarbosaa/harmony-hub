@@ -4,12 +4,15 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 const CREATE_EVENT = "multicap:open-create";
-type CreateDetail = { title?: string };
+type CreateDetail = { title?: string; option?: string };
 
 function normalizeTitle(value?: string) { return (value ?? "").trim().toUpperCase(); }
 
 function CreateButton({ title }: { title: string }) {
-  function handleClick() { window.dispatchEvent(new CustomEvent<CreateDetail>(CREATE_EVENT, { detail: { title: normalizeTitle(title) } })); }
+  function handleClick() {
+    const normalized = normalizeTitle(title);
+    window.dispatchEvent(new CustomEvent<CreateDetail>(CREATE_EVENT, { detail: { title: normalized, option: normalized } }));
+  }
   return <button type="button" onClick={handleClick} aria-label={`ADICIONAR ${title}`} title={`ADICIONAR ${title}`} className="group flex h-10 w-10 items-center justify-center rounded-xl border border-border/70 bg-card text-muted-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:bg-primary/5 hover:text-primary active:scale-95"><Plus className="h-5 w-5 transition-transform group-hover:rotate-90" strokeWidth={2} /></button>;
 }
 
@@ -23,8 +26,9 @@ function CreatePanel({ title, children, className, aside }: { title: string; chi
   const normalizedTitle = normalizeTitle(title);
   useEffect(() => {
     const openHandler = (event: Event) => {
-      const detail = (event as CustomEvent<CreateDetail>).detail;
-      if (normalizeTitle(detail?.title) !== normalizedTitle) return;
+      const detail = (event as CustomEvent<CreateDetail>).detail ?? {};
+      const requested = normalizeTitle(detail.title || detail.option);
+      if (requested !== normalizedTitle) return;
       setOpen(true);
     };
     window.addEventListener(CREATE_EVENT, openHandler);
