@@ -1,6 +1,6 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Plus, LayoutDashboard, ArrowLeftRight, Wallet, CreditCard, Repeat, TrendingUp, Target, Settings, RefreshCw, LogOut, Bell, AlertCircle } from "lucide-react";
+import { Plus, LayoutDashboard, ArrowLeftRight, Wallet, Settings, RefreshCw, LogOut, Bell, AlertCircle, MoreHorizontal } from "lucide-react";
 import { navGroups, quickAddOptions } from "./nav";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
@@ -9,10 +9,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const bottomItems = [
-  { label: "VISÃO", to: "/", icon: LayoutDashboard },
+  { label: "INÍCIO", to: "/", icon: LayoutDashboard },
   { label: "FLUXO", to: "/fluxo", icon: ArrowLeftRight },
-  { label: "ORÇAMENTO", to: "/orcamento", icon: Wallet },
   { label: "CONFIGURAÇÕES", to: "/configuracoes", icon: Settings },
+  { label: "MAIS", to: "/mais", icon: MoreHorizontal },
 ];
 const quickRoutes: Record<string,string> = { "NOVA DESPESA":"/fluxo?tipo=DESPESA", "NOVA RECEITA":"/fluxo?tipo=RECEITA", "NOVA PARCELA":"/parcelados", "NOVA ASSINATURA":"/assinatura", "NOVO INVESTIMENTO":"/investimentos", "NOVO RESGATE":"/resgate", "NOVA META":"/metas", "NOVO CUSTO FIXO":"/custos-fixos" };
 function QuickAdd({className}:{className?:string}){const[open,setOpen]=useState(false);const navigate=useNavigate();async function openRegistration(option:string){const destination=quickRoutes[option]??"/";setOpen(false);sessionStorage.setItem("multicap:pending-create",option);await navigate({to:destination as never});const fire=()=>window.dispatchEvent(new CustomEvent("multicap:open-create",{detail:{source:"quick-add",option,title:option}}));window.setTimeout(fire,50);window.setTimeout(fire,250);window.setTimeout(fire,600)}return <Dialog open={open} onOpenChange={setOpen}><DialogTrigger asChild><button type="button" aria-label="CADASTRO RÁPIDO" className={cn("gradient-primary shadow-elegant flex h-14 w-14 items-center justify-center rounded-2xl text-primary-foreground transition-all hover:-translate-y-1 hover:shadow-xl active:scale-95",className)}><Plus className="h-7 w-7" strokeWidth={2.5}/></button></DialogTrigger><DialogContent className="max-w-md rounded-3xl"><DialogHeader><DialogTitle className="label-caps text-base">CADASTRO RÁPIDO</DialogTitle></DialogHeader><div className="grid grid-cols-2 gap-2">{quickAddOptions.map(option=><button key={option.label} type="button" onClick={()=>void openRegistration(option.label)} className="label-caps rounded-xl border border-border/70 bg-secondary/60 px-3 py-3 text-center text-[11px] text-foreground transition-all hover:border-primary hover:bg-primary/5 hover:text-primary">{option.label}</button>)}</div></DialogContent></Dialog>}
