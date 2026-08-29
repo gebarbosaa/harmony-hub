@@ -20,6 +20,7 @@ type Row = {
   owner_id: string;
   household_id: string;
   privacy: string;
+  completed: boolean;
 };
 
 const categories = ["OUTROS", "CONTAS", "TRABALHO", "SAÚDE", "LAZER", "FAMÍLIA", "ESTUDOS", "ACADEMIA"];
@@ -28,7 +29,7 @@ function AgendaPage() {
   const { user, profile } = useAuth();
   const { rows, insert, update, remove, isLoading } = useHouseholdTable<Row>(
     "reminders",
-    "id,title,date,time,category,owner_id,privacy,household_id",
+    "id,title,date,time,category,owner_id,privacy,completed,household_id",
     "date",
   );
   const [title, setTitle] = useState("");
@@ -79,6 +80,16 @@ function AgendaPage() {
       toast.error(e instanceof Error ? e.message : "Não foi possível salvar");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function toggleComplete(event: Row) {
+    try {
+      await update(event.id, { completed: !event.completed });
+      setDetails((current) => (current && current.id === event.id ? { ...current, completed: !event.completed } : current));
+      toast.success(event.completed ? "COMPROMISSO REABERTO" : "COMPROMISSO CONCLUÍDO");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível atualizar");
     }
   }
 
@@ -136,13 +147,13 @@ function AgendaPage() {
         ) : (
           <ul className="space-y-3">
             {orderedRows.map((a) => (
-              <li key={a.id} className="flex items-start gap-3 rounded-xl border border-border bg-secondary/30 p-3">
+              <li key={a.id} className={a.completed ? "flex items-start gap-3 rounded-xl border border-border bg-secondary/30 p-3 opacity-60" : "flex items-start gap-3 rounded-xl border border-border bg-secondary/30 p-3"}>
                 <button onClick={() => setDetails(a)} className="gradient-soft flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl border border-primary/30 text-[10px] text-primary" aria-label={`Ver ${a.title}`}>
                   <CalendarClock className="h-4 w-4" />{a.time || "--:--"}
                 </button>
                 <button onClick={() => setDetails(a)} className="min-w-0 flex-1 text-left">
-                  <p className="label-caps text-[12px]">{a.title}</p>
-                  <div className="mt-1 flex flex-wrap items-center gap-2"><Tag tone="primary">{a.category}</Tag><PersonDot name={profile?.name || "MINHA CONTA"}/><span className="text-[10px] text-muted-foreground">{a.date}</span></div>
+                  <p className={a.completed ? "label-caps text-[12px] line-through" : "label-caps text-[12px]"}>{a.title}</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2"><Tag tone="primary">{a.category}</Tag>{a.completed && <Tag tone="success">CONCLUÍDO</Tag>}<PersonDot name={profile?.name || "MINHA CONTA"}/><span className="text-[10px] text-muted-foreground">{a.date}</span></div>
                 </button>
                 <div className="flex gap-1">
                   <button onClick={() => startEdit(a)} aria-label="Editar compromisso" className="rounded-lg p-2 hover:bg-secondary"><Pencil className="h-4 w-4" /></button>
@@ -159,7 +170,7 @@ function AgendaPage() {
           <div className="w-full max-w-lg rounded-t-2xl border border-border bg-background p-5 shadow-xl sm:rounded-2xl">
             <div className="flex items-start justify-between gap-3"><div><p className="text-xs text-muted-foreground">DETALHES DO COMPROMISSO</p><h2 className="mt-1 text-xl font-semibold">{details.title}</h2></div><button onClick={() => setDetails(null)} aria-label="Fechar"><X className="h-5 w-5" /></button></div>
             <div className="mt-5 grid grid-cols-2 gap-3 text-sm"><div><span className="text-xs text-muted-foreground">DATA</span><p>{details.date}</p></div><div><span className="text-xs text-muted-foreground">HORÁRIO</span><p>{details.time || "Não informado"}</p></div><div><span className="text-xs text-muted-foreground">CATEGORIA</span><p>{details.category}</p></div><div><span className="text-xs text-muted-foreground">RESPONSÁVEL</span><p>{profile?.name || "Minha conta"}</p></div></div>
-            <div className="mt-5 flex gap-2"><button onClick={() => { startEdit(details); setDetails(null); }} className="flex-1 rounded-xl border border-border px-4 py-3 text-sm"><Pencil className="mr-2 inline h-4 w-4"/>Editar</button><button onClick={() => void del(details.id)} className="rounded-xl border border-danger/30 px-4 py-3 text-sm text-danger"><Trash2 className="mr-2 inline h-4 w-4"/>Excluir</button><button disabled className="rounded-xl border border-border px-4 py-3 text-sm opacity-50" title="O banco atual ainda não possui campo de conclusão"><Check className="mr-2 inline h-4 w-4"/>Concluir</button></div>
+            <div className="mt-5 flex gap-2"><button onClick={() => { startEdit(details); setDetails(null); }} className="flex-1 rounded-xl border border-border px-4 py-3 text-sm"><Pencil className="mr-2 inline h-4 w-4"/>Editar</button><button onClick={() => void del(details.id)} className="rounded-xl border border-danger/30 px-4 py-3 text-sm text-danger"><Trash2 className="mr-2 inline h-4 w-4"/>Excluir</button><button onClick={() => void toggleComplete(details)} className={details.completed ? "rounded-xl border border-success/30 px-4 py-3 text-sm text-success" : "rounded-xl border border-border px-4 py-3 text-sm"}><Check className="mr-2 inline h-4 w-4"/>{details.completed ? "Reabrir" : "Concluir"}</button></div>
           </div>
         </div>
       )}
