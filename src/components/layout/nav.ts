@@ -1,8 +1,7 @@
-import { LayoutDashboard, ArrowLeftRight, Wallet, Repeat, CreditCard, ReceiptText, TrendingUp, Target } from "lucide-react";
+import { LayoutDashboard, ArrowLeftRight, Wallet, Repeat, CreditCard, ReceiptText, TrendingUp, Target, Settings } from "lucide-react";
 
 export type NavItem = { label: string; to: string; icon: typeof Wallet };
 
-// Navegação exclusivamente financeira.
 export const navGroups: { group: string; items: NavItem[] }[] = [
   {
     group: "PRINCIPAL",
@@ -20,9 +19,12 @@ export const navGroups: { group: string; items: NavItem[] }[] = [
       { label: "INVESTIMENTOS", to: "/investimentos", icon: TrendingUp },
     ],
   },
+  {
+    group: "SISTEMA",
+    items: [{ label: "CONFIGURAÇÕES", to: "/configuracoes", icon: Settings }],
+  },
 ];
 
-// Cadastro rápido: somente operações financeiras.
 export const quickAddOptions = [
   { label: "NOVA DESPESA", icon: ArrowLeftRight, kind: "DESPESA" },
   { label: "NOVA RECEITA", icon: TrendingUp, kind: "RECEITA" },
