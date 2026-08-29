@@ -11,7 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 const bottomItems = [
   { label: "INÍCIO", to: "/", icon: LayoutDashboard },
   { label: "FLUXO", to: "/fluxo", icon: ArrowLeftRight },
-  { label: "CONFIGURAÇÕES", to: "/configuracoes", icon: Settings },
+  { label: "AJUSTES", to: "/configuracoes", icon: Settings },
   { label: "MAIS", to: "/mais", icon: MoreHorizontal },
 ];
 const quickRoutes: Record<string,string> = { "NOVA DESPESA":"/fluxo?tipo=DESPESA", "NOVA RECEITA":"/fluxo?tipo=RECEITA", "NOVA PARCELA":"/parcelados", "NOVA ASSINATURA":"/assinatura", "NOVO INVESTIMENTO":"/investimentos", "NOVO RESGATE":"/resgate", "NOVA META":"/metas", "NOVO CUSTO FIXO":"/custos-fixos" };
