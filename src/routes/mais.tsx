@@ -14,6 +14,8 @@ import {
   FileText,
   Settings,
   ArrowLeftRight,
+  Target,
+  Plug,
 } from "lucide-react";
 import { PageHeader, Panel } from "@/components/ui-kit";
 
@@ -39,6 +41,7 @@ const moduleGroups: ModuleGroup[] = [
     items: [
       { label: "MOVIMENTAÇÕES", to: "/fluxo", icon: ArrowLeftRight },
       { label: "ORÇAMENTO", to: "/orcamento", icon: Wallet },
+      { label: "METAS", to: "/metas", icon: Target },
       { label: "CARTÕES E FATURAS", to: "/faturas", icon: ReceiptText },
       { label: "CUSTOS FIXOS E ASSINATURAS", to: "/custos-fixos", icon: Repeat },
       { label: "PARCELAS", to: "/parcelados", icon: CreditCard },
@@ -65,6 +68,7 @@ const moduleGroups: ModuleGroup[] = [
     label: "ORGANIZAÇÃO",
     icon: CalendarDays,
     items: [
+      { label: "AGENDA", to: "/agenda", icon: CalendarClock },
       { label: "CALENDÁRIO", to: "/calendario", icon: CalendarDays },
       { label: "ANOTAÇÕES", to: "/anotacoes", icon: FileText },
     ],
@@ -73,6 +77,7 @@ const moduleGroups: ModuleGroup[] = [
     label: "SISTEMA",
     icon: Settings,
     items: [
+      { label: "INTEGRAÇÕES", to: "/integracoes", icon: Plug },
       { label: "CONFIGURAÇÕES", to: "/configuracoes", icon: Settings },
     ],
   },

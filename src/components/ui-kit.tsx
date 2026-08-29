@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 import { Plus, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -39,10 +39,10 @@ function CreatePanel({ title, children, className, aside }: { title: string; chi
   return <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-3 backdrop-blur-md sm:p-5" onMouseDown={() => setOpen(false)}><section id="novo-registro" data-create-form="true" className={cn("max-h-[88vh] w-full max-w-4xl overflow-y-auto rounded-3xl border border-border bg-card p-5 shadow-2xl md:p-6", className)} onMouseDown={event => event.stopPropagation()}><div className="mb-5 flex items-center justify-between gap-3"><div><p className="text-[9px] font-semibold tracking-[0.18em] text-primary">NOVO REGISTRO</p><h2 className="label-caps mt-1 text-sm text-foreground">{title}</h2></div><div className="flex items-center gap-2">{aside}<button type="button" onClick={() => setOpen(false)} aria-label="Fechar" title="Fechar" className="rounded-xl p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"><X className="h-4 w-4" /></button></div></div>{children}</section></div>;
 }
 
-export function Panel({ children, className, title, aside }: { children: ReactNode; className?: string; title?: string; aside?: ReactNode }) {
+export function Panel({ children, className, title, aside, ...rest }: { children: ReactNode; className?: string; title?: string; aside?: ReactNode } & HTMLAttributes<HTMLElement>) {
   const isCreatePanel = !!title && /^(NOVO|ADICIONAR|CADASTRO|REGISTRAR)/i.test(title.trim());
-  if (isCreatePanel) return <CreatePanel title={title} className={className} aside={aside}>{children}</CreatePanel>;
-  return <section className={cn("rounded-2xl border border-border/70 bg-card p-5 shadow-[0_12px_40px_-30px_rgba(0,0,0,0.8)] transition-shadow hover:shadow-[0_16px_45px_-32px_rgba(0,0,0,0.9)] md:p-6", className)}>{title || aside ? <div className="mb-5 flex items-center justify-between gap-3 border-b border-border/50 pb-3">{title ? <h2 className="label-caps text-[11px] font-semibold text-foreground">{title}</h2> : <span />}{aside}</div> : null}{children}</section>;
+  if (isCreatePanel) return <CreatePanel title={title!} {...(className ? { className } : {})} aside={aside}>{children}</CreatePanel>;
+  return <section {...rest} className={cn("rounded-2xl border border-border/70 bg-card p-5 shadow-[0_12px_40px_-30px_rgba(0,0,0,0.8)] transition-shadow hover:shadow-[0_16px_45px_-32px_rgba(0,0,0,0.9)] md:p-6", className)}>{title || aside ? <div className="mb-5 flex items-center justify-between gap-3 border-b border-border/50 pb-3">{title ? <h2 className="label-caps text-[11px] font-semibold text-foreground">{title}</h2> : <span />}{aside}</div> : null}{children}</section>;
 }
 
 export function StatCard({ label, value, delta, icon, tone = "default" }: { label: string; value: string; delta?: string; icon?: ReactNode; tone?: "default" | "primary" | "success" | "danger" | "info" }) { const toneRing = { default: "text-muted-foreground", primary: "text-primary", success: "text-success", danger: "text-danger", info: "text-info" }[tone]; return <div className="group relative overflow-hidden rounded-2xl border border-border/70 bg-card p-4 transition-all hover:-translate-y-0.5 hover:shadow-lg"><div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/[0.06] via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100" /><div className="relative flex items-start justify-between gap-2"><span className="label-caps text-[9px] font-semibold text-muted-foreground">{label}</span><span className={toneRing}>{icon}</span></div><p className="relative mt-3 text-xl font-bold tracking-tight md:text-2xl">{value}</p>{delta ? <p className={cn("relative mt-1 text-xs", toneRing)}>{delta}</p> : null}</div>; }

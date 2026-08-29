@@ -35,7 +35,7 @@ export function useHouseholdTable<T extends HouseholdRow = HouseholdRow>(
           .eq("household_id", householdId)
           .order(orderBy, { ascending: false });
         if (error) throw error;
-        return (data ?? []) as T[];
+        return (data ?? []) as unknown as T[];
       } catch (error) {
         emitSyncEvent("error");
         throw error;

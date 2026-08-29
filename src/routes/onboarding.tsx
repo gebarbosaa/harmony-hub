@@ -12,7 +12,7 @@ function OnboardingPage() {
   const { user, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const [mode, setMode] = useState<"create" | "join">("create");
-  const [name, setName] = useState(user?.user_metadata?.full_name ?? "");
+  const [name, setName] = useState(user?.user_metadata?.["full_name"] ?? "");
   const [householdName, setHouseholdName] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [loading, setLoading] = useState(false);

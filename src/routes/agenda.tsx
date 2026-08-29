@@ -62,8 +62,8 @@ function AgendaPage() {
   }
 
   async function save() {
-    if (!user || !title.trim()) return toast.error("PREENCHA O COMPROMISSO");
-    if (!date) return toast.error("INFORME A DATA");
+    if (!user || !title.trim()) { toast.error("PREENCHA O COMPROMISSO"); return; }
+    if (!date) { toast.error("INFORME A DATA"); return; }
     setSaving(true);
     try {
       const values = { title: title.trim().toUpperCase(), date, time: time || null, category };

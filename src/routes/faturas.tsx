@@ -42,7 +42,7 @@ function InvoicesPage(){
 
   async function addCard(){
     const value=Number(limit.replace(",","."));
-    if(!name.trim()||value<=0) return toast.error("PREENCHA NOME E LIMITE");
+    if(!name.trim()||value<=0) {toast.error("PREENCHA NOME E LIMITE");return};
     try{
       await cards.insert({name:name.trim().toUpperCase(),credit_limit:value,due_day:Number(due),close_day:Number(close),brand:brand.trim().toUpperCase()||null,last4:last4.trim()||null});
       setName(""); setLimit(""); setBrand(""); setLast4("");
@@ -70,7 +70,7 @@ function InvoicesPage(){
 
   async function saveEdit(){
     if(!editing) return;
-    if(!editing.description.trim()||Number(editing.amount)<=0) return toast.error("PREENCHA DESCRIÇÃO E VALOR");
+    if(!editing.description.trim()||Number(editing.amount)<=0) {toast.error("PREENCHA DESCRIÇÃO E VALOR");return};
     setSaving(true);
     try{
       await transactions.update(editing.id,{description:editing.description.trim().toUpperCase(),amount:Number(editing.amount),category:editing.category,responsible:editing.responsible,paid:editing.paid});

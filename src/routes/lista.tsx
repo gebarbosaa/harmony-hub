@@ -45,7 +45,7 @@ function ShoppingPage() {
   const [editPrice, setEditPrice] = useState("");
 
   useEffect(() => {
-    if (!active && lists.rows.length > 0) setActive(lists.rows[0].id);
+    if (!active && lists.rows.length > 0) setActive(lists.rows[0]?.id ?? "");
     if (active && !lists.rows.some((list) => list.id === active)) {
       setActive(lists.rows[0]?.id ?? "");
     }
@@ -61,7 +61,7 @@ function ShoppingPage() {
   }
 
   function openAddItem() {
-    if (!current) return toast.error("CRIE OU SELECIONE UMA LISTA");
+    if (!current) {toast.error("CRIE OU SELECIONE UMA LISTA");return};
     setName("");
     setPrice("");
     setQty("1");
@@ -70,9 +70,9 @@ function ShoppingPage() {
 
   async function addList() {
     const cleanName = listName.trim();
-    if (!cleanName) return toast.error("INFORME O NOME DA LISTA");
+    if (!cleanName) {toast.error("INFORME O NOME DA LISTA");return};
     if (lists.rows.some((list) => list.name.toLowerCase() === cleanName.toLowerCase())) {
-      return toast.error("ESSA LISTA JÁ EXISTE");
+      {toast.error("ESSA LISTA JÁ EXISTE");return};
     }
     try {
       const created = await lists.insert({ name: cleanName.toUpperCase(), archived: false });
@@ -90,7 +90,7 @@ function ShoppingPage() {
     const nextName = window.prompt("NOVO NOME DA LISTA", list.name)?.trim();
     if (!nextName || nextName.toLowerCase() === list.name.toLowerCase()) return;
     if (lists.rows.some((other) => other.id !== list.id && other.name.toLowerCase() === nextName.toLowerCase())) {
-      return toast.error("ESSA LISTA JÁ EXISTE");
+      {toast.error("ESSA LISTA JÁ EXISTE");return};
     }
     try {
       await lists.update(list.id, { name: nextName.toUpperCase() });
@@ -117,8 +117,8 @@ function ShoppingPage() {
   }
 
   async function addItem() {
-    if (!current) return toast.error("CRIE OU SELECIONE UMA LISTA");
-    if (!name.trim()) return toast.error("INFORME O PRODUTO");
+    if (!current) {toast.error("CRIE OU SELECIONE UMA LISTA");return};
+    if (!name.trim()) {toast.error("INFORME O PRODUTO");return};
     try {
       await items.insert({
         list_id: current.id,
@@ -149,7 +149,7 @@ function ShoppingPage() {
   }
 
   async function saveEdit(item: Item) {
-    if (!editName.trim()) return toast.error("INFORME O PRODUTO");
+    if (!editName.trim()) {toast.error("INFORME O PRODUTO");return};
     try {
       await items.update(item.id, {
         name: editName.trim().toUpperCase(),

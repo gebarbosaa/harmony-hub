@@ -20,7 +20,7 @@ function DomesticTasksPage() {
   const [responsible, setResponsible] = useState("AMBAS");
 
   async function add() {
-    if (!title.trim()) return toast.error("INFORME A TAREFA");
+    if (!title.trim()) {toast.error("INFORME A TAREFA");return};
     try { await tasks.insert({ title: title.trim().toUpperCase(), weekday: Number(day), responsible: responsible.trim().toUpperCase() || "AMBAS", done: false }); setTitle(""); toast.success("TAREFA DOMÉSTICA ADICIONADA"); }
     catch (e) { toast.error(e instanceof Error ? e.message : "ERRO AO ADICIONAR"); }
   }
