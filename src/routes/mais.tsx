@@ -4,8 +4,8 @@ import { PageHeader, Panel } from "@/components/ui-kit";
 export const Route = createFileRoute("/mais")({ head: () => ({ meta: [{ title: "PAINEL — MULTICAP" }, { name: "description", content: "Central de todos os módulos do MULTICAP." }] }), component: MorePage });
 type Module={label:string;to:string;icon:typeof Wallet}; type ModuleGroup={label:string;icon:typeof Wallet;items:Module[]};
 const moduleGroups:ModuleGroup[]=[
-{label:"PRINCIPAL",icon:Wallet,items:[{label:"INÍCIO",to:"/",icon:Wallet}]},
-{label:"FINANCEIRO",icon:Wallet,items:[{label:"MOVIMENTAÇÕES",to:"/movimentacoes",icon:ArrowLeftRight},{label:"RECEITAS",to:"/receitas",icon:ArrowUpCircle},{label:"DESPESAS",to:"/despesas",icon:ArrowDownCircle},{label:"ORÇAMENTO",to:"/orcamento",icon:Wallet},{label:"CARTÕES E FATURAS",to:"/faturas",icon:ReceiptText},{label:"PARCELAS",to:"/parcelados",icon:CreditCard}]},
+{label:"PRINCIPAL",icon:Wallet,items:[{label:"INÍCIO",to:"/",icon:Wallet},{label:"MOVIMENTAÇÕES",to:"/movimentacoes",icon:ArrowLeftRight}]},
+{label:"FINANCEIRO",icon:Wallet,items:[{label:"RECEITAS",to:"/receitas",icon:ArrowUpCircle},{label:"DESPESAS",to:"/despesas",icon:ArrowDownCircle},{label:"ORÇAMENTO",to:"/orcamento",icon:Wallet},{label:"CARTÕES E FATURAS",to:"/faturas",icon:ReceiptText},{label:"PARCELAS",to:"/parcelados",icon:CreditCard}]},
 {label:"CUSTOS FIXOS E ASSINATURAS",icon:Repeat,items:[{label:"CUSTOS FIXOS",to:"/custos-fixos",icon:Repeat},{label:"ASSINATURAS",to:"/assinatura",icon:Repeat}]},
 {label:"INVESTIMENTOS",icon:TrendingUp,items:[{label:"INVESTIMENTOS",to:"/investimentos",icon:TrendingUp},{label:"METAS",to:"/metas",icon:Target},{label:"CALCULADORA DE APORTES",to:"/calculadora-aportes",icon:Calculator}]},
 {label:"SISTEMA",icon:Settings,items:[{label:"AJUSTES",to:"/configuracoes",icon:Settings}]}];
