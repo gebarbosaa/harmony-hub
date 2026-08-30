@@ -13,11 +13,12 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as AnotacoesRouteImport } from './routes/anotacoes'
 import { Route as AssinaturaRouteImport } from './routes/assinatura'
+import { Route as CalculadoraAportesRouteImport } from './routes/calculadora-aportes'
 import { Route as CalendarioRouteImport } from './routes/calendario'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as CustosFixosRouteImport } from './routes/custos-fixos'
+import { Route as DespesasRouteImport } from './routes/despesas'
 import { Route as FaturasRouteImport } from './routes/faturas'
-import { Route as FluxoRouteImport } from './routes/fluxo'
 import { Route as HabitosRouteImport } from './routes/habitos'
 import { Route as IntegracoesRouteImport } from './routes/integracoes'
 import { Route as InvestimentosRouteImport } from './routes/investimentos'
@@ -26,10 +27,11 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as MaisRouteImport } from './routes/mais'
 import { Route as MercadoRouteImport } from './routes/mercado'
 import { Route as MetasRouteImport } from './routes/metas'
+import { Route as MovimentacoesRouteImport } from './routes/movimentacoes'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as OrcamentoRouteImport } from './routes/orcamento'
 import { Route as ParceladosRouteImport } from './routes/parcelados'
-import { Route as ResgateRouteImport } from './routes/resgate'
+import { Route as ReceitasRouteImport } from './routes/receitas'
 import { Route as TarefasRouteImport } from './routes/tarefas'
 import { Route as TarefasDomesticasRouteImport } from './routes/tarefas-domesticas'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
@@ -54,6 +56,11 @@ const AssinaturaRoute = AssinaturaRouteImport.update({
   path: '/assinatura',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CalculadoraAportesRoute = CalculadoraAportesRouteImport.update({
+  id: '/calculadora-aportes',
+  path: '/calculadora-aportes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CalendarioRoute = CalendarioRouteImport.update({
   id: '/calendario',
   path: '/calendario',
@@ -69,14 +76,14 @@ const CustosFixosRoute = CustosFixosRouteImport.update({
   path: '/custos-fixos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DespesasRoute = DespesasRouteImport.update({
+  id: '/despesas',
+  path: '/despesas',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FaturasRoute = FaturasRouteImport.update({
   id: '/faturas',
   path: '/faturas',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FluxoRoute = FluxoRouteImport.update({
-  id: '/fluxo',
-  path: '/fluxo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HabitosRoute = HabitosRouteImport.update({
@@ -119,6 +126,11 @@ const MetasRoute = MetasRouteImport.update({
   path: '/metas',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MovimentacoesRoute = MovimentacoesRouteImport.update({
+  id: '/movimentacoes',
+  path: '/movimentacoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
@@ -134,9 +146,9 @@ const ParceladosRoute = ParceladosRouteImport.update({
   path: '/parcelados',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ResgateRoute = ResgateRouteImport.update({
-  id: '/resgate',
-  path: '/resgate',
+const ReceitasRoute = ReceitasRouteImport.update({
+  id: '/receitas',
+  path: '/receitas',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TarefasRoute = TarefasRouteImport.update({
@@ -160,11 +172,12 @@ export interface FileRoutesByFullPath {
   '/agenda': typeof AgendaRoute
   '/anotacoes': typeof AnotacoesRoute
   '/assinatura': typeof AssinaturaRoute
+  '/calculadora-aportes': typeof CalculadoraAportesRoute
   '/calendario': typeof CalendarioRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/custos-fixos': typeof CustosFixosRoute
+  '/despesas': typeof DespesasRoute
   '/faturas': typeof FaturasRoute
-  '/fluxo': typeof FluxoRoute
   '/habitos': typeof HabitosRoute
   '/integracoes': typeof IntegracoesRoute
   '/investimentos': typeof InvestimentosRoute
@@ -173,10 +186,11 @@ export interface FileRoutesByFullPath {
   '/mais': typeof MaisRoute
   '/mercado': typeof MercadoRoute
   '/metas': typeof MetasRoute
+  '/movimentacoes': typeof MovimentacoesRoute
   '/onboarding': typeof OnboardingRoute
   '/orcamento': typeof OrcamentoRoute
   '/parcelados': typeof ParceladosRoute
-  '/resgate': typeof ResgateRoute
+  '/receitas': typeof ReceitasRoute
   '/tarefas': typeof TarefasRoute
   '/tarefas-domesticas': typeof TarefasDomesticasRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -186,11 +200,12 @@ export interface FileRoutesByTo {
   '/agenda': typeof AgendaRoute
   '/anotacoes': typeof AnotacoesRoute
   '/assinatura': typeof AssinaturaRoute
+  '/calculadora-aportes': typeof CalculadoraAportesRoute
   '/calendario': typeof CalendarioRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/custos-fixos': typeof CustosFixosRoute
+  '/despesas': typeof DespesasRoute
   '/faturas': typeof FaturasRoute
-  '/fluxo': typeof FluxoRoute
   '/habitos': typeof HabitosRoute
   '/integracoes': typeof IntegracoesRoute
   '/investimentos': typeof InvestimentosRoute
@@ -199,10 +214,11 @@ export interface FileRoutesByTo {
   '/mais': typeof MaisRoute
   '/mercado': typeof MercadoRoute
   '/metas': typeof MetasRoute
+  '/movimentacoes': typeof MovimentacoesRoute
   '/onboarding': typeof OnboardingRoute
   '/orcamento': typeof OrcamentoRoute
   '/parcelados': typeof ParceladosRoute
-  '/resgate': typeof ResgateRoute
+  '/receitas': typeof ReceitasRoute
   '/tarefas': typeof TarefasRoute
   '/tarefas-domesticas': typeof TarefasDomesticasRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -213,11 +229,12 @@ export interface FileRoutesById {
   '/agenda': typeof AgendaRoute
   '/anotacoes': typeof AnotacoesRoute
   '/assinatura': typeof AssinaturaRoute
+  '/calculadora-aportes': typeof CalculadoraAportesRoute
   '/calendario': typeof CalendarioRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/custos-fixos': typeof CustosFixosRoute
+  '/despesas': typeof DespesasRoute
   '/faturas': typeof FaturasRoute
-  '/fluxo': typeof FluxoRoute
   '/habitos': typeof HabitosRoute
   '/integracoes': typeof IntegracoesRoute
   '/investimentos': typeof InvestimentosRoute
@@ -226,10 +243,11 @@ export interface FileRoutesById {
   '/mais': typeof MaisRoute
   '/mercado': typeof MercadoRoute
   '/metas': typeof MetasRoute
+  '/movimentacoes': typeof MovimentacoesRoute
   '/onboarding': typeof OnboardingRoute
   '/orcamento': typeof OrcamentoRoute
   '/parcelados': typeof ParceladosRoute
-  '/resgate': typeof ResgateRoute
+  '/receitas': typeof ReceitasRoute
   '/tarefas': typeof TarefasRoute
   '/tarefas-domesticas': typeof TarefasDomesticasRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -241,11 +259,12 @@ export interface FileRouteTypes {
     | '/agenda'
     | '/anotacoes'
     | '/assinatura'
+    | '/calculadora-aportes'
     | '/calendario'
     | '/configuracoes'
     | '/custos-fixos'
+    | '/despesas'
     | '/faturas'
-    | '/fluxo'
     | '/habitos'
     | '/integracoes'
     | '/investimentos'
@@ -254,10 +273,11 @@ export interface FileRouteTypes {
     | '/mais'
     | '/mercado'
     | '/metas'
+    | '/movimentacoes'
     | '/onboarding'
     | '/orcamento'
     | '/parcelados'
-    | '/resgate'
+    | '/receitas'
     | '/tarefas'
     | '/tarefas-domesticas'
     | '/auth/callback'
@@ -267,11 +287,12 @@ export interface FileRouteTypes {
     | '/agenda'
     | '/anotacoes'
     | '/assinatura'
+    | '/calculadora-aportes'
     | '/calendario'
     | '/configuracoes'
     | '/custos-fixos'
+    | '/despesas'
     | '/faturas'
-    | '/fluxo'
     | '/habitos'
     | '/integracoes'
     | '/investimentos'
@@ -280,10 +301,11 @@ export interface FileRouteTypes {
     | '/mais'
     | '/mercado'
     | '/metas'
+    | '/movimentacoes'
     | '/onboarding'
     | '/orcamento'
     | '/parcelados'
-    | '/resgate'
+    | '/receitas'
     | '/tarefas'
     | '/tarefas-domesticas'
     | '/auth/callback'
@@ -293,11 +315,12 @@ export interface FileRouteTypes {
     | '/agenda'
     | '/anotacoes'
     | '/assinatura'
+    | '/calculadora-aportes'
     | '/calendario'
     | '/configuracoes'
     | '/custos-fixos'
+    | '/despesas'
     | '/faturas'
-    | '/fluxo'
     | '/habitos'
     | '/integracoes'
     | '/investimentos'
@@ -306,10 +329,11 @@ export interface FileRouteTypes {
     | '/mais'
     | '/mercado'
     | '/metas'
+    | '/movimentacoes'
     | '/onboarding'
     | '/orcamento'
     | '/parcelados'
-    | '/resgate'
+    | '/receitas'
     | '/tarefas'
     | '/tarefas-domesticas'
     | '/auth/callback'
@@ -320,11 +344,12 @@ export interface RootRouteChildren {
   AgendaRoute: typeof AgendaRoute
   AnotacoesRoute: typeof AnotacoesRoute
   AssinaturaRoute: typeof AssinaturaRoute
+  CalculadoraAportesRoute: typeof CalculadoraAportesRoute
   CalendarioRoute: typeof CalendarioRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   CustosFixosRoute: typeof CustosFixosRoute
+  DespesasRoute: typeof DespesasRoute
   FaturasRoute: typeof FaturasRoute
-  FluxoRoute: typeof FluxoRoute
   HabitosRoute: typeof HabitosRoute
   IntegracoesRoute: typeof IntegracoesRoute
   InvestimentosRoute: typeof InvestimentosRoute
@@ -333,10 +358,11 @@ export interface RootRouteChildren {
   MaisRoute: typeof MaisRoute
   MercadoRoute: typeof MercadoRoute
   MetasRoute: typeof MetasRoute
+  MovimentacoesRoute: typeof MovimentacoesRoute
   OnboardingRoute: typeof OnboardingRoute
   OrcamentoRoute: typeof OrcamentoRoute
   ParceladosRoute: typeof ParceladosRoute
-  ResgateRoute: typeof ResgateRoute
+  ReceitasRoute: typeof ReceitasRoute
   TarefasRoute: typeof TarefasRoute
   TarefasDomesticasRoute: typeof TarefasDomesticasRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
@@ -372,6 +398,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AssinaturaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/calculadora-aportes': {
+      id: '/calculadora-aportes'
+      path: '/calculadora-aportes'
+      fullPath: '/calculadora-aportes'
+      preLoaderRoute: typeof CalculadoraAportesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/calendario': {
       id: '/calendario'
       path: '/calendario'
@@ -393,18 +426,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CustosFixosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/despesas': {
+      id: '/despesas'
+      path: '/despesas'
+      fullPath: '/despesas'
+      preLoaderRoute: typeof DespesasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/faturas': {
       id: '/faturas'
       path: '/faturas'
       fullPath: '/faturas'
       preLoaderRoute: typeof FaturasRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/fluxo': {
-      id: '/fluxo'
-      path: '/fluxo'
-      fullPath: '/fluxo'
-      preLoaderRoute: typeof FluxoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/habitos': {
@@ -463,6 +496,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MetasRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/movimentacoes': {
+      id: '/movimentacoes'
+      path: '/movimentacoes'
+      fullPath: '/movimentacoes'
+      preLoaderRoute: typeof MovimentacoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/onboarding': {
       id: '/onboarding'
       path: '/onboarding'
@@ -484,11 +524,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ParceladosRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/resgate': {
-      id: '/resgate'
-      path: '/resgate'
-      fullPath: '/resgate'
-      preLoaderRoute: typeof ResgateRouteImport
+    '/receitas': {
+      id: '/receitas'
+      path: '/receitas'
+      fullPath: '/receitas'
+      preLoaderRoute: typeof ReceitasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/tarefas': {
@@ -520,11 +560,12 @@ const rootRouteChildren: RootRouteChildren = {
   AgendaRoute: AgendaRoute,
   AnotacoesRoute: AnotacoesRoute,
   AssinaturaRoute: AssinaturaRoute,
+  CalculadoraAportesRoute: CalculadoraAportesRoute,
   CalendarioRoute: CalendarioRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
   CustosFixosRoute: CustosFixosRoute,
+  DespesasRoute: DespesasRoute,
   FaturasRoute: FaturasRoute,
-  FluxoRoute: FluxoRoute,
   HabitosRoute: HabitosRoute,
   IntegracoesRoute: IntegracoesRoute,
   InvestimentosRoute: InvestimentosRoute,
@@ -533,10 +574,11 @@ const rootRouteChildren: RootRouteChildren = {
   MaisRoute: MaisRoute,
   MercadoRoute: MercadoRoute,
   MetasRoute: MetasRoute,
+  MovimentacoesRoute: MovimentacoesRoute,
   OnboardingRoute: OnboardingRoute,
   OrcamentoRoute: OrcamentoRoute,
   ParceladosRoute: ParceladosRoute,
-  ResgateRoute: ResgateRoute,
+  ReceitasRoute: ReceitasRoute,
   TarefasRoute: TarefasRoute,
   TarefasDomesticasRoute: TarefasDomesticasRoute,
   AuthCallbackRoute: AuthCallbackRoute,
