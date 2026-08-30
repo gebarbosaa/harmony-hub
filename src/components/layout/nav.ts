@@ -1,4 +1,4 @@
-import { LayoutDashboard, ArrowLeftRight, Wallet, Repeat, CreditCard, TrendingUp, Settings, ArrowDownCircle, ArrowUpCircle, Calculator } from "lucide-react";
+import { LayoutDashboard, ArrowLeftRight, Wallet, Repeat, CreditCard, TrendingUp, Settings, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
 export type NavItem = { label: string; to: string; icon: typeof Wallet };
 export const navGroups: { group: string; items: NavItem[] }[] = [
 {group:"PRINCIPAL",items:[{label:"INÍCIO",to:"/",icon:LayoutDashboard},{label:"PAINEL",to:"/mais",icon:Wallet}]},
