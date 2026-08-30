@@ -14,8 +14,8 @@
 @utility label-caps { text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
 @layer base {
   * { border-color: var(--color-border); }
-  html { scroll-behavior: smooth; }
-  body { background: radial-gradient(circle at 15% 0%, oklch(0.23 0.02 45 / 0.28), transparent 30%), var(--color-background); color: var(--color-foreground); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; text-transform: uppercase; }
+  html { scroll-behavior: smooth; overflow-x: hidden; }
+  body { background: radial-gradient(circle at 15% 0%, oklch(0.23 0.02 45 / 0.28), transparent 30%), var(--color-background); color: var(--color-foreground); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; text-transform: uppercase; overflow-x: hidden; }
   ::selection { background: color-mix(in oklab, var(--primary) 35%, transparent); color: var(--foreground); }
   ::-webkit-scrollbar { width: 8px; height: 8px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -25,4 +25,19 @@
   input, textarea, select { transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease; }
   input:focus, textarea:focus, select:focus { outline: none; border-color: color-mix(in oklab, var(--primary) 70%, var(--border)); box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 14%, transparent); }
   button { transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background-color .18s ease; }
+}
+@media (max-width: 639px) {
+  html { -webkit-text-size-adjust: 100%; }
+  body { min-width: 0; }
+  input, textarea, select { font-size: 16px; }
+  button, a { -webkit-tap-highlight-color: transparent; }
+  main { min-width: 0; overflow-x: clip; }
+  main > * { min-width: 0; }
+  [data-create-form="true"] { max-height: calc(100dvh - 24px); padding: 16px; border-radius: 22px; }
+  .page-header-action { flex-shrink: 0; }
+  .page-header-action > button { min-height: 42px; min-width: 42px; }
+  [data-radix-dialog-content] { max-height: calc(100dvh - 24px); overflow-y: auto; overscroll-behavior: contain; }
+}
+@media (max-width: 380px) {
+  .label-caps { letter-spacing: 0.055em; }
 }
