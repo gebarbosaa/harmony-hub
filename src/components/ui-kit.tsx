@@ -4,10 +4,10 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 const CREATE_EVENT = "multicap:open-create";
-type CreateDetail = { title?: string; option?: string };
+type CreateDetail = { title?: string; option?: string; source?: string };
 function normalizeTitle(value?: string) { return (value ?? "").trim().toUpperCase(); }
 function CreateButton({ title }: { title: string }) {
-  function handleClick() { const normalized = normalizeTitle(title); window.dispatchEvent(new CustomEvent<CreateDetail>(CREATE_EVENT, { detail: { title: normalized, option: normalized } })); }
+  function handleClick() { const normalized = normalizeTitle(title); window.dispatchEvent(new CustomEvent<CreateDetail>(CREATE_EVENT, { detail: { title: normalized, option: normalized, source: "legacy" } })); }
   return <button type="button" onClick={handleClick} aria-label={`ADICIONAR ${title}`} title={`ADICIONAR ${title}`} className="group flex h-10 w-10 items-center justify-center rounded-xl border border-border/70 bg-card text-muted-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:bg-primary/5 hover:text-primary active:scale-95"><Plus className="h-5 w-5 transition-transform group-hover:rotate-90" strokeWidth={2} /></button>;
 }
 export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: ReactNode }) {
@@ -17,7 +17,7 @@ export function PageHeader({ title, subtitle, action }: { title: string; subtitl
 }
 function CreatePanel({ title, children, className, aside }: { title: string; children: ReactNode; className?: string; aside?: ReactNode }) {
   const [open, setOpen] = useState(false); const normalizedTitle = normalizeTitle(title);
-  useEffect(() => { const openHandler = (event: Event) => { const detail = (event as CustomEvent<CreateDetail>).detail ?? {}; const requested = normalizeTitle(detail.title || detail.option); if (requested !== normalizedTitle) return; setOpen(true); }; window.addEventListener(CREATE_EVENT, openHandler); return () => window.removeEventListener(CREATE_EVENT, openHandler); }, [normalizedTitle]);
+  useEffect(() => { const openHandler = (event: Event) => { const detail = (event as CustomEvent<CreateDetail>).detail ?? {}; const requested = normalizeTitle(detail.title || detail.option); if (detail.source !== "quick-add" || requested !== normalizedTitle) return; setOpen(true); }; window.addEventListener(CREATE_EVENT, openHandler); return () => window.removeEventListener(CREATE_EVENT, openHandler); }, [normalizedTitle]);
   useEffect(() => { if (!open) return; const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); }; document.addEventListener("keydown", onKeyDown); return () => document.removeEventListener("keydown", onKeyDown); }, [open]);
   if (!open) return null;
   return <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-3 backdrop-blur-md sm:p-5" onMouseDown={() => setOpen(false)}><section id="novo-registro" data-create-form="true" className={cn("max-h-[88vh] w-full max-w-4xl overflow-y-auto rounded-3xl border border-border bg-card p-5 shadow-2xl md:p-6", className)} onMouseDown={event => event.stopPropagation()}><div className="mb-5 flex items-center justify-between gap-3"><div><p className="text-[9px] font-semibold tracking-[0.18em] text-primary">NOVO REGISTRO</p><h2 className="label-caps mt-1 text-sm text-foreground">{title}</h2></div><div className="flex items-center gap-2">{aside}<button type="button" onClick={() => setOpen(false)} aria-label="Fechar" title="Fechar" className="rounded-xl p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"><X className="h-4 w-4" /></button></div></div>{children}</section></div>;
