@@ -19,16 +19,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data, error } = await supabase.from("profiles").select("id, household_id, name, initials, color").eq("id", userId).maybeSingle();
     if (error) throw error;
     if (requestId !== profileRequestRef.current || sessionRef.current?.user.id !== userId) return profileRef.current;
-    const pendingHousehold = activeHouseholdRef.current;
+    const pendingHousehold = activeHouseholdRef.current || getStoredHousehold();
     const nextHousehold = pendingHousehold || data?.household_id || null;
     const baseName = String(data?.name || sessionRef.current?.user.user_metadata?.["full_name"] || sessionRef.current?.user.user_metadata?.["name"] || "Usuário");
-    const nextProfile: Profile = {
-      id: userId,
-      household_id: nextHousehold,
-      name: baseName,
-      initials: data?.initials ?? initialsFrom(baseName),
-      color: data?.color ?? "#8b5cf6",
-    };
+    const nextProfile: Profile = { id: userId, household_id: nextHousehold, name: baseName, initials: data?.initials ?? initialsFrom(baseName), color: data?.color ?? "#8b5cf6" };
     setProfileSafe(nextProfile);
     return nextProfile;
   }
@@ -49,12 +43,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let active = true;
     const applySession = async (nextSession: Session | null) => {
       if (!active) return;
-      const previousUserId = sessionRef.current?.user.id;
-      const nextUserId = nextSession?.user.id;
-      sessionRef.current = nextSession;
-      setSession(nextSession);
+      const previousUserId = sessionRef.current?.user.id; const nextUserId = nextSession?.user.id;
+      sessionRef.current = nextSession; setSession(nextSession);
       if (!nextSession) { ++profileRequestRef.current; activeHouseholdRef.current = null; storeHousehold(null); setProfileSafe(null); setProfileLoading(false); setLoading(false); return; }
       if (previousUserId && previousUserId !== nextUserId) { activeHouseholdRef.current = null; storeHousehold(null); }
+      const storedHousehold = getStoredHousehold();
+      if (storedHousehold) activeHouseholdRef.current = storedHousehold;
       setProfileLoading(true);
       try { await loadProfile(nextSession.user.id); }
       catch (error) { if (active) console.error("Failed to load profile", error); }
