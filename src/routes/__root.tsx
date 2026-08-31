@@ -20,6 +20,8 @@ function AuthGate() {
   const navigate = useNavigate();
   const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
   const isOnboarding = pathname === "/onboarding";
+  const hasPersistedHousehold = typeof window !== "undefined" && Boolean(window.localStorage.getItem("harmony-active-household"));
+  const hasHousehold = Boolean(profile?.household_id || hasPersistedHousehold);
 
   useEffect(() => {
     if (loading || profileLoading) return;
@@ -28,19 +30,17 @@ function AuthGate() {
       return;
     }
     if (isPublicRoute) {
-      void navigate({ to: "/", replace: true });
+      void navigate({ to: hasHousehold ? "/" : "/onboarding", replace: true });
       return;
     }
-    // A própria tela de onboarding controla a navegação após criar/entrar.
-    // Isso evita duas navegações concorrentes e o loop que fazia a tela piscar.
     if (isOnboarding) return;
-    if (!profile?.household_id) {
+    if (!hasHousehold) {
       void navigate({ to: "/onboarding", replace: true });
     }
-  }, [loading, profileLoading, session, profile, isPublicRoute, isOnboarding, navigate]);
+  }, [loading, profileLoading, session, hasHousehold, isPublicRoute, isOnboarding, navigate]);
 
   if (loading || profileLoading) return <div className="flex min-h-screen items-center justify-center bg-background"><p className="label-caps text-sm text-muted-foreground">CARREGANDO...</p></div>;
   if (isPublicRoute || isOnboarding || !session) return <Outlet />;
-  if (!profile?.household_id) return <div className="flex min-h-screen items-center justify-center bg-background"><p className="label-caps text-sm text-muted-foreground">PREPARANDO SEU HUB...</p></div>;
+  if (!hasHousehold) return <div className="flex min-h-screen items-center justify-center bg-background"><p className="label-caps text-sm text-muted-foreground">PREPARANDO SEU HUB...</p></div>;
   return <AppShell><Outlet /></AppShell>;
 }
