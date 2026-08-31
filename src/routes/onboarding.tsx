@@ -81,7 +81,7 @@ function OnboardingPage() {
           <div><h1 className="label-caps text-xl tracking-[0.2em]">CASA CRIADA!</h1><p className="mt-2 text-sm text-muted-foreground">Compartilhe este código para convidar pessoas para sua casa.</p></div>
           <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5"><p className="label-caps text-[10px] text-muted-foreground">CÓDIGO DE CONVITE</p><code className="mt-3 block text-3xl font-bold tracking-[0.3em]">{createdCode}</code></div>
           <div className="grid grid-cols-2 gap-2"><button type="button" onClick={copyCode} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 text-xs font-semibold tracking-wide hover:border-primary/50"><Copy className="h-4 w-4" /> COPIAR</button><button type="button" onClick={shareCode} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-xs font-semibold tracking-wide text-primary-foreground hover:opacity-90"><Share2 className="h-4 w-4" /> COMPARTILHAR</button></div>
-          <button type="button" onClick={goToApp} className="gradient-primary inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90">IR PARA O APP <ArrowRight className="h-4 w-4" /></button>
+          <button type="button" onClick={goToApp} className="gradient-primary inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90">ENTRAR NO HUB <ArrowRight className="h-4 w-4" /></button>
         </div>
       </div>
     );
