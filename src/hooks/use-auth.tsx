@@ -28,16 +28,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
 
   async function loadProfile(userId: string) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("profiles")
       .select("id, household_id, name, initials, color")
       .eq("id", userId)
       .maybeSingle();
-    setProfile(data ?? null);
+    if (!error) setProfile(data ?? null);
   }
 
   async function refreshProfile() {
-    if (session?.user?.id) await loadProfile(session.user.id);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.id) await loadProfile(user.id);
   }
 
   useEffect(() => {
