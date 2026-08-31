@@ -17,29 +17,31 @@ function OnboardingPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function waitForHouseholdProfile() {
-    for (let attempt = 0; attempt < 8; attempt += 1) {
-      await refreshProfile();
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      if (!currentUser) throw new Error("Sessão expirada. Entre novamente.");
-      const { data, error: profileError } = await supabase
+  async function getHouseholdFromProfile() {
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (!currentUser) throw new Error("Sessão expirada. Entre novamente.");
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("household_id")
         .eq("id", currentUser.id)
         .maybeSingle();
       if (profileError) throw profileError;
-      if (data?.household_id) return data.household_id;
-      await new Promise((resolve) => window.setTimeout(resolve, 250));
+      if (profile?.household_id) {
+        return profile.household_id;
+      }
+      await new Promise((resolve) => window.setTimeout(resolve, 300));
     }
-    throw new Error("A casa foi registrada, mas ainda não conseguimos carregar sua entrada. Tente novamente.");
+    throw new Error("A casa foi criada, mas o vínculo com seu perfil ainda não foi concluído.");
   }
 
   async function goToApp() {
     setLoading(true);
     setError(null);
     try {
-      await waitForHouseholdProfile();
-      window.location.assign("/");
+      await refreshProfile();
+      await getHouseholdFromProfile();
+      window.location.replace("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Não foi possível entrar no Hub.");
     } finally {
@@ -55,13 +57,13 @@ function OnboardingPage() {
     try {
       if (mode === "create") {
         if (!householdName.trim()) throw new Error("Informe um nome para a casa/família.");
-        const { data, error: rpcError } = await supabase.rpc("create_household", {
+        const { error: rpcError } = await supabase.rpc("create_household", {
           household_name: householdName.trim(),
           my_name: name.trim(),
         });
         if (rpcError) throw rpcError;
-        const householdId = typeof data === "string" ? data : Array.isArray(data) ? data[0]?.id : data?.id;
-        if (!householdId) throw new Error("A casa foi criada, mas não recebemos o identificador dela.");
+
+        const householdId = await getHouseholdFromProfile();
         const { data: household, error: householdError } = await supabase
           .from("households")
           .select("invite_code")
@@ -70,8 +72,9 @@ function OnboardingPage() {
         if (householdError) throw householdError;
         const code = household?.invite_code?.trim().toUpperCase();
         if (!code) throw new Error("A casa foi criada, mas o código de convite não foi encontrado.");
+
+        await refreshProfile();
         setCreatedCode(code);
-        await waitForHouseholdProfile();
         toast.success("Casa criada com sucesso!");
       } else {
         if (!inviteCode.trim()) throw new Error("Informe o código de convite.");
@@ -80,9 +83,10 @@ function OnboardingPage() {
           my_name: name.trim(),
         });
         if (rpcError) throw rpcError;
-        await waitForHouseholdProfile();
+        await getHouseholdFromProfile();
+        await refreshProfile();
         toast.success("Você entrou na casa!");
-        window.location.assign("/");
+        window.location.replace("/");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Algo deu errado. Tente novamente.");
