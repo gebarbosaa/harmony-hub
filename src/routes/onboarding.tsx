@@ -22,7 +22,7 @@ function OnboardingPage() {
   async function loadHouseholdResult(): Promise<HouseholdResult> {
     const { data: { user: currentUser } } = await supabase.auth.getUser();
     if (!currentUser) throw new Error("Sessão expirada. Entre novamente.");
-    for (let attempt = 0; attempt < 10; attempt += 1) {
+    for (let attempt = 0; attempt < 12; attempt += 1) {
       const { data: profile, error: profileError } = await supabase.from("profiles").select("household_id").eq("id", currentUser.id).maybeSingle();
       if (profileError) throw profileError;
       if (profile?.household_id) {
@@ -30,9 +30,9 @@ function OnboardingPage() {
         if (householdError) throw householdError;
         if (household?.invite_code) return { household_id: profile.household_id, invite_code: household.invite_code };
       }
-      await new Promise((resolve) => window.setTimeout(resolve, 300));
+      await new Promise((resolve) => window.setTimeout(resolve, 250));
     }
-    throw new Error("A casa foi criada, mas o vínculo ainda não foi sincronizado. Tente novamente.");
+    throw new Error("A casa foi criada, mas o vínculo não apareceu no seu perfil. Tente novamente.");
   }
 
   async function goToApp() {
@@ -49,15 +49,13 @@ function OnboardingPage() {
     try {
       if (mode === "create") {
         if (!householdName.trim()) throw new Error("Informe um nome para a casa/família.");
-        const { data, error: rpcError } = await supabase.rpc("create_household", { household_name: householdName.trim(), my_name: name.trim() });
+        const { error: rpcError } = await supabase.rpc("create_household", { household_name: householdName.trim(), my_name: name.trim() });
         if (rpcError) throw rpcError;
-        // The production RPC returns the new household UUID. Resolve the code from that UUID.
-        const householdId = typeof data === "string" ? data : null;
-        if (!householdId) throw new Error("A casa foi criada, mas o servidor não retornou o identificador.");
-        const { data: household, error: householdError } = await supabase.from("households").select("invite_code").eq("id", householdId).single();
-        if (householdError) throw householdError;
-        if (!household?.invite_code) throw new Error("A casa foi criada, mas o código de convite não foi encontrado.");
-        await refreshProfile(); setCreatedCode(household.invite_code.toUpperCase()); toast.success("Casa criada com sucesso!");
+        // The RPC writes household_id to the authenticated user's profile. Resolve the created house from that persisted relation instead of depending on the RPC response shape.
+        const result = await loadHouseholdResult();
+        await refreshProfile();
+        setCreatedCode(result.invite_code.toUpperCase());
+        toast.success("Casa criada com sucesso!");
       } else {
         if (!inviteCode.trim()) throw new Error("Informe o código de convite.");
         const { error: rpcError } = await supabase.rpc("join_household", { invite: inviteCode.trim().toUpperCase(), my_name: name.trim() });
