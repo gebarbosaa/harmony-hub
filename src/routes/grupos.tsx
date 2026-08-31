@@ -65,7 +65,7 @@ function GroupsPage() {
   async function createGroup() {
     if (!groupName.trim()) return setMessage("Informe o nome do grupo.");
     setBusy(true); setMessage("");
-    const { data, error } = await db.rpc("create_household", { household_name: groupName.trim(), my_name: profile?.name ?? "USUÁRIO" });
+    const { error } = await db.rpc("create_household", { household_name: groupName.trim(), my_name: profile?.name ?? "USUÁRIO" });
     if (error) setMessage(error.message);
     else { setGroupName(""); setMode(null); setMessage("Grupo criado com sucesso."); await refreshProfile(); await queryClient.invalidateQueries({ queryKey: ["my-groups", user?.id] }); }
     setBusy(false);
@@ -82,14 +82,19 @@ function GroupsPage() {
 
   async function switchGroup(groupId: string) {
     if (groupId === profile?.household_id || !user) return;
+    const target = groupsQuery.data?.find((group) => group.household_id === groupId);
+    if (!target || target.status !== "ACTIVE") {
+      setMessage("Você não tem acesso a este grupo.");
+      return;
+    }
     setBusy(true); setMessage("");
-    const { error } = await db.from("profiles").update({ household_id: groupId }).eq("id", user.id);
+    const { error } = await db.rpc("switch_household", { p_household_id: groupId });
     if (error) setMessage(error.message); else { await refreshProfile(); await queryClient.invalidateQueries(); setMessage("Grupo ativo alterado."); }
     setBusy(false);
   }
 
   async function changeRole(member: Member, role: Role) {
-    if (!canManage || role === "OWNER") return;
+    if (!canManage || role === "OWNER" || member.role === "OWNER") return;
     setBusy(true); setMessage("");
     const { error } = await db.from("group_members").update({ role, updated_at: new Date().toISOString() }).eq("household_id", activeGroupId).eq("user_id", member.id);
     if (error) setMessage(error.message); else await membersQuery.refetch();
