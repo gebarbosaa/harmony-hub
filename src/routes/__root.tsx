@@ -20,13 +20,25 @@ function AuthGate() {
   const navigate = useNavigate();
   const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
   const isOnboarding = pathname === "/onboarding";
+
   useEffect(() => {
     if (loading || profileLoading) return;
-    if (!session) { if (!isPublicRoute) void navigate({ to: "/login" }); return; }
-    if (isPublicRoute) { void navigate({ to: "/" }); return; }
-    if (!profile?.household_id) { if (!isOnboarding) void navigate({ to: "/onboarding" }); return; }
-    if (isOnboarding) void navigate({ to: "/" });
+    if (!session) {
+      if (!isPublicRoute && !isOnboarding) void navigate({ to: "/login", replace: true });
+      return;
+    }
+    if (isPublicRoute) {
+      void navigate({ to: "/", replace: true });
+      return;
+    }
+    // A própria tela de onboarding controla a navegação após criar/entrar.
+    // Isso evita duas navegações concorrentes e o loop que fazia a tela piscar.
+    if (isOnboarding) return;
+    if (!profile?.household_id) {
+      void navigate({ to: "/onboarding", replace: true });
+    }
   }, [loading, profileLoading, session, profile, isPublicRoute, isOnboarding, navigate]);
+
   if (loading || profileLoading) return <div className="flex min-h-screen items-center justify-center bg-background"><p className="label-caps text-sm text-muted-foreground">CARREGANDO...</p></div>;
   if (isPublicRoute || isOnboarding || !session) return <Outlet />;
   if (!profile?.household_id) return <div className="flex min-h-screen items-center justify-center bg-background"><p className="label-caps text-sm text-muted-foreground">PREPARANDO SEU HUB...</p></div>;
