@@ -6,57 +6,25 @@ type Profile = { id: string; household_id: string | null; name: string; initials
 type AuthState = { loading: boolean; profileLoading: boolean; session: Session | null; user: User | null; profile: Profile | null; refreshProfile: () => Promise<Profile | null>; setActiveHousehold: (householdId: string) => void; signInWithGoogle: () => Promise<void>; signOut: () => Promise<void> };
 const AuthContext = createContext<AuthState | undefined>(undefined);
 const ACTIVE_HOUSEHOLD_KEY = "harmony-active-household";
-
 function getStoredHousehold() { try { return localStorage.getItem(ACTIVE_HOUSEHOLD_KEY); } catch { return null; } }
 function storeHousehold(id: string | null) { try { if (id) localStorage.setItem(ACTIVE_HOUSEHOLD_KEY, id); else localStorage.removeItem(ACTIVE_HOUSEHOLD_KEY); } catch {} }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [loading, setLoading] = useState(true);
-  const [profileLoading, setProfileLoading] = useState(true);
-  const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const sessionRef = useRef<Session | null>(null);
-  const profileRef = useRef<Profile | null>(null);
-  const profileRequestRef = useRef(0);
-
+  const [loading, setLoading] = useState(true); const [profileLoading, setProfileLoading] = useState(true); const [session, setSession] = useState<Session | null>(null); const [profile, setProfile] = useState<Profile | null>(null);
+  const sessionRef = useRef<Session | null>(null); const profileRef = useRef<Profile | null>(null); const profileRequestRef = useRef(0);
   function setProfileSafe(next: Profile | null) { profileRef.current = next; setProfile(next); if (next?.household_id) storeHousehold(next.household_id); }
   async function loadProfile(userId: string): Promise<Profile | null> {
-    const requestId = ++profileRequestRef.current;
-    const { data, error } = await supabase.from("profiles").select("id, household_id, name, initials, color").eq("id", userId).maybeSingle();
-    if (error) throw error;
-    if (requestId !== profileRequestRef.current || sessionRef.current?.user.id !== userId) return profileRef.current;
+    const requestId = ++profileRequestRef.current; const { data, error } = await supabase.from("profiles").select("id, household_id, name, initials, color").eq("id", userId).maybeSingle();
+    if (error) throw error; if (requestId !== profileRequestRef.current || sessionRef.current?.user.id !== userId) return profileRef.current;
     const stored = getStoredHousehold();
-    const nextProfile = data ? { ...data, household_id: data.household_id ?? stored } : null;
-    setProfileSafe(nextProfile);
-    return nextProfile;
+    const nextProfile = data ? { ...data, household_id: stored ?? data.household_id } : null;
+    setProfileSafe(nextProfile); return nextProfile;
   }
-  async function refreshProfile() {
-    const current = sessionRef.current;
-    if (!current?.user?.id) return profileRef.current;
-    setProfileLoading(true);
-    try { return await loadProfile(current.user.id); }
-    catch (error) { console.error("Failed to refresh profile", error); return profileRef.current; }
-    finally { if (sessionRef.current?.user.id === current.user.id) setProfileLoading(false); }
-  }
-  function setActiveHousehold(householdId: string) {
-    const current = profileRef.current;
-    storeHousehold(householdId);
-    const next = current ? { ...current, household_id: householdId } : null;
-    if (next) setProfileSafe(next);
-    setProfileLoading(false);
-  }
+  async function refreshProfile() { const current = sessionRef.current; if (!current?.user?.id) return profileRef.current; setProfileLoading(true); try { return await loadProfile(current.user.id); } catch (error) { console.error("Failed to refresh profile", error); return profileRef.current; } finally { if (sessionRef.current?.user.id === current.user.id) setProfileLoading(false); } }
+  function setActiveHousehold(householdId: string) { const current = profileRef.current; storeHousehold(householdId); if (current) setProfileSafe({ ...current, household_id: householdId }); setProfileLoading(false); }
   useEffect(() => {
     let active = true;
-    const applySession = async (nextSession: Session | null) => {
-      if (!active) return;
-      sessionRef.current = nextSession;
-      setSession(nextSession);
-      if (!nextSession) { ++profileRequestRef.current; storeHousehold(null); setProfileSafe(null); setProfileLoading(false); setLoading(false); return; }
-      setProfileLoading(true);
-      try { await loadProfile(nextSession.user.id); }
-      catch (error) { if (active) console.error("Failed to load profile", error); }
-      finally { if (active && sessionRef.current?.user.id === nextSession.user.id) { setProfileLoading(false); setLoading(false); } }
-    };
+    const applySession = async (nextSession: Session | null) => { if (!active) return; sessionRef.current = nextSession; setSession(nextSession); if (!nextSession) { ++profileRequestRef.current; storeHousehold(null); setProfileSafe(null); setProfileLoading(false); setLoading(false); return; } setProfileLoading(true); try { await loadProfile(nextSession.user.id); } catch (error) { if (active) console.error("Failed to load profile", error); } finally { if (active && sessionRef.current?.user.id === nextSession.user.id) { setProfileLoading(false); setLoading(false); } } };
     void supabase.auth.getSession().then(({ data }) => applySession(data.session));
     const { data: listener } = supabase.auth.onAuthStateChange((event, nextSession) => { if (!active || event === "INITIAL_SESSION") return; void applySession(nextSession); });
     return () => { active = false; listener.subscription.unsubscribe(); };
