@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Outlet, Link, createRootRouteWithContext, useRouter, useRouterState, useNavigate, HeadContent, Scripts } from "@tanstack/react-router";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AppShell } from "@/components/layout/AppShell";
@@ -20,30 +20,35 @@ function RootShell({ children }: { children: ReactNode }) { return <html lang="p
 function RootComponent() { const { queryClient } = Route.useRouteContext(); return <QueryClientProvider client={queryClient}><AuthProvider><GlobalMonthProvider><AuthGate /><Toaster position="top-center" /></GlobalMonthProvider></AuthProvider></QueryClientProvider>; }
 
 function AuthGate() {
-  const { loading, session, profile, refreshProfile } = useAuth();
+  const { loading, profileLoading, session, profile } = useAuth();
   const pathname = useRouterState({ select: s => s.location.pathname });
   const navigate = useNavigate();
-  const [checkingProfile, setCheckingProfile] = useState(false);
   const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
   const isOnboarding = pathname === "/onboarding";
 
   useEffect(() => {
-    if (loading) return;
-    if (!session && !isPublicRoute) { navigate({ to: "/login" }); return; }
-    if (session && isPublicRoute) { navigate({ to: "/" }); return; }
-
-    if (session && !profile?.household_id && !isOnboarding) {
-      if (!checkingProfile) {
-        setCheckingProfile(true);
-        void refreshProfile().finally(() => setCheckingProfile(false));
-      }
+    if (loading || profileLoading) return;
+    if (!session) {
+      if (!isPublicRoute) navigate({ to: "/login" });
       return;
     }
+    if (isPublicRoute) {
+      navigate({ to: "/" });
+      return;
+    }
+    if (!profile) {
+      if (!isOnboarding) navigate({ to: "/onboarding" });
+      return;
+    }
+    if (!profile.household_id) {
+      if (!isOnboarding) navigate({ to: "/onboarding" });
+      return;
+    }
+    if (isOnboarding) navigate({ to: "/" });
+  }, [loading, profileLoading, session, profile, isPublicRoute, isOnboarding, navigate]);
 
-    if (session && profile?.household_id && isOnboarding) navigate({ to: "/" });
-  }, [loading, session, profile, isPublicRoute, isOnboarding, pathname, navigate, checkingProfile, refreshProfile]);
-
-  if (loading || (session && !profile?.household_id && !isOnboarding && checkingProfile)) return <div className="flex min-h-screen items-center justify-center bg-background"><p className="label-caps text-sm text-muted-foreground">CARREGANDO...</p></div>;
-  if (isPublicRoute || isOnboarding || !session || !profile?.household_id) return <Outlet />;
+  if (loading || (session && profileLoading)) return <div className="flex min-h-screen items-center justify-center bg-background"><p className="label-caps text-sm text-muted-foreground">CARREGANDO...</p></div>;
+  if (isPublicRoute || isOnboarding || !session) return <Outlet />;
+  if (!profile?.household_id) return <div className="flex min-h-screen items-center justify-center bg-background"><p className="label-caps text-sm text-muted-foreground">PREPARANDO SEU HUB...</p></div>;
   return <AppShell><Outlet /></AppShell>;
 }
