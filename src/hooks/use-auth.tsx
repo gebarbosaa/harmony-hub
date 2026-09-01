@@ -3,7 +3,7 @@ import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
 type Profile = { id: string; household_id: string | null; name: string; initials: string | null; color: string };
-type AuthState = { loading: boolean; profileLoading: boolean; session: Session | null; user: User | null; profile: Profile | null; refreshProfile: () => Promise<Profile | null>; setActiveHousehold: (householdId: string) => void; signInWithGoogle: () => Promise<void>; signOut: () => Promise<void> };
+type AuthState = { loading: boolean; profileLoading: boolean; session: Session | null; user: User | null; profile: Profile | null; refreshProfile: () => Promise<Profile | null>; updateProfileName: (name: string) => Promise<Profile>; setActiveHousehold: (householdId: string) => void; signInWithGoogle: () => Promise<void>; signOut: () => Promise<void> };
 const AuthContext = createContext<AuthState | undefined>(undefined);
 const ACTIVE_HOUSEHOLD_KEY = "harmony-active-household";
 function getStoredHousehold() { try { return localStorage.getItem(ACTIVE_HOUSEHOLD_KEY); } catch { return null; } }
@@ -35,10 +35,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return nextProfile;
   }
   async function refreshProfile() { const current = sessionRef.current; if (!current?.user?.id) return profileRef.current; setProfileLoading(true); try { return await loadProfile(current.user.id); } catch (error) { console.error("Failed to refresh profile", error); return profileRef.current; } finally { if (sessionRef.current?.user.id === current.user.id) setProfileLoading(false); } }
+  async function updateProfileName(name: string): Promise<Profile> {
+    const currentUser = sessionRef.current?.user;
+    const normalized = name.trim().toUpperCase();
+    if (!currentUser) throw new Error("USUÁRIO NÃO AUTENTICADO");
+    if (!normalized) throw new Error("INFORME SEU NOME");
+    const { error } = await supabase.from("profiles").update({ name: normalized, updated_at: new Date().toISOString() }).eq("id", currentUser.id);
+    if (error) throw error;
+    const current = profileRef.current;
+    const nextProfile: Profile = current
+      ? { ...current, name: normalized, initials: initialsFrom(normalized) }
+      : { id: currentUser.id, household_id: null, name: normalized, initials: initialsFrom(normalized), color: "#8b5cf6" };
+    profileRef.current = nextProfile;
+    setProfile(nextProfile);
+    return nextProfile;
+  }
   function setActiveHousehold(householdId: string) { activeHouseholdRef.current = householdId; storeHousehold(householdId); const current = profileRef.current; const user = sessionRef.current?.user; const name = current?.name || String(user?.user_metadata?.["full_name"] ?? user?.user_metadata?.["name"] ?? "Usuário"); const next: Profile = current ? { ...current, household_id: householdId } : { id: user?.id ?? "", household_id: householdId, name, initials: initialsFrom(name), color: "#8b5cf6" }; profileRef.current = next; setProfile(next); setProfileLoading(false); setLoading(false); }
   useEffect(() => { let active = true; const applySession = async (nextSession: Session | null) => { if (!active) return; const previousUserId = sessionRef.current?.user.id; const nextUserId = nextSession?.user.id; sessionRef.current = nextSession; setSession(nextSession); if (!nextSession) { ++profileRequestRef.current; activeHouseholdRef.current = null; storeHousehold(null); setProfileSafe(null); setProfileLoading(false); setLoading(false); return; } if (previousUserId && previousUserId !== nextUserId) { activeHouseholdRef.current = null; storeHousehold(null); } const storedHousehold = getStoredHousehold(); if (storedHousehold) activeHouseholdRef.current = storedHousehold; setProfileLoading(true); try { await loadProfile(nextSession.user.id); } catch (error) { if (active) console.error("Failed to load profile", error); } finally { if (active && sessionRef.current?.user.id === nextSession.user.id) { setProfileLoading(false); setLoading(false); } } }; void supabase.auth.getSession().then(({ data }) => applySession(data.session)); const { data: listener } = supabase.auth.onAuthStateChange((event, nextSession) => { if (!active || event === "INITIAL_SESSION") return; void applySession(nextSession); }); return () => { active = false; listener.subscription.unsubscribe(); }; }, []);
   async function signInWithGoogle() { await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: `${window.location.origin}/auth/callback`, queryParams: { access_type: "offline", prompt: "consent" }, scopes: "https://www.googleapis.com/auth/calendar.events" } }); }
   async function signOut() { activeHouseholdRef.current = null; storeHousehold(null); await supabase.auth.signOut(); }
-  return <AuthContext.Provider value={{ loading, profileLoading, session, user: session?.user ?? null, profile, refreshProfile, setActiveHousehold, signInWithGoogle, signOut }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ loading, profileLoading, session, user: session?.user ?? null, profile, refreshProfile, updateProfileName, setActiveHousehold, signInWithGoogle, signOut }}>{children}</AuthContext.Provider>;
 }
 export function useAuth() { const ctx = useContext(AuthContext); if (!ctx) throw new Error("useAuth must be used within AuthProvider"); return ctx; }
