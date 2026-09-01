@@ -7,7 +7,7 @@ import { useHouseholdTable } from "@/hooks/use-household-data";
 import { useHouseholdMembers } from "@/hooks/use-household-members";
 import { MonthSelector, useGlobalMonth } from "@/hooks/use-global-month";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-export const Route=createFileRoute("/receitas")({head:()=>({meta:[{title:"RECEITAS — MULTICAP"}]}),component:ReceitasPage});
+export const Route=createFileRoute("/receitas")({head:()=>({meta:[{title:"RECEITAS — HARMONY HUB"}]}),component:ReceitasPage});
 type Row={id:string;date:string;description:string;category:string;pay_method:string;responsible:string;amount:number;type:string;paid:boolean;household_id:string;payment_method_id:string|null;payment_method_name:string|null;account_id:string|null;source_type:string|null};
 type Category={id:string;name:string;kind:string;household_id:string}; type Payment={id:string;name:string;description:string|null;kind:string;card_id:string|null;household_id:string}; type Account={id:string;name:string;institution:string|null;household_id:string};
 function ReceitasPage(){
