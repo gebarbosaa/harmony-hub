@@ -15,29 +15,24 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 function RootShell({ children }: { children: ReactNode }) { return <html lang="pt-BR" className="dark"><head><HeadContent /></head><body>{children}<Scripts /></body></html>; }
 function RootComponent() { const { queryClient } = Route.useRouteContext(); return <QueryClientProvider client={queryClient}><AuthProvider><GlobalMonthProvider><AuthGate /><Toaster position="top-center" /></GlobalMonthProvider></AuthProvider></QueryClientProvider>; }
 function AuthGate() {
-  const { loading, profileLoading, session, profile } = useAuth();
+  const { loading, profileLoading, session } = useAuth();
   const pathname = useRouterState({ select: s => s.location.pathname });
   const navigate = useNavigate();
   const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
-  const isOnboarding = pathname === "/onboarding";
-  const hasHousehold = Boolean(profile?.household_id);
 
   useEffect(() => {
     if (loading || profileLoading) return;
     if (!session) {
-      if (!isPublicRoute && !isOnboarding) void navigate({ to: "/login", replace: true });
+      if (!isPublicRoute) void navigate({ to: "/login", replace: true });
       return;
     }
+    // Login/OAuth always returns to the main app. A household/group is optional.
     if (isPublicRoute) {
-      void navigate({ to: hasHousehold ? "/" : "/onboarding", replace: true });
-      return;
+      void navigate({ to: "/", replace: true });
     }
-    if (isOnboarding) return;
-    if (!hasHousehold) void navigate({ to: "/onboarding", replace: true });
-  }, [loading, profileLoading, session, hasHousehold, isPublicRoute, isOnboarding, navigate]);
+  }, [loading, profileLoading, session, isPublicRoute, navigate]);
 
   if (loading || profileLoading) return <div className="flex min-h-screen items-center justify-center bg-background"><p className="label-caps text-sm text-muted-foreground">CARREGANDO...</p></div>;
-  if (isPublicRoute || isOnboarding || !session) return <Outlet />;
-  if (!hasHousehold) return <div className="flex min-h-screen items-center justify-center bg-background"><p className="label-caps text-sm text-muted-foreground">PREPARANDO SEU HUB...</p></div>;
+  if (isPublicRoute || !session) return <Outlet />;
   return <AppShell><Outlet /></AppShell>;
 }
