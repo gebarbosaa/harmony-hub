@@ -20,8 +20,7 @@ function AuthGate() {
   const navigate = useNavigate();
   const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
   const isOnboarding = pathname === "/onboarding";
-  const hasPersistedHousehold = typeof window !== "undefined" && Boolean(window.localStorage.getItem("harmony-active-household"));
-  const hasHousehold = Boolean(profile?.household_id || hasPersistedHousehold);
+  const hasHousehold = Boolean(profile?.household_id);
 
   useEffect(() => {
     if (loading || profileLoading) return;
@@ -34,9 +33,7 @@ function AuthGate() {
       return;
     }
     if (isOnboarding) return;
-    if (!hasHousehold) {
-      void navigate({ to: "/onboarding", replace: true });
-    }
+    if (!hasHousehold) void navigate({ to: "/onboarding", replace: true });
   }, [loading, profileLoading, session, hasHousehold, isPublicRoute, isOnboarding, navigate]);
 
   if (loading || profileLoading) return <div className="flex min-h-screen items-center justify-center bg-background"><p className="label-caps text-sm text-muted-foreground">CARREGANDO...</p></div>;
