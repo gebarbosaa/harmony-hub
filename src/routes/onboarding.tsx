@@ -55,11 +55,26 @@ function OnboardingPage() {
   }, [user, setActiveHousehold]);
 
   async function createHousehold(): Promise<HouseholdResult> {
-    const { data, error: e } = await supabase.rpc("create_household", { household_name: householdName.trim(), my_name: name.trim() });
+    const { data, error: e } = await supabase.rpc("create_household", {
+      household_name: householdName.trim(),
+      my_name: name.trim(),
+    });
     if (e) throw e;
-    const row = Array.isArray(data) ? data[0] : data;
-    if (!row?.household_id || !row?.invite_code) throw new Error("A casa foi criada, mas o sistema não recebeu o identificador e o código.");
-    return { household_id: String(row.household_id), invite_code: String(row.invite_code).toUpperCase(), name: householdName.trim() };
+
+    const raw = Array.isArray(data) ? data[0] : data;
+    const row = raw && typeof raw === "object" ? raw as Record<string, unknown> : null;
+    const householdId = row?.household_id ?? row?.id ?? row?.householdId;
+    const code = row?.invite_code ?? row?.inviteCode ?? row?.code;
+
+    if (!householdId || !code) {
+      throw new Error("A casa foi criada, mas o sistema não recebeu o identificador e o código.");
+    }
+
+    return {
+      household_id: String(householdId),
+      invite_code: String(code).trim().toUpperCase(),
+      name: householdName.trim(),
+    };
   }
 
   async function joinHousehold() {
@@ -86,16 +101,39 @@ function OnboardingPage() {
       if (mode === "create") {
         if (!householdName.trim()) throw new Error("Informe um nome para a casa/família.");
         const result = await createHousehold();
-        setActiveHousehold(result.household_id); setCreated(result); toast.success("Casa criada com sucesso!");
+        setActiveHousehold(result.household_id);
+        setCreated(result);
+        setLoading(false);
+        toast.success("Casa criada com sucesso!");
       } else {
-        const householdId = await joinHousehold(); await enterDashboard(householdId);
+        const householdId = await joinHousehold();
+        await enterDashboard(householdId);
       }
-    } catch (err) { setError(err instanceof Error ? err.message : "Algo deu errado. Tente novamente."); setLoading(false); }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Algo deu errado. Tente novamente.");
+      setLoading(false);
+    }
   }
 
-  async function enterHub() { if (!created && !existing) return; const householdId = created?.household_id ?? existing!.household_id; setError(null); setLoading(true); try { await enterDashboard(householdId); } catch (err) { setError(err instanceof Error ? err.message : "Não foi possível abrir o início do Hub."); setLoading(false); } }
-  async function copyCode() { const code = created?.invite_code ?? existing?.invite_code; if (code) { await navigator.clipboard?.writeText(code); toast.success("Código copiado!"); } }
-  async function shareCode() { const code = created?.invite_code ?? existing?.invite_code; if (!code) return; const text = `Entre na minha casa no Harmony Hub usando o código: ${code}`; if (navigator.share) await navigator.share({ text }); else await copyCode(); }
+  async function enterHub() {
+    if (!created && !existing) return;
+    const householdId = created?.household_id ?? existing!.household_id;
+    setError(null); setLoading(true);
+    try { await enterDashboard(householdId); }
+    catch (err) { setError(err instanceof Error ? err.message : "Não foi possível abrir o início do Hub."); setLoading(false); }
+  }
+
+  async function copyCode() {
+    const code = created?.invite_code ?? existing?.invite_code;
+    if (code) { await navigator.clipboard?.writeText(code); toast.success("Código copiado!"); }
+  }
+
+  async function shareCode() {
+    const code = created?.invite_code ?? existing?.invite_code;
+    if (!code) return;
+    const text = `Entre na minha casa no Harmony Hub usando o código: ${code}`;
+    if (navigator.share) await navigator.share({ text }); else await copyCode();
+  }
 
   if (loading && !existing && !created) return <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">VERIFICANDO SUA CASA...</div>;
 
@@ -103,5 +141,5 @@ function OnboardingPage() {
 
   if (created) return <div className="flex min-h-screen items-center justify-center bg-background px-4"><div className="w-full max-w-sm space-y-5 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary"><CheckCircle2 className="h-7 w-7"/></div><div><h1 className="label-caps text-xl tracking-[0.2em]">CASA CRIADA!</h1><p className="mt-2 text-sm text-muted-foreground">Compartilhe este código para convidar pessoas para sua casa.</p></div><div className="rounded-2xl border border-primary/30 bg-primary/5 p-5"><p className="label-caps text-[10px] text-muted-foreground">CÓDIGO DE CONVITE</p><code className="mt-3 block text-3xl font-bold tracking-[0.3em]">{created.invite_code}</code></div><div className="grid grid-cols-2 gap-2"><button type="button" onClick={copyCode} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 text-xs font-semibold"><Copy className="h-4 w-4"/>COPIAR</button><button type="button" onClick={shareCode} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-xs font-semibold text-primary-foreground"><Share2 className="h-4 w-4"/>COMPARTILHAR</button></div><button type="button" onClick={enterHub} disabled={loading} className="gradient-primary inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-primary-foreground disabled:opacity-60">{loading?"ABRINDO O INÍCIO...":"ENTRAR NO HUB"}<ArrowRight className="h-4 w-4"/></button>{error&&<p className="text-sm text-destructive">{error}</p>}</div></div>;
 
-  return <div className="flex min-h-screen items-center justify-center bg-background px-4"><div className="w-full max-w-sm space-y-6"><div className="text-center"><h1 className="label-caps text-xl tracking-[0.2em]">BEM-VINDO(A)</h1><p className="mt-1 text-sm text-muted-foreground">Crie sua casa no Harmony Hub ou entre em uma existente com um código de convite.</p></div><div className="flex rounded-xl border border-border p-1"><button type="button" onClick={()=>setMode("create")} className={`label-caps flex-1 rounded-lg py-2 text-[11px] ${mode==="create"?"bg-primary text-primary-foreground":"text-muted-foreground"}`}>Criar casa</button><button type="button" onClick={()=>setMode("join")} className={`label-caps flex-1 rounded-lg py-2 text-[11px] ${mode==="join"?"bg-primary text-primary-foreground":"text-muted-foreground"}`}>Entrar com código</button></div><form onSubmit={handleSubmit} className="space-y-3"><div className="space-y-1"><label className="label-caps text-[11px] text-muted-foreground">Seu nome</label><input value={name} onChange={e=>setName(e.target.value)} placeholder="Ex: Maria" className="w-full rounded-lg border border-border bg-secondary/60 px-3 py-2 text-sm text-foreground outline-none focus:border-primary"/></div>{mode==="create"?<div className="space-y-1"><label className="label-caps text-[11px] text-muted-foreground">Nome da casa/família</label><input value={householdName} onChange={e=>setHouseholdName(e.target.value)} placeholder="Ex: Casa Barbosa" className="w-full rounded-lg border border-border bg-secondary/60 px-3 py-2 text-sm text-foreground outline-none focus:border-primary"/></div>:<div className="space-y-1"><label className="label-caps text-[11px] text-muted-foreground">Código de convite</label><input value={inviteCode} onChange={e=>setInviteCode(e.target.value.toUpperCase())} placeholder="Ex: A1B2C3" className="w-full rounded-lg border border-border bg-secondary/60 px-3 py-2 text-sm uppercase text-foreground outline-none focus:border-primary"/></div>}{error&&<p className="text-sm text-destructive">{error}</p>}<button type="submit" disabled={loading} className="gradient-primary w-full rounded-lg px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-60">{loading?"SALVANDO...":mode==="create"?"CRIAR CASA":"ENTRAR"}</button></form></div></div>;
+  return <div className="flex min-h-screen items-center justify-center bg-background px-4"><div className="w-full max-w-sm space-y-6"><div className="text-center"><h1 className="label-caps text-xl tracking-[0.2em]">BEM-VINDO(A)</h1><p className="mt-1 text-sm text-muted-foreground">Crie sua casa no Harmony Hub ou entre em uma existente com um código de convite.</p></div><div className="flex rounded-xl border border-border p-1"><button type="button" onClick={()=>setMode("create")} className={`label-caps flex-1 rounded-lg py-2 text-[11px] ${mode==="create"?"bg-primary text-primary-foreground":"text-muted-foreground"}`}>Criar casa</button><button type="button" onClick={()=>setMode("join")} className={`label-caps flex-1 rounded-lg py-2 text-[11px] ${mode==="join"?"bg-primary text-primary-foreground":"text-muted-foreground"}`}>Entrar com código</button></div><form onSubmit={handleSubmit} className="space-y-3"><div className="space-y-1"><label className="label-caps text-[11px] text-muted-foreground">Seu nome</label><input value={name} onChange={e=>setName(e.target.value)} placeholder="Ex: Maria" className="w-full rounded-lg border border-border bg-secondary/60 px-3 py-2 text-sm text-foreground outline-none focus:border-primary"/></div>{mode==="create"?<div className="space-y-1"><label className="label-caps text-[11px] text-muted-foreground">Nome da casa/família</label><input value={householdName} onChange={e=>setHouseholdName(e.target.value)} placeholder="Ex: Casa Barbosa" className="w-full rounded-lg border border-border bg-secondary/60 px-3 py-2 text-sm text-foreground outline-none focus:border-primary"/> </div>:<div className="space-y-1"><label className="label-caps text-[11px] text-muted-foreground">Código de convite</label><input value={inviteCode} onChange={e=>setInviteCode(e.target.value.toUpperCase())} placeholder="Ex: A1B2C3" className="w-full rounded-lg border border-border bg-secondary/60 px-3 py-2 text-sm uppercase text-foreground outline-none focus:border-primary"/></div>}{error&&<p className="text-sm text-destructive">{error}</p>}<button type="submit" disabled={loading} className="gradient-primary w-full rounded-lg px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-60">{loading?"SALVANDO...":mode==="create"?"CRIAR CASA":"ENTRAR"}</button></form></div></div>;
 }
