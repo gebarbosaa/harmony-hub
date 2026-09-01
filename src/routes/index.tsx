@@ -8,105 +8,39 @@ import { useAuth } from "@/hooks/use-auth";
 import { useHouseholdTable } from "@/hooks/use-household-data";
 
 export const Route = createFileRoute("/")({
-  head: () => ({ meta: [{ title: "VISÃO GERAL — MULTICAP" }, { name: "description", content: "Resumo financeiro do mês com dados reais do seu grupo." }] }),
+  head: () => ({ meta: [{ title: "VISÃO GERAL — HARMONY HUB" }, { name: "description", content: "Resumo financeiro do mês com dados reais do seu grupo." }] }),
   component: Dashboard,
 });
-
 const PIE_COLORS = ["var(--orange-primary)", "var(--orange-light)", "var(--graphite-light)", "var(--muted-foreground)", "var(--danger)"];
-type Tx = { id:string; date:string; description:string; category:string; amount:number; type:string; paid:boolean; household_id:string };
+type Tx = { id:string; date:string; description:string; category:string; amount:number; type:string; paid:boolean; household_id:string; responsible?:string };
 type Fixed = { id:string; name:string; category:string; amount:number; due_day:number; months:boolean[]; responsible:string; household_id:string };
 type Installment = { id:string; name:string; category:string; total_amount:number; installments_count:number; paid_count:number; purchase_date:string; household_id:string };
 type Goal = { id:string; name:string; current_amount:number; target_amount:number; monthly:number; deadline:string|null; responsible:string; shared:boolean; household_id:string };
 type Budget = { id:string; category:string; limit_amount:number; period:string; household_id:string };
 type Reminder = { id:string; title:string; date:string; time:string|null; category:string; household_id:string };
-
 function Dashboard() {
-  const { profile } = useAuth();
-  const [isMounted, setIsMounted] = useState(false);
-  const [currentHour, setCurrentHour] = useState(() => new Date().getHours());
-  useEffect(() => {
-    setIsMounted(true);
-    const updateGreeting = () => setCurrentHour(new Date().getHours());
-    updateGreeting();
-    const interval = window.setInterval(updateGreeting, 60_000);
-    return () => window.clearInterval(interval);
-  }, []);
-
-  const greeting = currentHour < 12 ? "BOM DIA" : currentHour < 18 ? "BOA TARDE" : "BOA NOITE";
-
-  const tx = useHouseholdTable<Tx>("transactions", "id,date,description,category,amount,type,paid,household_id", "date");
-  const fixed = useHouseholdTable<Fixed>("fixed_costs", "id,name,category,amount,due_day,months,responsible,household_id");
-  const installments = useHouseholdTable<Installment>("installments", "id,name,category,total_amount,installments_count,paid_count,purchase_date,household_id");
-  const goals = useHouseholdTable<Goal>("goals", "id,name,current_amount,target_amount,monthly,deadline,responsible,shared,household_id");
-  const budgets = useHouseholdTable<Budget>("budgets", "id,category,limit_amount,period,household_id");
-  const reminders = useHouseholdTable<Reminder>("reminders", "id,title,date,time,category,household_id", "date");
-
-  const now = new Date();
-  const monthKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
-  const monthName = now.toLocaleDateString("pt-BR", { month:"long", year:"numeric" }).toUpperCase();
-  const currentTx = tx.rows.filter(t => t.date?.startsWith(monthKey));
-  const activeInstallments = installments.rows.filter(i => Number(i.paid_count) < Number(i.installments_count));
-  const activeFixed = fixed.rows.filter(f => Array.isArray(f.months) ? f.months[now.getMonth()] !== false : true);
-  const income = currentTx.filter(t => t.type === "RECEITA").reduce((s,t)=>s+Number(t.amount),0);
-  const expenses = currentTx.filter(t => t.type === "DESPESA").reduce((s,t)=>s+Number(t.amount),0);
-  const fixedTotal = activeFixed.reduce((s,f)=>s+Number(f.amount),0);
-  const installmentTotal = activeInstallments.reduce((s,i)=>s + (Number(i.total_amount)/Math.max(1,Number(i.installments_count))),0);
-  const mainGoal = goals.rows[0];
-
-  const categoryDistribution = useMemo(() => {
-    const map = new Map<string, number>();
-    currentTx.filter(t=>t.type === "DESPESA").forEach(t=>map.set(t.category || "OUTROS", (map.get(t.category || "OUTROS") || 0)+Number(t.amount)));
-    return Array.from(map, ([name,value])=>({name,value,budget:budgets.rows.find(b=>b.category===name)?.limit_amount ?? value})).sort((a,b)=>b.value-a.value).slice(0,5);
-  }, [currentTx, budgets.rows]);
-
-  const monthlyEvolution = useMemo(() => {
-    const months = Array.from({length:6}, (_,idx) => {
-      const d = new Date(now.getFullYear(), now.getMonth()-5+idx, 1);
-      return { key:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`, mes:d.toLocaleDateString("pt-BR",{month:"short"}).replace(".","").toUpperCase() };
-    });
-    return months.map(m=>({ ...m, gastos:tx.rows.filter(t=>t.date?.startsWith(m.key)&&t.type==="DESPESA").reduce((s,t)=>s+Number(t.amount),0), receitas:tx.rows.filter(t=>t.date?.startsWith(m.key)&&t.type==="RECEITA").reduce((s,t)=>s+Number(t.amount),0) }));
-  }, [tx.rows]);
-
-  const upcoming = useMemo(() => {
-    const today = new Date(); today.setHours(0,0,0,0);
-    const five = new Date(today); five.setDate(five.getDate()+5);
-    const items = activeFixed.map(f=>({id:f.id,name:f.name,amount:Number(f.amount),date:new Date(now.getFullYear(),now.getMonth(),f.due_day),category:f.category})).filter(x=>x.date>=today&&x.date<=five);
-    return items.sort((a,b)=>a.date.getTime()-b.date.getTime()).slice(0,4);
-  }, [activeFixed]);
-
-  const splitData = useMemo(() => {
-    const map = new Map<string,number>();
-    currentTx.filter(t=>t.type==="DESPESA").forEach(t=>map.set(t.category || "OUTROS",(map.get(t.category || "OUTROS")||0)+Number(t.amount)));
-    return Array.from(map,([name,value])=>({name,value})).slice(0,4);
-  }, [currentTx]);
-
-  return <div className="space-y-5">
-    <PageHeader title={`${greeting}, ${profile?.name?.split(" ")[0]?.toUpperCase() || ""}`} subtitle={`Veja como estão as finanças de ${monthName.toLowerCase()}.`} action={<Tag tone="primary">{monthName}</Tag>} />
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      <StatCard label="TOTAL DO MÊS" value={formatCurrency(income + expenses + installmentTotal + fixedTotal)} delta={`${currentTx.length} lançamentos`} tone="primary" icon={<Wallet className="h-4 w-4"/>}/>
-      <StatCard label="À VISTA" value={formatCurrency(expenses)} delta={`${currentTx.filter(t=>t.type==="DESPESA").length} despesas`} tone="danger" icon={<Coins className="h-4 w-4"/>}/>
-      <StatCard label="PARCELADOS" value={formatCurrency(installmentTotal)} delta={`${activeInstallments.length} compras ativas`} tone="info" icon={<CreditCard className="h-4 w-4"/>}/>
-      <StatCard label="CUSTOS FIXOS" value={formatCurrency(fixedTotal)} delta={`${activeFixed.length} ativos`} tone="success" icon={<Repeat className="h-4 w-4"/>}/>
-    </div>
-
-    <Panel className="border-warning/50">
-      <div className="flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning/15 text-warning"><AlertTriangle className="h-5 w-5"/></span><div><h2 className="label-caps text-sm">VENCENDO EM BREVE</h2><p className="text-xs text-muted-foreground">{upcoming.length} contas nos próximos 5 dias</p></div></div><Link to="/faturas" className="label-caps rounded-xl border border-primary/60 px-3 py-2 text-[11px] text-primary">VER CONTAS</Link></div>
-      {upcoming.length === 0 ? <p className="mt-4 py-4 text-center text-sm text-muted-foreground">Nenhuma conta vencendo nos próximos 5 dias.</p> : <div className="mt-4 grid gap-2 md:grid-cols-2">{upcoming.map(b=><div key={b.id} className="flex items-center justify-between rounded-xl border border-border bg-secondary/40 px-3 py-2.5"><div><p className="label-caps text-[11px]">{b.name}</p><Tag tone="warning">DIA {b.date.getDate()}</Tag></div><div className="text-right"><p className="text-sm font-bold">{formatCurrency(b.amount)}</p><Link to="/custos-fixos" className="label-caps text-[10px] text-primary">VER CONTA</Link></div></div>)}</div>}
-    </Panel>
-
-    <div className="grid gap-4 lg:grid-cols-3">
-      <Panel title="EVOLUÇÃO RECENTE" className="lg:col-span-2"><div className="h-64">{isMounted && <ResponsiveContainer width="100%" height="100%"><AreaChart data={monthlyEvolution}><CartesianGrid stroke="var(--border)" vertical={false}/><XAxis dataKey="mes" stroke="var(--muted-foreground)" fontSize={11} tickLine={false}/><YAxis stroke="var(--muted-foreground)" fontSize={11} tickLine={false} width={48}/><Tooltip formatter={(v:number)=>formatCurrency(v)}/><Area type="monotone" dataKey="gastos" stroke="var(--orange-primary)" fill="var(--orange-primary)" fillOpacity={0.15}/><Area type="monotone" dataKey="receitas" stroke="var(--success)" fill="transparent"/></AreaChart></ResponsiveContainer>}</div></Panel>
-      <Panel title="DISTRIBUIÇÃO DE GASTOS"><div className="h-64">{isMounted && (categoryDistribution.length ? <ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={categoryDistribution} dataKey="value" nameKey="name" innerRadius={55} outerRadius={85} paddingAngle={3} stroke="none">{categoryDistribution.map((entry,index)=><Cell key={entry.name} fill={entry.value>entry.budget?"var(--danger)":PIE_COLORS[index%5]}/>)}</Pie><Legend wrapperStyle={{fontSize:10}}/><Tooltip formatter={(v:number)=>formatCurrency(v)}/></PieChart></ResponsiveContainer> : <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Cadastre despesas para ver a distribuição.</div>)}</div></Panel>
-    </div>
-
-    <div className="grid gap-4 lg:grid-cols-2">
-      <Panel title="DIVISÃO DE GASTOS"><div className="space-y-4 pt-2">{splitData.length ? splitData.map(person=>{const total=splitData.reduce((s,p)=>s+p.value,0)||1;const percent=person.value/total*100;return <div key={person.name} className="space-y-2"><div className="flex items-center justify-between"><PersonDot name={person.name}/><span className="text-sm font-semibold">{formatCurrency(person.value)}</span></div><ProgressBar percent={percent} tone="primary"/><p className="text-[11px] text-muted-foreground">{Math.round(percent)}% do total</p></div>}) : <p className="py-8 text-center text-sm text-muted-foreground">Nenhuma despesa cadastrada.</p>}</div></Panel>
-      <Panel title="MAIORES CATEGORIAS"><div className="space-y-4">{categoryDistribution.length ? categoryDistribution.map(cat=>{const usage=calculateBudgetUsage(cat.value,cat.budget);return <div key={cat.name} className="space-y-2"><div className="flex items-center justify-between text-sm"><span className="label-caps text-[11px]">{cat.name}</span><span className="font-semibold">{formatCurrency(cat.value)}</span></div><ProgressBar percent={usage}/><p className="text-[11px] text-muted-foreground">{Math.round(usage)}% do orçamento de {formatCurrency(cat.budget)}</p></div>}) : <p className="py-8 text-center text-sm text-muted-foreground">Nenhum gasto registrado neste mês.</p>}</div></Panel>
-    </div>
-
-    <div className="grid gap-4 lg:grid-cols-2">
-      <Panel title="PRÓXIMOS COMPROMISSOS"><ul className="space-y-3">{reminders.rows.slice(0,4).map(item=><li key={item.id} className="flex items-start gap-3"><span className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-lg bg-secondary text-primary"><CalendarClock className="h-4 w-4"/></span><div className="min-w-0 flex-1"><p className="label-caps truncate text-[11px]">{item.title}</p><p className="text-[11px] text-muted-foreground">{item.date} {item.time ? `· ${item.time}` : ""} · {item.category}</p></div></li>)}{reminders.rows.length===0&&<li className="py-6 text-center text-sm text-muted-foreground">Nenhum compromisso cadastrado.</li>}</ul></Panel>
-      <Panel title="META PRINCIPAL">{mainGoal ? <><p className="label-caps text-sm">{mainGoal.name}</p><p className="mt-1 text-xs text-muted-foreground">{formatCurrency(Number(mainGoal.current_amount))} / {formatCurrency(Number(mainGoal.target_amount))}</p><div className="mt-3"><ProgressBar percent={calculateGoalProgress(Number(mainGoal.current_amount),Number(mainGoal.target_amount))} tone="primary"/></div><div className="mt-3 flex items-center justify-between text-[11px] text-muted-foreground"><span>{Math.round(calculateGoalProgress(Number(mainGoal.current_amount),Number(mainGoal.target_amount)))}% concluído</span><span>{mainGoal.deadline ? `Previsão: ${mainGoal.deadline}` : "Sem prazo"}</span></div><Link to="/metas" className="label-caps mt-4 inline-flex items-center gap-1 text-[11px] text-primary">VER TODAS AS METAS <ArrowRight className="h-3 w-3"/></Link></> : <div className="py-8 text-center"><p className="text-sm text-muted-foreground">Nenhuma meta cadastrada.</p><Link to="/metas" className="label-caps mt-3 inline-flex text-[11px] text-primary">CRIAR META</Link></div>}</Panel>
-    </div>
+  const { profile } = useAuth(); const [isMounted, setIsMounted] = useState(false); const [currentHour, setCurrentHour] = useState(() => new Date().getHours());
+  useEffect(() => { setIsMounted(true); const updateGreeting=()=>setCurrentHour(new Date().getHours()); updateGreeting(); const interval=window.setInterval(updateGreeting,60000); return()=>window.clearInterval(interval); },[]);
+  const greeting=currentHour<12?"BOM DIA":currentHour<18?"BOA TARDE":"BOA NOITE";
+  const tx=useHouseholdTable<Tx>("transactions","id,date,description,category,amount,type,paid,household_id,responsible","date");
+  const fixed=useHouseholdTable<Fixed>("fixed_costs","id,name,category,amount,due_day,months,responsible,household_id");
+  const installments=useHouseholdTable<Installment>("installments","id,name,category,total_amount,installments_count,paid_count,purchase_date,household_id");
+  const goals=useHouseholdTable<Goal>("goals","id,name,current_amount,target_amount,monthly,deadline,responsible,shared,household_id");
+  const budgets=useHouseholdTable<Budget>("budgets","id,category,limit_amount,period,household_id");
+  const reminders=useHouseholdTable<Reminder>("reminders","id,title,date,time,category,household_id","date");
+  const now=new Date(); const monthKey=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`; const monthName=now.toLocaleDateString("pt-BR",{month:"long",year:"numeric"}).toUpperCase(); const currentTx=tx.rows.filter(t=>t.date?.startsWith(monthKey));
+  const activeInstallments=installments.rows.filter(i=>Number(i.paid_count)<Number(i.installments_count)); const activeFixed=fixed.rows.filter(f=>Array.isArray(f.months)?f.months[now.getMonth()]!==false:true);
+  const income=currentTx.filter(t=>t.type==="RECEITA").reduce((s,t)=>s+Number(t.amount),0); const expenses=currentTx.filter(t=>t.type==="DESPESA").reduce((s,t)=>s+Number(t.amount),0);
+  const fixedTotal=activeFixed.reduce((s,f)=>s+Number(f.amount),0); const installmentTotal=activeInstallments.reduce((s,i)=>s+Number(i.total_amount)/Math.max(1,Number(i.installments_count)),0); const totalOutflow=expenses+installmentTotal+fixedTotal; const balance=income-totalOutflow; const mainGoal=goals.rows[0];
+  const categoryDistribution=useMemo(()=>{const map=new Map<string,number>();currentTx.filter(t=>t.type==="DESPESA").forEach(t=>map.set(t.category||"OUTROS",(map.get(t.category||"OUTROS")||0)+Number(t.amount)));return Array.from(map,([name,value])=>({name,value,budget:budgets.rows.find(b=>b.category===name)?.limit_amount??value})).sort((a,b)=>b.value-a.value).slice(0,5)},[currentTx,budgets.rows]);
+  const monthlyEvolution=useMemo(()=>{const months=Array.from({length:6},(_,idx)=>{const d=new Date(now.getFullYear(),now.getMonth()-5+idx,1);return{key:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`,mes:d.toLocaleDateString("pt-BR",{month:"short"}).replace(".","").toUpperCase()}});return months.map(m=>({...m,gastos:tx.rows.filter(t=>t.date?.startsWith(m.key)&&t.type==="DESPESA").reduce((s,t)=>s+Number(t.amount),0),receitas:tx.rows.filter(t=>t.date?.startsWith(m.key)&&t.type==="RECEITA").reduce((s,t)=>s+Number(t.amount),0)}))},[tx.rows]);
+  const upcoming=useMemo(()=>{const today=new Date();today.setHours(0,0,0,0);const five=new Date(today);five.setDate(five.getDate()+5);return activeFixed.map(f=>({id:f.id,name:f.name,amount:Number(f.amount),date:new Date(now.getFullYear(),now.getMonth(),f.due_day),category:f.category})).filter(x=>x.date>=today&&x.date<=five).sort((a,b)=>a.date.getTime()-b.date.getTime()).slice(0,4)},[activeFixed]);
+  const splitData=useMemo(()=>{const map=new Map<string,number>();currentTx.filter(t=>t.type==="DESPESA").forEach(t=>{const name=t.responsible?.trim()||"COMPARTILHADO";map.set(name,(map.get(name)||0)+Number(t.amount))});return Array.from(map,([name,value])=>({name,value})).sort((a,b)=>b.value-a.value).slice(0,4)},[currentTx]);
+  return <div className="space-y-5"><PageHeader title={`${greeting}, ${profile?.name?.split(" ")[0]?.toUpperCase()||""}`} subtitle={`Veja como estão as finanças de ${monthName.toLowerCase()}.`} action={<Tag tone="primary">{monthName}</Tag>}/>
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4"><StatCard label="SALDO DO MÊS" value={formatCurrency(balance)} delta={`${income>0?"Receitas":"Sem receitas"}`} tone={balance>=0?"primary":"danger"} icon={<Wallet className="h-4 w-4"/>}/><StatCard label="À VISTA" value={formatCurrency(expenses)} delta={`${currentTx.filter(t=>t.type==="DESPESA").length} despesas`} tone="danger" icon={<Coins className="h-4 w-4"/>}/><StatCard label="PARCELADOS" value={formatCurrency(installmentTotal)} delta={`${activeInstallments.length} compras ativas`} tone="info" icon={<CreditCard className="h-4 w-4"/>}/><StatCard label="CUSTOS FIXOS" value={formatCurrency(fixedTotal)} delta={`${activeFixed.length} ativos`} tone="success" icon={<Repeat className="h-4 w-4"/>}/></div>
+    <Panel className="border-warning/50"><div className="flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning/15 text-warning"><AlertTriangle className="h-5 w-5"/></span><div><h2 className="label-caps text-sm">VENCENDO EM BREVE</h2><p className="text-xs text-muted-foreground">{upcoming.length} contas nos próximos 5 dias</p></div></div><Link to="/faturas" className="label-caps rounded-xl border border-primary/60 px-3 py-2 text-[11px] text-primary">VER CONTAS</Link></div>{upcoming.length===0?<p className="mt-4 py-4 text-center text-sm text-muted-foreground">Nenhuma conta vencendo nos próximos 5 dias.</p>:<div className="mt-4 grid gap-2 md:grid-cols-2">{upcoming.map(b=><div key={b.id} className="flex items-center justify-between rounded-xl border border-border bg-secondary/40 px-3 py-2.5"><div><p className="label-caps text-[11px]">{b.name}</p><Tag tone="warning">DIA {b.date.getDate()}</Tag></div><div className="text-right"><p className="text-sm font-bold">{formatCurrency(b.amount)}</p><Link to="/custos-fixos" className="label-caps text-[10px] text-primary">VER CONTA</Link></div></div>)}</div>}</Panel>
+    <div className="grid gap-4 lg:grid-cols-3"><Panel title="EVOLUÇÃO RECENTE" className="lg:col-span-2"><div className="h-64">{isMounted&&<ResponsiveContainer width="100%" height="100%"><AreaChart data={monthlyEvolution}><CartesianGrid stroke="var(--border)" vertical={false}/><XAxis dataKey="mes" stroke="var(--muted-foreground)" fontSize={11} tickLine={false}/><YAxis stroke="var(--muted-foreground)" fontSize={11} tickLine={false} width={48}/><Tooltip formatter={(v:number)=>formatCurrency(v)}/><Area type="monotone" dataKey="gastos" stroke="var(--orange-primary)" fill="var(--orange-primary)" fillOpacity={0.15}/><Area type="monotone" dataKey="receitas" stroke="var(--success)" fill="transparent"/></AreaChart></ResponsiveContainer>}</div></Panel><Panel title="DISTRIBUIÇÃO DE GASTOS"><div className="h-64">{isMounted&&(categoryDistribution.length?<ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={categoryDistribution} dataKey="value" nameKey="name" innerRadius={55} outerRadius={85} paddingAngle={3} stroke="none">{categoryDistribution.map((entry,index)=><Cell key={entry.name} fill={entry.value>entry.budget?"var(--danger)":PIE_COLORS[index%5]}/>)}</Pie><Legend wrapperStyle={{fontSize:10}}/><Tooltip formatter={(v:number)=>formatCurrency(v)}/></PieChart></ResponsiveContainer>:<div className="flex h-full items-center justify-center text-sm text-muted-foreground">Cadastre despesas para ver a distribuição.</div>)}</div></Panel></div>
+    <div className="grid gap-4 lg:grid-cols-2"><Panel title="DIVISÃO DE GASTOS"><div className="space-y-4 pt-2">{splitData.length?splitData.map(person=>{const total=splitData.reduce((s,p)=>s+p.value,0)||1;const percent=person.value/total*100;return <div key={person.name} className="space-y-2"><div className="flex items-center justify-between"><PersonDot name={person.name}/><span className="text-sm font-semibold">{formatCurrency(person.value)}</span></div><ProgressBar percent={percent} tone="primary"/><p className="text-[11px] text-muted-foreground">{Math.round(percent)}% do total</p></div>}):<p className="py-8 text-center text-sm text-muted-foreground">Nenhuma despesa cadastrada.</p>}</div></Panel><Panel title="MAIORES CATEGORIAS"><div className="space-y-4">{categoryDistribution.length?categoryDistribution.map(cat=>{const usage=calculateBudgetUsage(cat.value,cat.budget);return <div key={cat.name} className="space-y-2"><div className="flex items-center justify-between text-sm"><span className="label-caps text-[11px]">{cat.name}</span><span className="font-semibold">{formatCurrency(cat.value)}</span></div><ProgressBar percent={usage}/><p className="text-[11px] text-muted-foreground">{Math.round(usage)}% do orçamento de {formatCurrency(cat.budget)}</p></div>}):<p className="py-8 text-center text-sm text-muted-foreground">Nenhum gasto registrado neste mês.</p>}</div></Panel></div>
+    <div className="grid gap-4 lg:grid-cols-2"><Panel title="PRÓXIMOS COMPROMISSOS"><ul className="space-y-3">{reminders.rows.slice(0,4).map(item=><li key={item.id} className="flex items-start gap-3"><span className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-lg bg-secondary text-primary"><CalendarClock className="h-4 w-4"/></span><div className="min-w-0 flex-1"><p className="label-caps truncate text-[11px]">{item.title}</p><p className="text-[11px] text-muted-foreground">{item.date} {item.time?`· ${item.time}`:""} · {item.category}</p></div></li>)}{reminders.rows.length===0&&<li className="py-6 text-center text-sm text-muted-foreground">Nenhum compromisso cadastrado.</li>}</ul></Panel><Panel title="META PRINCIPAL">{mainGoal?<><p className="label-caps text-sm">{mainGoal.name}</p><p className="mt-1 text-xs text-muted-foreground">{formatCurrency(Number(mainGoal.current_amount))} / {formatCurrency(Number(mainGoal.target_amount))}</p><div className="mt-3"><ProgressBar percent={calculateGoalProgress(Number(mainGoal.current_amount),Number(mainGoal.target_amount))} tone="primary"/></div><div className="mt-3 flex items-center justify-between text-[11px] text-muted-foreground"><span>{Math.round(calculateGoalProgress(Number(mainGoal.current_amount),Number(mainGoal.target_amount)))}% concluído</span><span>{mainGoal.deadline?`Previsão: ${mainGoal.deadline}`:"Sem prazo"}</span></div><Link to="/metas" className="label-caps mt-4 inline-flex items-center gap-1 text-[11px] text-primary">VER TODAS AS METAS <ArrowRight className="h-3 w-3"/></Link></>:<div className="py-8 text-center"><p className="text-sm text-muted-foreground">Nenhuma meta cadastrada.</p><Link to="/metas" className="label-caps mt-3 inline-flex text-[11px] text-primary">CRIAR META</Link></div>}</Panel></div>
   </div>;
 }
