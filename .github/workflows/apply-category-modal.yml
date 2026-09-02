@@ -1,0 +1,38 @@
+name: Apply category modal
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Replace category form with modal
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          p = Path('src/routes/configuracoes.tsx')
+          s = p.read_text()
+          state_anchor = '  const [cat, setCat] = useState("");'
+          if 'const [categoryModalOpen,' not in s:
+              s = s.replace(state_anchor, state_anchor + '\n  const [categoryModalOpen, setCategoryModalOpen] = useState(false);')
+          start = s.index('<Panel title="CATEGORIAS">')
+          end = s.index('</Panel>', start) + len('</Panel>')
+          replacement = '''<Panel title="CATEGORIAS"><div className="space-y-3"><button type="button" onClick={() => { setCat(""); setCatEdit(null); setCategoryModalOpen(true); }} className="gradient-primary flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-[11px] font-bold text-primary-foreground"><Plus className="h-4 w-4"/>ADICIONAR CATEGORIA</button>{categories.rows.length === 0 ? <p className="py-6 text-center text-sm text-muted-foreground">NENHUMA CATEGORIA CADASTRADA.</p> : categories.rows.map((item) => <div key={item.id} className="rounded-xl border p-3"><div className="flex items-center justify-between gap-2"><span className="text-xs">{item.name}</span><span className="flex gap-2"><button onClick={() => { setCatEdit(item.id); setCatName(item.name); setCategoryModalOpen(true); }} className="text-[10px] text-primary">EDITAR</button><button onClick={() => void deleteCategory(item.id)} className="text-[10px] text-danger">EXCLUIR</button></span></div></div>)}</div></Panel>'''
+          s = s[:start] + replacement + s[end:]
+          modal = '''{categoryModalOpen && <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={catEdit ? "Editar categoria" : "Adicionar categoria"} onMouseDown={(event) => { if (event.target === event.currentTarget) { setCategoryModalOpen(false); setCatEdit(null); } }}><div className="w-full rounded-t-3xl bg-background p-5 shadow-2xl sm:max-w-lg sm:rounded-3xl"><div className="mb-5 flex items-center justify-between"><div><p className="text-sm font-bold">{catEdit ? "EDITAR CATEGORIA" : "NOVA CATEGORIA"}</p><p className="mt-1 text-[10px] text-muted-foreground">ORGANIZE SEUS LANÇAMENTOS DE FORMA PRÁTICA.</p></div><button type="button" onClick={() => { setCategoryModalOpen(false); setCatEdit(null); }} className="rounded-full p-2 hover:bg-secondary" aria-label="Fechar"><X className="h-5 w-5"/></button></div><div className="space-y-3"><input autoFocus value={catEdit ? catName : cat} onChange={(event) => catEdit ? setCatName(event.target.value) : setCat(event.target.value)} placeholder="NOME DA CATEGORIA" className="w-full rounded-xl border p-3"/><div className="grid grid-cols-2 gap-2 pt-2"><button type="button" onClick={() => { setCategoryModalOpen(false); setCatEdit(null); }} className="rounded-xl border px-4 py-3 text-[10px] font-semibold">CANCELAR</button><button type="button" onClick={async () => { if (catEdit) { await editCategory(catEdit); } else { await addCategory(); } setCategoryModalOpen(false); setCatEdit(null); }} className="gradient-primary rounded-xl px-4 py-3 text-[10px] font-bold text-primary-foreground">{catEdit ? "SALVAR" : "CADASTRAR"}</button></div></div></div></div>}'''
+          anchor = '    <Panel title="FORMAS DE PAGAMENTO">'
+          if 'aria-label={catEdit ? "Editar categoria"' not in s:
+              s = s.replace(anchor, '    ' + modal + '\n' + anchor, 1)
+          p.write_text(s)
+          PY
+      - name: Commit change and remove helper workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/routes/configuracoes.tsx
+          git rm -f .github/workflows/apply-category-modal.yml
+          git commit -m "feat: tornar cadastro de categoria intuitivo em popup"
+          git push
