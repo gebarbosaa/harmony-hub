@@ -1,0 +1,39 @@
+name: Fix payment form
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove separate card selector from expense form
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('src/routes/despesas.tsx')
+          s=p.read_text()
+          s=s.replace('type Card={id:string;name:string;brand:string|null;last4:string|null;credit_limit:number;close_day:number;due_day:number;household_id:string};','')
+          s=s.replace(' const cards=useHouseholdTable<Card>("cards","id,name,brand,last4,credit_limit,close_day,due_day,household_id","name");','')
+          s=s.replace(' const[open,setOpen]=useState(false); const[description,setDescription]=useState(""); const[amount,setAmount]=useState(""); const[category,setCategory]=useState(""); const[paymentId,setPaymentId]=useState(""); const[cardId,setCardId]=useState(""); const[responsible,setResponsible]=useState("AMBAS");',' const[open,setOpen]=useState(false); const[description,setDescription]=useState(""); const[amount,setAmount]=useState(""); const[category,setCategory]=useState(""); const[paymentId,setPaymentId]=useState(""); const[responsible,setResponsible]=useState("AMBAS");')
+          s=s.replace('const selectedPayment=useMemo(()=>payments.rows.find(p=>p.id===paymentId),[payments.rows,paymentId]);const creditSelected=selectedPayment?.kind==="CREDITO";const paymentOptions=', 'const selectedPayment=useMemo(()=>payments.rows.find(p=>p.id===paymentId),[payments.rows,paymentId]);const paymentOptions=')
+          old='useEffect(()=>{if(creditSelected){if(selectedPayment?.card_id) setCardId(selectedPayment.card_id);else if(!cardId) setCardId(cards.rows[0]?.id??"")}else setCardId("")},[creditSelected,selectedPayment?.card_id,cardId,cards.rows]);'
+          s=s.replace(old,'')
+          s=s.replace('if(creditSelected&&!cardId){toast.error("SELECIONE O CARTÃO DE CRÉDITO");return}const p=selectedPayment;const card=cards.rows.find(c=>c.id===cardId);try{await tx.insert({','const p=selectedPayment;try{await tx.insert({')
+          s=s.replace('card_id:creditSelected?cardId:null,card_name:creditSelected?(card?.name??null):null,','card_id:p?.card_id??null,card_name:p?.card_id?(p?.name??null):null,')
+          oldjsx='{creditSelected&&<label className="md:col-span-2"><span className="label-caps text-[10px]">CARTÃO DE CRÉDITO</span><select value={cardId} onChange={e=>setCardId(e.target.value)} className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm"><option value="">SELECIONE O CARTÃO</option>{cards.rows.map(c=><option key={c.id} value={c.id}>{c.name} · •••• {c.last4||"----"}</option>)}</select></label>}'
+          s=s.replace(oldjsx,'')
+          p.write_text(s)
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/routes/despesas.tsx
+          git diff --cached --quiet || git commit -m 'fix: usar apenas forma de pagamento nas despesas'
+          git push
+      - name: Remove temporary workflow
+        run: |
+          git rm .github/workflows/fix-payment-form.yml
+          git commit -m 'chore: remover workflow temporário'
+          git push
