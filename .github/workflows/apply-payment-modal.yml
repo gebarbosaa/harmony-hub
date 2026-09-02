@@ -1,0 +1,38 @@
+name: Apply payment form modal
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Replace payment form with modal
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          p = Path('src/routes/configuracoes.tsx')
+          s = p.read_text()
+          start = s.index('<Panel title="FORMAS DE PAGAMENTO">')
+          end = s.index('</Panel>', start) + len('</Panel>')
+          replacement = r'''<Panel title="FORMAS DE PAGAMENTO"><div className="space-y-3"><button type="button" onClick={() => { setPay(""); setPayDesc(""); setPayKind("DEBITO"); setPayEdit(null); setPaymentModalOpen(true); }} className="gradient-primary flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-[11px] font-bold text-primary-foreground"><Plus className="h-4 w-4"/>ADICIONAR FORMA DE PAGAMENTO</button>{payments.rows.length === 0 ? <p className="py-6 text-center text-sm text-muted-foreground">NENHUMA FORMA CADASTRADA.</p> : payments.rows.map((item) => <div key={item.id} className="rounded-xl border p-3"><div className="flex items-center justify-between gap-2">{payEdit === item.id ? <div className="grid w-full gap-2 sm:grid-cols-2"><input value={payName} onChange={(event) => setPayName(event.target.value)} className="rounded-lg border p-2"/><input value={payDescEdit} onChange={(event) => setPayDescEdit(event.target.value)} className="rounded-lg border p-2"/><select value={payKindEdit} onChange={(event) => setPayKindEdit(event.target.value)} className="rounded-lg border bg-background p-2"><option value="DEBITO">DÉBITO</option><option value="CREDITO">CRÉDITO</option></select><button onClick={() => void editPayment(item.id)} className="text-left text-[10px] text-primary">SALVAR</button></div> : <><div><div className="flex flex-wrap items-center gap-2"><p className="text-xs font-semibold">{item.name}</p><span className="rounded-full bg-secondary px-2 py-0.5 text-[9px] font-semibold">{item.kind === "CREDITO" ? "CRÉDITO" : item.kind === "DEBITO" ? "DÉBITO" : "OUTRO"}</span>{item.card_id && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[9px] font-semibold text-primary">CARTÃO</span>}</div>{item.description && <p className="text-[10px] text-muted-foreground">{item.description}</p>}</div><span className="flex gap-2"><button onClick={() => { setPayEdit(item.id); setPayName(item.name); setPayDescEdit(item.description ?? ""); setPayKindEdit(item.kind === "CREDITO" ? "CREDITO" : "DEBITO"); }} className="text-[10px] text-primary">EDITAR</button><button onClick={() => void deletePayment(item.id)} className="text-[10px] text-danger">EXCLUIR</button></span></>}</div></div>)}</div></Panel>'''
+          s = s[:start] + replacement + s[end:]
+          state_anchor = '  const [payKind, setPayKind] = useState("DEBITO");'
+          if 'const [paymentModalOpen,' not in s:
+              s = s.replace(state_anchor, state_anchor + '\n  const [paymentModalOpen, setPaymentModalOpen] = useState(false);')
+          modal = r'''{paymentModalOpen && <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label="Adicionar forma de pagamento" onMouseDown={(event) => { if (event.target === event.currentTarget) setPaymentModalOpen(false); }}><div className="w-full rounded-t-3xl bg-background p-5 shadow-2xl sm:max-w-lg sm:rounded-3xl"><div className="mb-5 flex items-center justify-between"><div><p className="text-sm font-bold">NOVA FORMA DE PAGAMENTO</p><p className="mt-1 text-[10px] text-muted-foreground">CADASTRE E IDENTIFIQUE COMO CRÉDITO OU DÉBITO.</p></div><button type="button" onClick={() => setPaymentModalOpen(false)} className="rounded-full p-2 hover:bg-secondary" aria-label="Fechar"><X className="h-5 w-5"/></button></div><div className="space-y-3"><input autoFocus value={pay} onChange={(event) => setPay(event.target.value)} placeholder="NOME DA FORMA DE PAGAMENTO" className="w-full rounded-xl border p-3"/><input value={payDesc} onChange={(event) => setPayDesc(event.target.value)} placeholder="DESCRIÇÃO (OPCIONAL)" className="w-full rounded-xl border p-3"/><select value={payKind} onChange={(event) => setPayKind(event.target.value)} className="w-full rounded-xl border bg-background p-3"><option value="DEBITO">DÉBITO</option><option value="CREDITO">CRÉDITO</option></select><div className="grid grid-cols-2 gap-2 pt-2"><button type="button" onClick={() => setPaymentModalOpen(false)} className="rounded-xl border px-4 py-3 text-[10px] font-semibold">CANCELAR</button><button type="button" onClick={async () => { await addPayment(); setPaymentModalOpen(false); }} className="gradient-primary rounded-xl px-4 py-3 text-[10px] font-bold text-primary-foreground">CADASTRAR</button></div></div></div></div>}'''
+          anchor = '    <Panel title="CARTÕES">'
+          if 'aria-label="Adicionar forma de pagamento"' not in s:
+              s = s.replace(anchor, '    ' + modal + '\n' + anchor, 1)
+          p.write_text(s)
+          PY
+      - name: Commit change and remove helper workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/routes/configuracoes.tsx
+          git rm -f .github/workflows/apply-payment-modal.yml
+          git commit -m "feat: tornar cadastro de forma de pagamento intuitivo em popup"
+          git push
