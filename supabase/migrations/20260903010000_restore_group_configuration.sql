@@ -19,20 +19,14 @@ insert into public.group_members (household_id, user_id, role, status, joined_at
 select p.household_id, p.id, 'OWNER', 'ACTIVE', coalesce(p.created_at, now())
 from public.profiles p
 where p.household_id is not null
-  and not exists (
-    select 1 from public.group_members gm
-    where gm.household_id = p.household_id and gm.user_id = p.id
-  );
+  and not exists (select 1 from public.group_members gm where gm.household_id = p.household_id and gm.user_id = p.id);
 
 create or replace function public.has_household_permission(p_household_id uuid, p_permission text)
-returns boolean
-language sql stable security definer set search_path = public
+returns boolean language sql stable security definer set search_path = public
 as $$
   select exists (
     select 1 from public.group_members gm
-    where gm.household_id = p_household_id
-      and gm.user_id = auth.uid()
-      and gm.status = 'ACTIVE'
+    where gm.household_id = p_household_id and gm.user_id = auth.uid() and gm.status = 'ACTIVE'
       and case
         when gm.role in ('OWNER','ADMIN') then true
         when gm.role = 'EDITOR' and p_permission in ('SELECT','INSERT','UPDATE') then true
@@ -56,8 +50,11 @@ create policy group_members_insert on public.group_members for insert to authent
 create policy group_members_update on public.group_members for update using (household_id = public.current_household_id() and public.has_household_permission(household_id,'MANAGE_MEMBERS')) with check (household_id = public.current_household_id() and public.has_household_permission(household_id,'MANAGE_MEMBERS'));
 create policy group_members_delete on public.group_members for delete using (household_id = public.current_household_id() and public.has_household_permission(household_id,'MANAGE_MEMBERS'));
 
+-- Keep the group infrastructure, but return the invite code to the onboarding client.
+drop function if exists public.create_household(text, text);
 create or replace function public.create_household(household_name text, my_name text)
-returns uuid language plpgsql security definer set search_path = public
+returns table (household_id uuid, invite_code text)
+language plpgsql security definer set search_path = public
 as $$
 declare new_id uuid; code text; uid uuid := auth.uid();
 begin
@@ -73,7 +70,7 @@ begin
   on conflict(id) do update set household_id=excluded.household_id,name=excluded.name,initials=excluded.initials,updated_at=now();
   insert into public.group_members(household_id,user_id,role,status) values(new_id,uid,'OWNER','ACTIVE')
   on conflict(household_id,user_id) do update set role='OWNER',status='ACTIVE',updated_at=now();
-  return new_id;
+  return query select new_id, code;
 end;
 $$;
 revoke all on function public.create_household(text,text) from public;
