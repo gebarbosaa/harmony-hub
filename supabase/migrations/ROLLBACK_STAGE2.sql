@@ -1,2 +1,0 @@
--- Placeholder: stage 2 rollback is represented by restoring repository state to c2423e82.
--- Production database schema rollback requires restoring dropped legacy objects from the pre-stage-2 schema.
