@@ -1,1 +1,1 @@
-The repository was rolled back to the state immediately before Etapa 2.
+rollback marker
