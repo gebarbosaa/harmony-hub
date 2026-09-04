@@ -23,11 +23,14 @@ type Tx = {
   household_id: string;
 };
 
+type ColorFilter = "spend" | "income" | "payable";
+
 const WEEK = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"];
 
 function CalendarPage() {
   const { month, setMonth } = useGlobalMonth("calendario");
   const [selected, setSelected] = useState<number | null>(null);
+  const [colorFilters, setColorFilters] = useState<Set<ColorFilter>>(new Set());
   const tx = useHouseholdTable<Tx>(
     "transactions",
     "id,date,description,amount,category,responsible,type,paid,household_id",
@@ -76,6 +79,15 @@ function CalendarPage() {
   const selectedIncome = selectedTx.filter((t) => t.type === "RECEITA").reduce((s, t) => s + Number(t.amount), 0);
   const selectedPayable = selectedTx.filter((t) => t.type === "DESPESA" && !t.paid).reduce((s, t) => s + Number(t.amount), 0);
 
+  function toggleColorFilter(filter: ColorFilter) {
+    setColorFilters((current) => {
+      const next = new Set(current);
+      if (next.has(filter)) next.delete(filter);
+      else next.add(filter);
+      return next;
+    });
+  }
+
   function openMovements(day: number) {
     const date = `${month}-${String(day).padStart(2, "0")}`;
     setSelected(day);
@@ -91,11 +103,44 @@ function CalendarPage() {
       />
 
       <Panel>
-        <div className="mb-3 flex flex-wrap gap-3 text-[9px] font-semibold uppercase tracking-wide">
-          <span className="text-danger">● GASTOS</span>
-          <span className="text-success">● RECEBIMENTOS</span>
-          <span className="text-warning">● A PAGAR</span>
+        <div className="mb-3 flex flex-wrap gap-2 text-[9px] font-semibold uppercase tracking-wide">
+          <button
+            type="button"
+            aria-pressed={colorFilters.has("spend")}
+            onClick={() => toggleColorFilter("spend")}
+            className={cn(
+              "rounded-full border px-3 py-1.5 transition-all",
+              colorFilters.has("spend") ? "border-danger bg-danger/10 text-danger" : "border-border text-danger opacity-60 hover:opacity-100",
+            )}
+          >
+            ● GASTOS
+          </button>
+          <button
+            type="button"
+            aria-pressed={colorFilters.has("income")}
+            onClick={() => toggleColorFilter("income")}
+            className={cn(
+              "rounded-full border px-3 py-1.5 transition-all",
+              colorFilters.has("income") ? "border-success bg-success/10 text-success" : "border-border text-success opacity-60 hover:opacity-100",
+            )}
+          >
+            ● RECEBIMENTOS
+          </button>
+          <button
+            type="button"
+            aria-pressed={colorFilters.has("payable")}
+            onClick={() => toggleColorFilter("payable")}
+            className={cn(
+              "rounded-full border px-3 py-1.5 transition-all",
+              colorFilters.has("payable") ? "border-warning bg-warning/10 text-warning" : "border-border text-warning opacity-60 hover:opacity-100",
+            )}
+          >
+            ● A PAGAR
+          </button>
         </div>
+        <p className="mb-3 text-[9px] uppercase tracking-wide text-muted-foreground">
+          {colorFilters.size === 0 ? "MOSTRANDO TODAS AS CORES" : "MOSTRANDO APENAS AS CORES SELECIONADAS"}
+        </p>
         <div className="mb-2 grid grid-cols-7 gap-1.5">
           {WEEK.map((day) => <span key={day} className="label-caps text-center text-[10px] text-muted-foreground">{day}</span>)}
         </div>
@@ -108,6 +153,12 @@ function CalendarPage() {
             const payable = payableByDay.get(day) ?? 0;
             const isToday = dayKey === todayKey;
             const isSelected = selectedDay === day;
+            const hasFilteredMovement =
+              (colorFilters.has("spend") && spend > 0) ||
+              (colorFilters.has("income") && income > 0) ||
+              (colorFilters.has("payable") && payable > 0);
+            const shouldDim = colorFilters.size > 0 && !hasFilteredMovement;
+
             return (
               <button
                 type="button"
@@ -117,12 +168,13 @@ function CalendarPage() {
                   "relative flex min-h-[92px] flex-col items-center justify-start gap-1 rounded-xl border p-2 text-[11px] transition-all hover:border-primary hover:bg-primary/5",
                   isToday ? "border-primary ring-2 ring-primary" : "border-border/60",
                   isSelected && !isToday && "ring-2 ring-primary",
+                  shouldDim && "opacity-25",
                 )}
               >
                 <span className="font-bold">{day}</span>
-                {spend > 0 && <span className="max-w-full truncate text-[8px] font-semibold text-danger">− {formatCurrency(spend)}</span>}
-                {income > 0 && <span className="max-w-full truncate text-[8px] font-semibold text-success">+ {formatCurrency(income)}</span>}
-                {payable > 0 && <span className="max-w-full truncate text-[8px] font-semibold text-warning">A PAGAR {formatCurrency(payable)}</span>}
+                {(colorFilters.size === 0 || colorFilters.has("spend")) && spend > 0 && <span className="max-w-full truncate text-[8px] font-semibold text-danger">− {formatCurrency(spend)}</span>}
+                {(colorFilters.size === 0 || colorFilters.has("income")) && income > 0 && <span className="max-w-full truncate text-[8px] font-semibold text-success">+ {formatCurrency(income)}</span>}
+                {(colorFilters.size === 0 || colorFilters.has("payable")) && payable > 0 && <span className="max-w-full truncate text-[8px] font-semibold text-warning">A PAGAR {formatCurrency(payable)}</span>}
               </button>
             );
           })}
