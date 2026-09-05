@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Wallet, Repeat, CreditCard, ReceiptText, TrendingUp, Settings, ArrowLeftRight, Target, ArrowDownCircle, ArrowUpCircle, Calculator, CalendarDays, Users } from "lucide-react";
+import { Wallet, Repeat, CreditCard, ReceiptText, TrendingUp, Settings, ArrowLeftRight, Target, ArrowDownCircle, ArrowUpCircle, Calculator, CalendarDays, Users, CircleDollarSign } from "lucide-react";
 import { PageHeader, Panel } from "@/components/ui-kit";
 
 export const Route = createFileRoute("/mais")({ head: () => ({ meta: [{ title: "PAINEL — HARMONY HUB" }, { name: "description", content: "Central das áreas financeiras do HARMONY HUB." }] }), component: MorePage });
@@ -7,7 +7,7 @@ type Module = { label: string; to: string; icon: typeof Wallet };
 type ModuleGroup = { label: string; icon: typeof Wallet; items: Module[] };
 const moduleGroups: ModuleGroup[] = [
   { label: "PRINCIPAL", icon: Wallet, items: [{ label: "INÍCIO", to: "/", icon: Wallet }, { label: "MOVIMENTAÇÕES", to: "/movimentacoes", icon: ArrowLeftRight }, { label: "CALENDÁRIO", to: "/calendario", icon: CalendarDays }] },
-  { label: "FINANCEIRO", icon: Wallet, items: [{ label: "RECEITAS", to: "/receitas", icon: ArrowUpCircle }, { label: "DESPESAS", to: "/despesas", icon: ArrowDownCircle }, { label: "CUSTOS FIXOS", to: "/custos-fixos", icon: Repeat }, { label: "ORÇAMENTO", to: "/orcamento", icon: Wallet }, { label: "CARTÕES E FATURAS", to: "/faturas", icon: ReceiptText }, { label: "PARCELAS", to: "/parcelados", icon: CreditCard }] },
+  { label: "FINANCEIRO", icon: Wallet, items: [{ label: "RECEITAS", to: "/receitas", icon: ArrowUpCircle }, { label: "DESPESAS", to: "/despesas", icon: ArrowDownCircle }, { label: "CONTAS A PAGAR", to: "/contas-a-pagar", icon: CircleDollarSign }, { label: "CUSTOS FIXOS", to: "/custos-fixos", icon: Repeat }, { label: "ORÇAMENTO", to: "/orcamento", icon: Wallet }, { label: "CARTÕES E FATURAS", to: "/faturas", icon: ReceiptText }, { label: "PARCELAS", to: "/parcelados", icon: CreditCard }] },
   { label: "INVESTIMENTOS", icon: TrendingUp, items: [{ label: "INVESTIMENTOS", to: "/investimentos", icon: TrendingUp }, { label: "METAS", to: "/metas", icon: Target }, { label: "CALCULADORA DE APORTES", to: "/calculadora-aportes", icon: Calculator }] },
   { label: "SISTEMA", icon: Settings, items: [{ label: "GRUPOS", to: "/grupos", icon: Users }, { label: "AJUSTES", to: "/configuracoes", icon: Settings }] },
 ];
