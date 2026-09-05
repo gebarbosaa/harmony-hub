@@ -7,12 +7,11 @@ const CREATE_EVENT = "multicap:open-create";
 type CreateDetail = { title?: string; option?: string; source?: string };
 function normalizeTitle(value?: string) { return (value ?? "").trim().toUpperCase(); }
 function CreateButton({ title }: { title: string }) {
-  function handleClick() { const normalized = normalizeTitle(title); window.dispatchEvent(new CustomEvent<CreateDetail>(CREATE_EVENT, { detail: { title: normalized, option: normalized, source: "legacy" } })); }
+  function handleClick() { const normalized = normalizeTitle(title); window.dispatchEvent(new CustomEvent<CreateDetail>(CREATE_EVENT, { detail: { title: normalized, option: normalized, source: "page-header" } })); }
   return <button type="button" onClick={handleClick} aria-label={`ADICIONAR ${title}`} title={`ADICIONAR ${title}`} className="group flex h-10 w-10 items-center justify-center rounded-xl border border-border/70 bg-card text-muted-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:bg-primary/5 hover:text-primary active:scale-95"><Plus className="h-5 w-5 transition-transform group-hover:rotate-90" strokeWidth={2} /></button>;
 }
 export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: ReactNode }) {
-  const noDefaultCreate = ["MODO MERCADO", "HÁBITOS", "LISTA DE COMPRAS", "ROTINA DA CASA", "ANOTAÇÕES"].includes(normalizeTitle(title));
-  const defaultAction = !noDefaultCreate ? <CreateButton title={title} /> : null;
+  const defaultAction = <CreateButton title={title} />;
   return <header className="flex flex-wrap items-center justify-between gap-4"><div><div className="flex items-center gap-2"><span className="h-7 w-1 rounded-full bg-primary" /><h1 className="label-caps text-2xl font-bold tracking-tight text-foreground md:text-3xl">{title}</h1></div>{subtitle ? <p className="ml-3 mt-1 text-sm text-muted-foreground">{subtitle}</p> : null}</div><div className="page-header-action [&_button[aria-label^='ADICIONAR']]:hidden [&_button[aria-label^='NOVA']]:hidden [&_button[aria-label^='NOVO']]:hidden">{action ?? defaultAction}</div></header>;
 }
 function CreatePanel({ title, children, className, aside }: { title: string; children: ReactNode; className?: string; aside?: ReactNode }) {
