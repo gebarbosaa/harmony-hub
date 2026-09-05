@@ -8,7 +8,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useHouseholdTable } from "@/hooks/use-household-data";
 
 export const Route = createFileRoute("/")({
-  head: () => ({ meta: [{ title: "VISÃO GERAL — HARMONY HUB" }, { name: "description", content: "Resumo financeiro do mês com dados reais do seu grupo." }] }),
+  head: () => ({ meta: [{ title: "INÍCIO — HARMONY HUB" }, { name: "description", content: "Resumo financeiro do mês com dados reais do seu grupo." }] }),
   component: Dashboard,
 });
 const PIE_COLORS = ["var(--orange-primary)", "var(--orange-light)", "var(--graphite-light)", "var(--muted-foreground)", "var(--danger)"];
