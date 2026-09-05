@@ -25,11 +25,11 @@ type FormState = {
   name: string; amount: string; category: string; day: string; responsible: string;
   paymentId: string; months: boolean[];
 };
+type Category = { id: string; name: string; kind: string; household_id: string };
 
 const MONTHS = ["JAN","FEV","MAR","ABR","MAI","JUN","JUL","AGO","SET","OUT","NOV","DEZ"];
-const COST_CATEGORIES = ["MORADIA","ALIMENTAÇÃO","TRANSPORTE","SAÚDE","IMPOSTOS","OUTROS"];
 const emptyForm = (subscription = false): FormState => ({
-  name: "", amount: "", category: subscription ? "ASSINATURAS" : "MORADIA", day: "5",
+  name: "", amount: "", category: subscription ? "ASSINATURAS" : "", day: "5",
   responsible: "AMBAS / COMPARTILHADO", paymentId: "", months: Array(12).fill(true),
 });
 
@@ -45,6 +45,7 @@ function FixedCostsPage() {
     "name",
   );
   const payments = useHouseholdPaymentMethods();
+  const categories = useHouseholdTable<Category>("categories", "id,name,kind,household_id", "name");
   const members = useHouseholdMembers();
   const [tab, setTab] = useState<"CUSTOS" | "ASSINATURAS">("CUSTOS");
   const [form, setForm] = useState<FormState>(emptyForm());
@@ -53,6 +54,7 @@ function FixedCostsPage() {
   const [open, setOpen] = useState(false);
 
   const paymentOptions = useMemo(() => payments.options, [payments.options]);
+  const categoryOptions = useMemo(() => categories.rows.map((c) => c.name.toUpperCase()).filter(Boolean), [categories.rows]);
   const [, monthNumber] = month.split("-").map(Number) as [number, number];
   const subscriptions = rows.filter((r) => r.category.toUpperCase() === "ASSINATURAS");
   const active = rows.filter((r) => Boolean(r.months?.[monthNumber - 1]));
@@ -65,6 +67,10 @@ function FixedCostsPage() {
   useEffect(() => {
     if (!form.paymentId && paymentOptions[0]?.id) setForm((v) => ({ ...v, paymentId: paymentOptions[0].id }));
   }, [form.paymentId, paymentOptions]);
+
+  useEffect(() => {
+    if (tab === "CUSTOS" && !categoryOptions.includes(form.category)) setForm((v) => ({ ...v, category: categoryOptions[0] ?? "" }));
+  }, [categoryOptions, form.category, tab]);
 
   function openNew(target: "CUSTOS" | "ASSINATURAS" = tab) {
     setTab(target); setEditing(null); setSelected(null); setForm(emptyForm(target === "ASSINATURAS")); setOpen(true);
@@ -92,6 +98,7 @@ function FixedCostsPage() {
     const dueDay = Math.max(1, Math.min(31, Number(form.day) || 5));
     if (!form.name.trim() || !Number.isFinite(value) || value <= 0) return toast.error("PREENCHA NOME E VALOR");
     if (!payment) return toast.error("SELECIONE UMA FORMA DE PAGAMENTO");
+    if (tab === "CUSTOS" && (!form.category || !categoryOptions.includes(form.category))) return toast.error("SELECIONE UMA CATEGORIA CADASTRADA EM AJUSTES");
     if (!form.months.some(Boolean)) return toast.error("SELECIONE PELO MENOS UM MÊS DE COBRANÇA");
     const payload = {
       name: form.name.trim().toUpperCase(), amount: value, category: tab === "ASSINATURAS" ? "ASSINATURAS" : form.category,
@@ -152,7 +159,7 @@ function FixedCostsPage() {
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-3"><StatCard label={tab === "ASSINATURAS" ? "ASSINATURAS DO MÊS" : "CUSTOS DO MÊS"} value={formatCurrency(tab === "ASSINATURAS" ? subscriptionMonthly : monthly)} tone="primary"/><StatCard label="CUSTO ANUAL ESTIMADO" value={formatCurrency(annual)} tone="info"/><StatCard label={tab === "ASSINATURAS" ? "ASSINATURAS ATIVAS" : "CUSTOS ATIVOS"} value={String(tab === "ASSINATURAS" ? subscriptionActive.length : regularActive.length)} tone="success"/></div>
     {tab === "ASSINATURAS" ? <Panel title="ASSINATURAS"><p className="mb-3 text-[10px] text-muted-foreground">Controle mensal das suas assinaturas recorrentes.</p>{subscriptions.length === 0 ? <p className="py-8 text-center text-sm text-muted-foreground">NENHUMA ASSINATURA CADASTRADA.</p> : <div className="grid gap-3 md:grid-cols-2">{subscriptions.map(renderRow)}</div>}</Panel> : <Panel title={`DESPESAS RECORRENTES — ${month}`}>{isLoading ? <p className="py-8 text-center text-sm text-muted-foreground">CARREGANDO...</p> : regularActive.length === 0 ? <p className="py-8 text-center text-sm text-muted-foreground">NENHUM CUSTO FIXO NESTE MÊS.</p> : <div className="space-y-3">{regularActive.map(renderRow)}</div>}</Panel>}
 
-    <Dialog open={open} onOpenChange={(v) => { if (!v) closeForm(); else setOpen(true); }}><DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto rounded-3xl"><DialogHeader><DialogTitle className="label-caps">{editing ? "EDITAR" : "NOVO"} {tab === "ASSINATURAS" ? "ASSINATURA" : "CUSTO FIXO"}</DialogTitle></DialogHeader><div className="space-y-4"><div className="grid gap-3 md:grid-cols-2"><Field label={tab === "ASSINATURAS" ? "NOME DA ASSINATURA" : "NOME DO CUSTO"}><input value={form.name} onChange={(e) => setForm((v) => ({ ...v, name: e.target.value }))} className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm" placeholder={tab === "ASSINATURAS" ? "Ex.: NETFLIX" : "Ex.: ALUGUEL"}/></Field><Field label="VALOR"><input value={form.amount} onChange={(e) => setForm((v) => ({ ...v, amount: e.target.value }))} inputMode="decimal" className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm" placeholder="R$ 0,00"/></Field><Field label="CATEGORIA"><select disabled={tab === "ASSINATURAS"} value={form.category} onChange={(e) => setForm((v) => ({ ...v, category: e.target.value }))} className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm">{tab === "ASSINATURAS" ? <option value="ASSINATURAS">ASSINATURAS</option> : COST_CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select></Field><Field label="DIA DE VENCIMENTO"><input value={form.day} onChange={(e) => setForm((v) => ({ ...v, day: e.target.value }))} type="number" min="1" max="31" className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm"/></Field><Field label="FORMA DE PAGAMENTO"><select value={form.paymentId} onChange={(e) => setForm((v) => ({ ...v, paymentId: e.target.value }))} className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm"><option value="">SELECIONE</option>{paymentOptions.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}</select></Field><Field label="RESPONSÁVEL"><select value={form.responsible} onChange={(e) => setForm((v) => ({ ...v, responsible: e.target.value }))} className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm"><option>AMBAS / COMPARTILHADO</option>{(members.data ?? []).map((m) => <option key={m.id} value={m.name}>{m.name}</option>)}</select></Field></div>
+    <Dialog open={open} onOpenChange={(v) => { if (!v) closeForm(); else setOpen(true); }}><DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto rounded-3xl"><DialogHeader><DialogTitle className="label-caps">{editing ? "EDITAR" : "NOVO"} {tab === "ASSINATURAS" ? "ASSINATURA" : "CUSTO FIXO"}</DialogTitle></DialogHeader><div className="space-y-4"><div className="grid gap-3 md:grid-cols-2"><Field label={tab === "ASSINATURAS" ? "NOME DA ASSINATURA" : "NOME DO CUSTO"}><input value={form.name} onChange={(e) => setForm((v) => ({ ...v, name: e.target.value }))} className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm" placeholder={tab === "ASSINATURAS" ? "Ex.: NETFLIX" : "Ex.: ALUGUEL"}/></Field><Field label="VALOR"><input value={form.amount} onChange={(e) => setForm((v) => ({ ...v, amount: e.target.value }))} inputMode="decimal" className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm" placeholder="R$ 0,00"/></Field><Field label="CATEGORIA"><select disabled={tab === "ASSINATURAS"} value={form.category} onChange={(e) => setForm((v) => ({ ...v, category: e.target.value }))} className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm">{tab === "ASSINATURAS" ? <option value="ASSINATURAS">ASSINATURAS</option> : <><option value="">SELECIONE</option>{categoryOptions.map((c) => <option key={c}>{c}</option>)}</>}</select></Field><Field label="DIA DE VENCIMENTO"><input value={form.day} onChange={(e) => setForm((v) => ({ ...v, day: e.target.value }))} type="number" min="1" max="31" className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm"/></Field><Field label="FORMA DE PAGAMENTO"><select value={form.paymentId} onChange={(e) => setForm((v) => ({ ...v, paymentId: e.target.value }))} className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm"><option value="">SELECIONE</option>{paymentOptions.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}</select></Field><Field label="RESPONSÁVEL"><select value={form.responsible} onChange={(e) => setForm((v) => ({ ...v, responsible: e.target.value }))} className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm"><option>AMBAS / COMPARTILHADO</option>{(members.data ?? []).map((m) => <option key={m.id} value={m.name}>{m.name}</option>)}</select></Field></div>
       <div className="rounded-2xl border border-border/70 bg-secondary/30 p-4"><div className="mb-3 flex items-center justify-between gap-2"><div><p className="label-caps text-[10px] font-semibold">MESES DE COBRANÇA</p><p className="text-[10px] text-muted-foreground">Defina em quais meses o lançamento recorrente deve existir.</p></div><div className="flex gap-2"><button type="button" onClick={() => setForm((v) => ({ ...v, months: Array(12).fill(true) }))} className="rounded-lg border px-2.5 py-1.5 text-[9px]">TODOS</button><button type="button" onClick={() => setForm((v) => ({ ...v, months: Array(12).fill(false) }))} className="rounded-lg border px-2.5 py-1.5 text-[9px]">LIMPAR</button></div></div><div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">{MONTHS.map((m, i) => <label key={m} className="flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-background px-2.5 py-2.5"><input type="checkbox" checked={form.months[i]} onChange={() => setForm((v) => ({ ...v, months: v.months.map((x, j) => j === i ? !x : x) }))} className="h-4 w-4 accent-primary"/><span className="label-caps text-[9px]">{m}</span></label>)}</div></div>
       <button type="button" onClick={() => void save()} className="gradient-primary w-full rounded-xl px-4 py-2.5 text-[10px] font-semibold text-primary-foreground">{editing ? "SALVAR ALTERAÇÕES" : tab === "ASSINATURAS" ? "SALVAR ASSINATURA" : "SALVAR CUSTO FIXO"}</button></div></DialogContent></Dialog>
 
