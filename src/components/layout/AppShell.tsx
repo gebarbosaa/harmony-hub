@@ -62,14 +62,14 @@ function QuickAdd({ className }: { className?: string }) {
   );
 }
 
-type TaskNotice = { id: string; title: string; due_date: string | null; completed: boolean; household_id: string };
+type PayableNotice = { id: string; description: string; due_date: string; status: string; household_id: string };
 
 function Notifications() {
-  const tasks = useHouseholdTable<TaskNotice>("tasks", "id,title,due_date,completed,household_id", "due_date");
+  const payables = useHouseholdTable<PayableNotice>("accounts_payable", "id,description,due_date,status,household_id", "due_date");
   const [open, setOpen] = useState(false);
   const [todayKey, setTodayKey] = useState("");
   useEffect(() => setTodayKey(new Date().toISOString().slice(0, 10)), []);
-  const pending = useMemo(() => tasks.rows.filter((task) => !task.completed && task.due_date && task.due_date <= todayKey), [tasks.rows, todayKey]);
+  const pending = useMemo(() => payables.rows.filter((item) => item.status === "PENDENTE" && item.due_date && item.due_date <= todayKey), [payables.rows, todayKey]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -82,7 +82,7 @@ function Notifications() {
       <DialogContent className="w-[calc(100vw-24px)] max-w-md rounded-3xl p-5 sm:p-6">
         <DialogHeader><DialogTitle className="label-caps">NOTIFICAÇÕES</DialogTitle></DialogHeader>
         <div className="space-y-2">
-          {pending.length === 0 ? <div className="rounded-2xl border border-dashed p-6 text-center"><Bell className="mx-auto mb-2 h-7 w-7 text-muted-foreground" /><p className="text-sm font-semibold">NENHUMA PENDÊNCIA</p></div> : pending.map((task) => <div key={task.id} className="flex items-start gap-3 rounded-xl border p-3"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" /><div><p className="text-sm font-semibold">{task.title}</p><p className="text-[10px] text-muted-foreground">{task.due_date === todayKey ? "VENCE HOJE" : "ATRASADA"}</p></div></div>)}
+          {pending.length === 0 ? <div className="rounded-2xl border border-dashed p-6 text-center"><Bell className="mx-auto mb-2 h-7 w-7 text-muted-foreground" /><p className="text-sm font-semibold">NENHUMA PENDÊNCIA</p></div> : pending.map((item) => <div key={item.id} className="flex items-start gap-3 rounded-xl border p-3"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" /><div><p className="text-sm font-semibold">{item.description}</p><p className="text-[10px] text-muted-foreground">{item.due_date === todayKey ? "VENCE HOJE" : "ATRASADA"}</p></div></div>)}
         </div>
       </DialogContent>
     </Dialog>
