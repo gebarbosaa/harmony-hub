@@ -1,25 +1,142 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Check, Plus, Trash2, X } from "lucide-react";
+import { toast } from "sonner";
 import { PageHeader, Panel } from "@/components/ui-kit";
 import { formatCurrency } from "@/lib/finance";
 import { useHouseholdTable } from "@/hooks/use-household-data";
 
 export const Route = createFileRoute("/contas-a-pagar")({ component: ContasAPagarPage });
 
-type Payable = { id: string; description: string; amount: number; due_date: string; category: string; responsible: string; status: "PENDENTE" | "PAGA" | "CANCELADA"; paid_at?: string | null };
+type Payable = {
+  id: string;
+  household_id: string;
+  description: string;
+  amount: number;
+  due_date: string;
+  category: string;
+  account_id: string | null;
+  payment_method_id: string | null;
+  card_id: string | null;
+  responsible: string;
+  status: "PENDENTE" | "PAGA" | "CANCELADA";
+  recurrence?: string | null;
+  notes?: string | null;
+  paid_at?: string | null;
+  linked_transaction_id?: string | null;
+};
+
+type Transaction = {
+  id: string;
+  source_type: string | null;
+  source_id: string | null;
+};
 
 function ContasAPagarPage() {
-  const { rows, loading, insertRow, updateRow, deleteRow } = useHouseholdTable<Payable>("accounts_payable", "*", "due_date", true);
+  const payable = useHouseholdTable<Payable>("accounts_payable", "*", "due_date", true);
+  const transactions = useHouseholdTable<Transaction>("transactions", "id,source_type,source_id");
+  const { rows, loading, insertRow, updateRow, deleteRow } = payable;
   const [open, setOpen] = useState(false);
-  const [description, setDescription] = useState(""); const [amount, setAmount] = useState(""); const [dueDate, setDueDate] = useState(""); const [category, setCategory] = useState("Outros");
+  const [description, setDescription] = useState("");
+  const [amount, setAmount] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [category, setCategory] = useState("Outros");
   const today = new Date().toISOString().slice(0, 10);
-  const pending = rows.filter(r => r.status === "PENDENTE"); const overdue = pending.filter(r => r.due_date < today); const dueToday = pending.filter(r => r.due_date === today); const upcoming = pending.filter(r => r.due_date > today); const paid = rows.filter(r => r.status === "PAGA");
-  const totalPending = useMemo(() => pending.reduce((s, r) => s + Number(r.amount), 0), [pending]); const totalOverdue = useMemo(() => overdue.reduce((s, r) => s + Number(r.amount), 0), [overdue]); const totalPaid = useMemo(() => paid.reduce((s, r) => s + Number(r.amount), 0), [paid]);
-  async function addPayable() { const value = Number(amount.replace(",", ".")); if (!description.trim() || !Number.isFinite(value) || value <= 0 || !dueDate) return; await insertRow({ description: description.trim(), amount: value, due_date: dueDate, category: category.trim() || "Outros", responsible: "", status: "PENDENTE" }); setDescription(""); setAmount(""); setDueDate(""); setCategory("Outros"); setOpen(false); }
-  async function markPaid(item: Payable) { await updateRow(item.id, { status: "PAGA", paid_at: new Date().toISOString() }); }
+  const pending = rows.filter(r => r.status === "PENDENTE");
+  const overdue = pending.filter(r => r.due_date < today);
+  const dueToday = pending.filter(r => r.due_date === today);
+  const upcoming = pending.filter(r => r.due_date > today);
+  const paid = rows.filter(r => r.status === "PAGA");
+  const totalPending = useMemo(() => pending.reduce((s, r) => s + Number(r.amount), 0), [pending]);
+  const totalOverdue = useMemo(() => overdue.reduce((s, r) => s + Number(r.amount), 0), [overdue]);
+  const totalPaid = useMemo(() => paid.reduce((s, r) => s + Number(r.amount), 0), [paid]);
+
+  function resetForm() {
+    setDescription("");
+    setAmount("");
+    setDueDate("");
+    setCategory("Outros");
+  }
+
+  async function addPayable() {
+    const value = Number(amount.replace(",", "."));
+    if (!description.trim() || !Number.isFinite(value) || value <= 0 || !dueDate) {
+      toast.error("PREENCHA DESCRIÇÃO, VALOR E VENCIMENTO");
+      return;
+    }
+    try {
+      await insertRow({
+        description: description.trim(),
+        amount: value,
+        due_date: dueDate,
+        category: category.trim() || "Outros",
+        account_id: null,
+        payment_method_id: null,
+        card_id: null,
+        responsible: "",
+        status: "PENDENTE",
+        linked_transaction_id: null,
+      });
+      resetForm();
+      setOpen(false);
+      toast.success("CONTA SALVA");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "ERRO AO SALVAR CONTA");
+    }
+  }
+
+  async function markPaid(item: Payable) {
+    try {
+      let transactionId = item.linked_transaction_id ?? null;
+      const existing = transactions.rows.find(t => t.source_type === "accounts_payable" && t.source_id === item.id);
+      if (!transactionId && existing) transactionId = existing.id;
+
+      if (!transactionId) {
+        const created = await transactions.insert({
+          date: item.due_date,
+          description: item.description,
+          amount: Number(item.amount),
+          type: "DESPESA",
+          category: item.category || "OUTROS",
+          pay_method: "PIX",
+          payment_method_id: item.payment_method_id ?? null,
+          payment_method_name: null,
+          card_id: item.card_id ?? null,
+          card_name: null,
+          account_id: item.account_id ?? null,
+          responsible: item.responsible || "AMBAS",
+          paid: true,
+          source_type: "accounts_payable",
+          source_id: item.id,
+        });
+        transactionId = created.id;
+      }
+
+      await updateRow(item.id, {
+        status: "PAGA",
+        paid_at: new Date().toISOString(),
+        linked_transaction_id: transactionId,
+      });
+      toast.success("CONTA PAGA E LANÇADA EM MOVIMENTAÇÕES");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "ERRO AO PAGAR CONTA");
+    }
+  }
+
+  async function removePayable(item: Payable) {
+    if (!window.confirm(`EXCLUIR ${item.description}?`)) return;
+    try {
+      const linkedId = item.linked_transaction_id ?? transactions.rows.find(t => t.source_type === "accounts_payable" && t.source_id === item.id)?.id;
+      if (linkedId) await transactions.remove(linkedId);
+      await deleteRow(item.id);
+      toast.success("CONTA EXCLUÍDA");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "ERRO AO EXCLUIR CONTA");
+    }
+  }
+
   const inputClass = "h-11 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10";
   const actionClass = "inline-flex h-9 items-center justify-center gap-1 rounded-xl border border-border px-3 text-xs font-medium transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50";
-  return <div className="space-y-5"><PageHeader title="CONTAS A PAGAR" subtitle="CONTROLE DE VENCIMENTOS E OBRIGAÇÕES FINANCEIRAS." action={<button type="button" onClick={() => setOpen(true)} className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-sm transition-transform hover:-translate-y-0.5 active:scale-95"><Plus className="h-4 w-4"/>NOVA CONTA</button>}/><div className="grid gap-3 sm:grid-cols-3"><Panel><p className="label-caps text-xs text-muted-foreground">TOTAL A PAGAR</p><p className="mt-2 text-xl font-semibold">{formatCurrency(totalPending)}</p></Panel><Panel><p className="label-caps text-xs text-muted-foreground">TOTAL VENCIDO</p><p className="mt-2 text-xl font-semibold">{formatCurrency(totalOverdue)}</p></Panel><Panel><p className="label-caps text-xs text-muted-foreground">TOTAL PAGO</p><p className="mt-2 text-xl font-semibold">{formatCurrency(totalPaid)}</p></Panel></div><section className="space-y-3">{loading ? <Panel>CARREGANDO...</Panel> : rows.length === 0 ? <Panel>NENHUMA CONTA A PAGAR CADASTRADA.</Panel> : <><PayableSection title="VENCIDAS" tone="text-red-600" items={overdue} onPaid={markPaid} onDelete={deleteRow} actionClass={actionClass}/><PayableSection title="VENCENDO HOJE" tone="text-orange-600" items={dueToday} onPaid={markPaid} onDelete={deleteRow} actionClass={actionClass}/><PayableSection title="PRÓXIMOS VENCIMENTOS" tone="text-yellow-600" items={upcoming} onPaid={markPaid} onDelete={deleteRow} actionClass={actionClass}/><PayableSection title="PAGAS" tone="text-green-600" items={paid} onDelete={deleteRow} actionClass={actionClass}/></>}</section>{open && <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-3 backdrop-blur-md sm:p-5" onMouseDown={() => setOpen(false)}><section className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-border bg-card p-5 shadow-2xl md:p-6" onMouseDown={e => e.stopPropagation()}><div className="mb-6 flex items-center justify-between gap-3"><div><p className="label-caps text-[9px] font-semibold tracking-[0.18em] text-primary">NOVO REGISTRO</p><h2 className="label-caps mt-1 text-base font-semibold">NOVA CONTA A PAGAR</h2></div><button type="button" onClick={() => setOpen(false)} aria-label="Fechar" className="rounded-xl p-2 text-muted-foreground hover:bg-secondary hover:text-foreground"><X className="h-5 w-5"/></button></div><div className="grid gap-4 sm:grid-cols-2"><label className="sm:col-span-2"><span className="mb-1.5 block text-xs font-medium text-muted-foreground">DESCRIÇÃO</span><input className={inputClass} placeholder="Ex.: Conta de energia" value={description} onChange={e => setDescription(e.target.value)} autoFocus/></label><label><span className="mb-1.5 block text-xs font-medium text-muted-foreground">VALOR</span><input className={inputClass} placeholder="R$ 0,00" inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)}/></label><label><span className="mb-1.5 block text-xs font-medium text-muted-foreground">VENCIMENTO</span><input className={inputClass} type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}/></label><label><span className="mb-1.5 block text-xs font-medium text-muted-foreground">CATEGORIA</span><input className={inputClass} placeholder="Ex.: Moradia" value={category} onChange={e => setCategory(e.target.value)}/></label></div><div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><button type="button" className={actionClass} onClick={() => setOpen(false)}>CANCELAR</button><button type="button" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-xs font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50" onClick={addPayable} disabled={!description.trim() || !amount || !dueDate}><Check className="h-4 w-4"/>SALVAR CONTA</button></div></section></div>}</div>;
+  return <div className="space-y-5"><PageHeader title="CONTAS A PAGAR" subtitle="CONTROLE DE VENCIMENTOS E OBRIGAÇÕES FINANCEIRAS." action={<button type="button" onClick={() => setOpen(true)} className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-sm transition-transform hover:-translate-y-0.5 active:scale-95"><Plus className="h-4 w-4"/>NOVA CONTA</button>}/><div className="grid gap-3 sm:grid-cols-3"><Panel><p className="label-caps text-xs text-muted-foreground">TOTAL A PAGAR</p><p className="mt-2 text-xl font-semibold">{formatCurrency(totalPending)}</p></Panel><Panel><p className="label-caps text-xs text-muted-foreground">TOTAL VENCIDO</p><p className="mt-2 text-xl font-semibold">{formatCurrency(totalOverdue)}</p></Panel><Panel><p className="label-caps text-xs text-muted-foreground">TOTAL PAGO</p><p className="mt-2 text-xl font-semibold">{formatCurrency(totalPaid)}</p></Panel></div><section className="space-y-3">{loading ? <Panel>CARREGANDO...</Panel> : rows.length === 0 ? <Panel>NENHUMA CONTA A PAGAR CADASTRADA.</Panel> : <><PayableSection title="VENCIDAS" tone="text-red-600" items={overdue} onPaid={markPaid} onDelete={removePayable} actionClass={actionClass}/><PayableSection title="VENCENDO HOJE" tone="text-orange-600" items={dueToday} onPaid={markPaid} onDelete={removePayable} actionClass={actionClass}/><PayableSection title="PRÓXIMOS VENCIMENTOS" tone="text-yellow-600" items={upcoming} onPaid={markPaid} onDelete={removePayable} actionClass={actionClass}/><PayableSection title="PAGAS" tone="text-green-600" items={paid} onDelete={removePayable} actionClass={actionClass}/></>}</section>{open && <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-3 backdrop-blur-md sm:p-5" onMouseDown={() => setOpen(false)}><section className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-border bg-card p-5 shadow-2xl md:p-6" onMouseDown={e => e.stopPropagation()}><div className="mb-6 flex items-center justify-between gap-3"><div><p className="label-caps text-[9px] font-semibold tracking-[0.18em] text-primary">NOVO REGISTRO</p><h2 className="label-caps mt-1 text-base font-semibold">NOVA CONTA A PAGAR</h2></div><button type="button" onClick={() => setOpen(false)} aria-label="Fechar" className="rounded-xl p-2 text-muted-foreground hover:bg-secondary hover:text-foreground"><X className="h-5 w-5"/></button></div><div className="grid gap-4 sm:grid-cols-2"><label className="sm:col-span-2"><span className="mb-1.5 block text-xs font-medium text-muted-foreground">DESCRIÇÃO</span><input className={inputClass} placeholder="Ex.: Conta de energia" value={description} onChange={e => setDescription(e.target.value)} autoFocus/></label><label><span className="mb-1.5 block text-xs font-medium text-muted-foreground">VALOR</span><input className={inputClass} placeholder="R$ 0,00" inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)}/></label><label><span className="mb-1.5 block text-xs font-medium text-muted-foreground">VENCIMENTO</span><input className={inputClass} type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}/></label><label><span className="mb-1.5 block text-xs font-medium text-muted-foreground">CATEGORIA</span><input className={inputClass} placeholder="Ex.: Moradia" value={category} onChange={e => setCategory(e.target.value)}/></label></div><div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><button type="button" className={actionClass} onClick={() => { resetForm(); setOpen(false); }}>CANCELAR</button><button type="button" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-xs font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50" onClick={addPayable} disabled={!description.trim() || !amount || !dueDate}><Check className="h-4 w-4"/>SALVAR CONTA</button></div></section></div>}</div>;
 }
-function PayableSection({ title, tone, items, onPaid, onDelete, actionClass }: { title: string; tone: string; items: Payable[]; onPaid?: (item: Payable) => Promise<void>; onDelete: (id: string) => Promise<unknown> | unknown; actionClass: string }) { if (!items.length) return null; return <Panel><div className="mb-3 flex items-center justify-between"><p className={`label-caps text-xs ${tone}`}>{title}</p><span className="text-xs text-muted-foreground">{items.length}</span></div><div className="space-y-2">{items.map(item => <div key={item.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-border p-3"><div className="min-w-[160px] flex-1"><p className="font-medium">{item.description}</p><p className="text-xs text-muted-foreground">Vencimento: {new Date(`${item.due_date}T12:00:00`).toLocaleDateString("pt-BR")} · {item.category}</p></div><p className="font-semibold">{formatCurrency(Number(item.amount))}</p>{onPaid && <button type="button" className={actionClass} onClick={() => onPaid(item)}><Check className="h-4 w-4"/>PAGA</button>}<button type="button" className={actionClass} onClick={() => onDelete(item.id)} aria-label={`Excluir ${item.description}`}><Trash2 className="h-4 w-4"/></button></div>)}</div></Panel>; }
+function PayableSection({ title, tone, items, onPaid, onDelete, actionClass }: { title: string; tone: string; items: Payable[]; onPaid?: (item: Payable) => Promise<void>; onDelete: (item: Payable) => Promise<void>; actionClass: string }) { if (!items.length) return null; return <Panel><div className="mb-3 flex items-center justify-between"><p className={`label-caps text-xs ${tone}`}>{title}</p><span className="text-xs text-muted-foreground">{items.length}</span></div><div className="space-y-2">{items.map(item => <div key={item.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-border p-3"><div className="min-w-[160px] flex-1"><p className="font-medium">{item.description}</p><p className="text-xs text-muted-foreground">Vencimento: {new Date(`${item.due_date}T12:00:00`).toLocaleDateString("pt-BR")} · {item.category}</p></div><p className="font-semibold">{formatCurrency(Number(item.amount))}</p>{onPaid && <button type="button" className={actionClass} onClick={() => onPaid(item)}><Check className="h-4 w-4"/>PAGA</button>}<button type="button" className={actionClass} onClick={() => onDelete(item)} aria-label={`Excluir ${item.description}`}><Trash2 className="h-4 w-4"/></button></div>)}</div></Panel>; }
