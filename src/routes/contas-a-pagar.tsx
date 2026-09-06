@@ -9,6 +9,7 @@ import { useHouseholdMembers } from "@/hooks/use-household-members";
 import { useHouseholdPaymentMethods } from "@/hooks/use-household-payment-methods";
 
 export const Route = createFileRoute("/contas-a-pagar")({
+  ssr: true,
   head: () => ({ meta: [{ title: "CONTAS A PAGAR — HARMONY HUB" }] }),
   component: ContasAPagarPage,
 });
@@ -22,7 +23,7 @@ type Category = { id: string; name: string; kind: string; household_id: string }
 
 function ContasAPagarPage() {
   const payable = useHouseholdTable<Payable>("accounts_payable", "*", "due_date");
-  const transactions = useHouseholdTable<Transaction>("transactions", "id,source_type,source_id");
+  const transactions = useHouseholdTable<Transaction & { household_id: string }>("transactions", "id,source_type,source_id");
   const accounts = useHouseholdTable<Account>("household_accounts", "id,name,household_id,institution", "name");
   const cards = useHouseholdTable<Card>("cards", "id,name,last4,household_id", "name");
   const paymentsQuery = useHouseholdPaymentMethods();
