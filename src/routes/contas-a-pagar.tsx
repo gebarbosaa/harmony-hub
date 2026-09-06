@@ -9,7 +9,6 @@ import { useHouseholdMembers } from "@/hooks/use-household-members";
 import { useHouseholdPaymentMethods } from "@/hooks/use-household-payment-methods";
 
 export const Route = createFileRoute("/contas-a-pagar")({
-  ssr: true,
   head: () => ({ meta: [{ title: "CONTAS A PAGAR — HARMONY HUB" }] }),
   component: ContasAPagarPage,
 });
