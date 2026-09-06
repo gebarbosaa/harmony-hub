@@ -14,8 +14,7 @@ const text=(t:Row)=>`${t.description} ${t.category} ${t.pay_method}`.toLowerCase
 const isCard=(t:Row)=>/cart[aã]o|cr[eé]dito/.test(text(t));
 function MovimentacoesPage(){
  const {month,setMonth}=useGlobalMonth("movimentacoes");
- const initialDate=useMemo(()=>new URLSearchParams(window.location.search).get("date")||"",[]);
- const [selectedDate,setSelectedDate]=useState(initialDate);
+ const [selectedDate,setSelectedDate]=useState("");
  const tx=useHouseholdTable<Row>("transactions","id,date,description,category,pay_method,responsible,amount,type,paid,household_id");
  const [search,setSearch]=useState("");
  const [filter,setFilter]=useState<"TODOS"|"RECEITAS"|"DESPESAS"|"CARTAO"|"ALIMENTACAO"|"REFEICAO"|"INVESTIMENTOS"|"TRANSFERENCIAS">("TODOS");
