@@ -1,10 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { Wallet, Repeat, CreditCard, ReceiptText, TrendingUp, Settings, ArrowLeftRight, Target, ArrowDownCircle, ArrowUpCircle, Calculator, CalendarDays, Users, CircleDollarSign } from "lucide-react";
 import { PageHeader, Panel } from "@/components/ui-kit";
 
 export const Route = createFileRoute("/mais")({
-  beforeLoad: () => { throw new Error("REDIRECT_TO_PAINEL"); },
-  component: MorePage,
+  beforeLoad: () => { throw redirect({ to: "/painel", replace: true }); },
 });
 type Module = { label: string; to: string; icon: typeof Wallet };
 type ModuleGroup = { label: string; icon: typeof Wallet; items: Module[] };
