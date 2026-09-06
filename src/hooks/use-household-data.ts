@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -21,11 +21,15 @@ export function useHouseholdTable<T extends HouseholdRow = HouseholdRow>(
 ) {
   const householdId = useHouseholdId();
   const queryClient = useQueryClient();
-  const queryKey = ["household", householdId, table, select, orderBy];
+  const queryKey = useMemo(() => ["household", householdId, table, select, orderBy] as const, [householdId, table, select, orderBy]);
 
   const query = useQuery({
     queryKey,
     enabled: Boolean(householdId),
+    staleTime: 10_000,
+    gcTime: 5 * 60_000,
+    retry: 1,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       if (!householdId) return [] as T[];
       try {
@@ -46,17 +50,19 @@ export function useHouseholdTable<T extends HouseholdRow = HouseholdRow>(
   useEffect(() => {
     if (!householdId) return;
     const channel = supabase
-      .channel(`${table}:${householdId}`)
+      .channel(`household-sync:${table}:${householdId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table, filter: `household_id=eq.${householdId}` },
-        () => queryClient.invalidateQueries({ queryKey }),
+        () => {
+          void queryClient.invalidateQueries({ queryKey });
+        },
       )
       .subscribe();
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [householdId, table, queryClient, queryKey.join("|")]);
+  }, [householdId, table, queryClient, queryKey]);
 
   const insert = useCallback(
     async (values: Record<string, unknown>) => {
@@ -77,7 +83,7 @@ export function useHouseholdTable<T extends HouseholdRow = HouseholdRow>(
         throw error;
       }
     },
-    [householdId, table, queryClient, queryKey.join("|")],
+    [householdId, table, queryClient, queryKey],
   );
 
   const update = useCallback(
@@ -101,7 +107,7 @@ export function useHouseholdTable<T extends HouseholdRow = HouseholdRow>(
         throw error;
       }
     },
-    [householdId, table, queryClient, queryKey.join("|")],
+    [householdId, table, queryClient, queryKey],
   );
 
   const remove = useCallback(
@@ -122,7 +128,7 @@ export function useHouseholdTable<T extends HouseholdRow = HouseholdRow>(
         throw error;
       }
     },
-    [householdId, table, queryClient, queryKey.join("|")],
+    [householdId, table, queryClient, queryKey],
   );
 
   return { ...query, rows: query.data ?? [], insert, update, remove, householdId };
