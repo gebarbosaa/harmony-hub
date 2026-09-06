@@ -19,6 +19,7 @@ function AuthGate() {
   const pathname = useRouterState({ select: s => s.location.pathname });
   const navigate = useNavigate();
   const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
+  const isServer = typeof window === "undefined";
 
   useEffect(() => {
     if (loading || profileLoading) return;
@@ -26,12 +27,13 @@ function AuthGate() {
       if (!isPublicRoute) void navigate({ to: "/login", replace: true });
       return;
     }
-    // Login/OAuth always returns to the main app. A household/group is optional.
-    if (isPublicRoute) {
-      void navigate({ to: "/", replace: true });
-    }
+    if (isPublicRoute) void navigate({ to: "/", replace: true });
   }, [loading, profileLoading, session, isPublicRoute, navigate]);
 
+  // Authentication is client-owned. During SSR there is no browser session
+  // available, so never block the route tree with an infinite loading shell.
+  // The client immediately resolves the session and redirects if necessary.
+  if (isServer) return <Outlet />;
   if (loading || profileLoading) return <div className="flex min-h-screen items-center justify-center bg-background"><p className="label-caps text-sm text-muted-foreground">CARREGANDO...</p></div>;
   if (isPublicRoute || !session) return <Outlet />;
   return <AppShell><Outlet /></AppShell>;
