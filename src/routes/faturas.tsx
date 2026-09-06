@@ -20,7 +20,10 @@ function InvoicesPage(){
  const monthInvoices=useMemo(()=>invoices.rows.filter(i=>i.period===month),[invoices.rows,month]);
  const cardRows=(card:Card)=>tx.rows.filter(t=>t.card_id===card.id&&t.type==="DESPESA"&&invoicePeriod(card,t.date)===month);
  const cardTotal=(card:Card)=>cardRows(card).reduce((s,t)=>s+Number(t.amount),0);
- const usedLimit=(card:Card)=>tx.rows.filter(t=>t.card_id===card.id&&t.type==="DESPESA"&&!t.paid).reduce((s,t)=>s+Number(t.amount),0);
+ // A credit-card purchase consumes available limit until its invoice is paid.
+ // `transactions.paid` represents settlement of the transaction and is not
+ // a reliable indicator of whether the card invoice is still open.
+ const usedLimit=(card:Card)=>tx.rows.filter(t=>t.card_id===card.id&&t.type==="DESPESA"&&invoicePeriod(card,t.date)>=month).reduce((s,t)=>s+Number(t.amount),0);
  const calculatedInvoiceTotal=useMemo(()=>cards.rows.reduce((s,c)=>s+cardTotal(c),0),[cards.rows,tx.rows,month]);
  function clearForm(){setName("");setLimit("");setDue("5");setClose("28");setBrand("");setLast4("");setEditing(null)}
  function openEdit(c:Card){setEditing(c);setName(c.name);setLimit(String(c.credit_limit));setDue(String(c.due_day));setClose(String(c.close_day));setBrand(c.brand??"");setLast4(c.last4??"")}
