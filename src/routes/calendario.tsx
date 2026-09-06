@@ -6,7 +6,7 @@ import { useHouseholdTable } from "@/hooks/use-household-data";
 import { MonthSelector, useGlobalMonth } from "@/hooks/use-global-month";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/calendario")({ head: () => ({ meta: [{ title: "CALENDÁRIO — MULTICAP" }] }), component: CalendarPage });
+export const Route = createFileRoute("/calendario")({ head: () => ({ meta: [{ title: "CALENDÁRIO — HARMONY HUB" }] }), component: CalendarPage });
 type Tx = { id:string; date:string; description:string; amount:number; category:string; responsible:string; type:string; paid:boolean; household_id:string };
 type Payable = { id:string; due_date:string; amount:number; status:string; household_id:string };
 type ColorFilter = "spend" | "income" | "payable";
