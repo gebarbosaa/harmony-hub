@@ -1,7 +1,7 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
+import { MorePage } from "./mais";
 
 export const Route = createFileRoute("/painel")({
-  beforeLoad: () => {
-    throw redirect({ to: "/mais", replace: true });
-  },
+  head: () => ({ meta: [{ title: "PAINEL — HARMONY HUB" }] }),
+  component: MorePage,
 });
