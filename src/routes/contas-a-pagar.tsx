@@ -16,12 +16,13 @@ type Payable = {
 };
 
 export const Route = createFileRoute("/contas-a-pagar")({
+  ssr: false,
   head: () => ({ meta: [{ title: "CONTAS A PAGAR — HARMONY HUB" }] }),
   component: ContasAPagarPage,
 });
 
 function ContasAPagarPage() {
-  const { rows, isLoading, insert, update, remove } = useHouseholdTable<Payable>(
+  const { rows, isLoading, error, insert, update, remove } = useHouseholdTable<Payable>(
     "accounts_payable",
     "id,description,amount,due_date,category,status",
     "due_date",
@@ -103,7 +104,12 @@ function ContasAPagarPage() {
         <Panel><p className="label-caps text-xs text-muted-foreground">TOTAL PAGO</p><p className="mt-2 text-xl font-semibold">{formatCurrency(totalPaid)}</p></Panel>
       </div>
 
-      {isLoading ? (
+      {error ? (
+        <Panel>
+          <p className="font-medium">NÃO FOI POSSÍVEL CARREGAR AS CONTAS.</p>
+          <p className="mt-1 text-sm text-muted-foreground">{error instanceof Error ? error.message : "ERRO AO CONSULTAR CONTAS A PAGAR."}</p>
+        </Panel>
+      ) : isLoading ? (
         <Panel>CARREGANDO...</Panel>
       ) : rows.length === 0 ? (
         <Panel>
