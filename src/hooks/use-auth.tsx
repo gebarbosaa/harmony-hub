@@ -3,7 +3,7 @@ import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
 type Profile = { id: string; household_id: string | null; name: string; initials: string | null; color: string };
-type AuthState = { loading: boolean; profileLoading: boolean; session: Session | null; user: User | null; profile: Profile | null; refreshProfile: () => Promise<Profile | null>; updateProfileName: (name: string) => Promise<Profile>; setActiveHousehold: (householdId: string) => void; signInWithGoogle: () => Promise<void>; signOut: () => Promise<void> };
+type AuthState = { loading: boolean; profileLoading: boolean; session: Session | null; user: User | null; profile: Profile | null; refreshProfile: () => Promise<Profile | null>; updateProfileName: (name: string) => Promise<Profile>; setActiveHousehold: (householdId: string) => void; signInWithGoogle: () => Promise<void>; signInWithEmail: (email: string, password: string) => Promise<void>; signUpWithEmail: (email: string, password: string, name: string) => Promise<{ needsConfirmation: boolean }>; signOut: () => Promise<void> };
 const AuthContext = createContext<AuthState | undefined>(undefined);
 const ACTIVE_HOUSEHOLD_KEY = "harmony-active-household";
 function getStoredHousehold() { try { return localStorage.getItem(ACTIVE_HOUSEHOLD_KEY); } catch { return null; } }
@@ -43,17 +43,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.from("profiles").update({ name: normalized, updated_at: new Date().toISOString() }).eq("id", currentUser.id);
     if (error) throw error;
     const current = profileRef.current;
-    const nextProfile: Profile = current
-      ? { ...current, name: normalized, initials: initialsFrom(normalized) }
-      : { id: currentUser.id, household_id: null, name: normalized, initials: initialsFrom(normalized), color: "#8b5cf6" };
-    profileRef.current = nextProfile;
-    setProfile(nextProfile);
-    return nextProfile;
+    const nextProfile: Profile = current ? { ...current, name: normalized, initials: initialsFrom(normalized) } : { id: currentUser.id, household_id: null, name: normalized, initials: initialsFrom(normalized), color: "#8b5cf6" };
+    profileRef.current = nextProfile; setProfile(nextProfile); return nextProfile;
   }
   function setActiveHousehold(householdId: string) { activeHouseholdRef.current = householdId; storeHousehold(householdId); const current = profileRef.current; const user = sessionRef.current?.user; const name = current?.name || String(user?.user_metadata?.["full_name"] ?? user?.user_metadata?.["name"] ?? "Usuário"); const next: Profile = current ? { ...current, household_id: householdId } : { id: user?.id ?? "", household_id: householdId, name, initials: initialsFrom(name), color: "#8b5cf6" }; profileRef.current = next; setProfile(next); setProfileLoading(false); setLoading(false); }
   useEffect(() => { let active = true; const applySession = async (nextSession: Session | null) => { if (!active) return; const previousUserId = sessionRef.current?.user.id; const nextUserId = nextSession?.user.id; sessionRef.current = nextSession; setSession(nextSession); if (!nextSession) { ++profileRequestRef.current; activeHouseholdRef.current = null; storeHousehold(null); setProfileSafe(null); setProfileLoading(false); setLoading(false); return; } if (previousUserId && previousUserId !== nextUserId) { activeHouseholdRef.current = null; storeHousehold(null); } const storedHousehold = getStoredHousehold(); if (storedHousehold) activeHouseholdRef.current = storedHousehold; setProfileLoading(true); try { await loadProfile(nextSession.user.id); } catch (error) { if (active) console.error("Failed to load profile", error); } finally { if (active && sessionRef.current?.user.id === nextSession.user.id) { setProfileLoading(false); setLoading(false); } } }; void supabase.auth.getSession().then(({ data }) => applySession(data.session)); const { data: listener } = supabase.auth.onAuthStateChange((event, nextSession) => { if (!active || event === "INITIAL_SESSION") return; void applySession(nextSession); }); return () => { active = false; listener.subscription.unsubscribe(); }; }, []);
   async function signInWithGoogle() { await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: `${window.location.origin}/auth/callback`, queryParams: { access_type: "offline", prompt: "consent" }, scopes: "https://www.googleapis.com/auth/calendar.events" } }); }
+  async function signInWithEmail(email: string, password: string) { const { error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password }); if (error) throw error; }
+  async function signUpWithEmail(email: string, password: string, name: string) { const normalizedEmail = email.trim().toLowerCase(); const normalizedName = name.trim(); if (!normalizedEmail) throw new Error("INFORME SEU E-MAIL"); if (!normalizedName) throw new Error("INFORME SEU NOME"); if (password.length < 6) throw new Error("A SENHA DEVE TER PELO MENOS 6 CARACTERES"); const { data, error } = await supabase.auth.signUp({ email: normalizedEmail, password, options: { data: { full_name: normalizedName, name: normalizedName } } }); if (error) throw error; return { needsConfirmation: !data.session }; }
   async function signOut() { activeHouseholdRef.current = null; storeHousehold(null); await supabase.auth.signOut(); }
-  return <AuthContext.Provider value={{ loading, profileLoading, session, user: session?.user ?? null, profile, refreshProfile, updateProfileName, setActiveHousehold, signInWithGoogle, signOut }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ loading, profileLoading, session, user: session?.user ?? null, profile, refreshProfile, updateProfileName, setActiveHousehold, signInWithGoogle, signInWithEmail, signUpWithEmail, signOut }}>{children}</AuthContext.Provider>;
 }
 export function useAuth() { const ctx = useContext(AuthContext); if (!ctx) throw new Error("useAuth must be used within AuthProvider"); return ctx; }
