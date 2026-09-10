@@ -56,6 +56,9 @@ export function useHouseholdTable<T extends HouseholdRow = HouseholdRow>(
         { event: "*", schema: "public", table, filter: `household_id=eq.${householdId}` },
         () => {
           void queryClient.invalidateQueries({ queryKey });
+          if (table === "accounts_payable") {
+            void queryClient.invalidateQueries({ queryKey: ["contas-a-pagar", householdId] });
+          }
         },
       )
       .subscribe();
@@ -76,6 +79,9 @@ export function useHouseholdTable<T extends HouseholdRow = HouseholdRow>(
           .single();
         if (error) throw error;
         await queryClient.invalidateQueries({ queryKey });
+        if (table === "accounts_payable") {
+          await queryClient.invalidateQueries({ queryKey: ["contas-a-pagar", householdId] });
+        }
         emitSyncEvent("synced");
         return data as T;
       } catch (error) {
@@ -100,6 +106,9 @@ export function useHouseholdTable<T extends HouseholdRow = HouseholdRow>(
           .single();
         if (error) throw error;
         await queryClient.invalidateQueries({ queryKey });
+        if (table === "accounts_payable") {
+          await queryClient.invalidateQueries({ queryKey: ["contas-a-pagar", householdId] });
+        }
         emitSyncEvent("synced");
         return data as T;
       } catch (error) {
@@ -122,6 +131,9 @@ export function useHouseholdTable<T extends HouseholdRow = HouseholdRow>(
           .eq("household_id", householdId);
         if (error) throw error;
         await queryClient.invalidateQueries({ queryKey });
+        if (table === "accounts_payable") {
+          await queryClient.invalidateQueries({ queryKey: ["contas-a-pagar", householdId] });
+        }
         emitSyncEvent("synced");
       } catch (error) {
         emitSyncEvent("error");
