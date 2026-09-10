@@ -1,24 +1,245 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Upload, Download, Search, CheckCircle2, X, RefreshCw, Copy, AlertCircle } from "lucide-react";
+import { Upload, Download, Search, CheckCircle2, RefreshCw, Copy, X } from "lucide-react";
 import { PageHeader, Panel } from "@/components/ui-kit";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/importacao")({ component: ImportacaoPage });
-type Row={date:string;description:string;amount:number;totalAmount:number;type:"DESPESA"|"RECEITA";category:string;payment:string;installment?:string;installmentCurrent?:number;installmentTotal?:number};
-type Decision="keep"|"replace"|"import";
-const normalize=(v:unknown)=>String(v??"").trim();
-const normalizePayMethod=(v:unknown)=>{const s=normalize(v).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");if(s.includes("credito")||s.includes("cartao"))return"CREDITO";if(s.includes("debito"))return"DEBITO";if(s.includes("pix"))return"PIX";if(s.includes("dinheiro")||s.includes("especie"))return"DINHEIRO";if(s.includes("alimentacao")||s.includes("refeicao"))return"ALIMENTACAO";if(s.includes("transfer"))return"TRANSFERENCIA";if(s.includes("boleto"))return"BOLETO";return"PIX"};
-const normalizeDate=(v:unknown)=>{const s=normalize(v);if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;const m=s.match(/^(\d{2})[\/.-](\d{2})[\/.-](\d{4})$/);return m?`${m[3]}-${m[2]}-${m[1]}`:""};
-const money=(v:unknown)=>{let s=normalize(v).replace(/R\$\s?/gi,"").replace(/\s/g,"");const neg=/^-/.test(s)||/^\(.*\)$/.test(s);s=s.replace(/[()]/g,"").replace(/^-/ ,"");if(s.includes(","))s=s.replace(/\./g,"").replace(",",".");const n=Number(s);return Number.isFinite(n)?(neg?-Math.abs(n):Math.abs(n)):0};
-const duplicateKey=(r:Row)=>`${normalizeDate(r.date)}|${r.description.toLowerCase().replace(/\s+/g," ")}|${r.totalAmount.toFixed(2)}|${r.type}|${r.installmentTotal??""}`;
-function parseCsv(text:string):Row[]{const input=text.replace(/^\uFEFF/,"");const lines:string[]=[];let line="",quoted=false;for(let i=0;i<input.length;i++){const c=input[i];if(c==='"'){if(quoted&&input[i+1]==='"'){line+='"';i++}else quoted=!quoted}else if((c==='\n'||c==='\r')&&!quoted){if(c==='\r'&&input[i+1]==='\n')i++;if(line.trim())lines.push(line);line=""}else line+=c}if(line.trim())lines.push(line);if(!lines.length)return[];const sep=(lines[0].split(";").length>lines[0].split(",").length)?";":",";const cells=(s:string)=>{const out:string[]=[];let c="",q=false;for(let i=0;i<s.length;i++){const ch=s[i];if(ch==='"'){if(q&&s[i+1]==='"'){c+='"';i++}else q=!q}else if(ch===sep&&!q){out.push(c.trim());c=""}else c+=ch}out.push(c.trim());return out};const h=cells(lines[0]).map(x=>x.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,""));const find=(...names:string[])=>h.findIndex(x=>names.some(n=>x.includes(n)));const d=find("data","date"),desc=find("descricao","estabelecimento","merchant","historico"),a=find("valor total","total","valor","amount","value","preco"),t=find("tipo","type","natureza"),p=find("pagamento","forma","metodo","cartao","payment"),cat=find("categoria","category"),ins=find("parcela","parcelas","installment");if(d<0||desc<0||a<0||ins<0)throw new Error("CSV de parcelados inválido: são obrigatórias as colunas Data, Descrição, Valor Total e Parcelas.");return lines.slice(1).map((ln)=>{const c=cells(ln),raw=normalize(c[a]),typ=normalize(c[t]).toLowerCase(),parcelas=normalize(c[ins]);const pm=parcelas.match(/^(\d+)(?:\s*[/xX]\s*(\d+))?$/);const totalParcelas=pm?Number(pm[2]??pm[1]):0;const valorTotal=money(raw);const valorParcela=totalParcelas>0?Number((valorTotal/totalParcelas).toFixed(2)):valorTotal;return{date:normalizeDate(c[d]),description:normalize(c[desc]),amount:valorParcela,totalAmount:valorTotal,type:/desp|debit/.test(typ)||raw.includes("-")?"DESPESA":"DESPESA",category:cat>=0?normalize(c[cat])||"OUTROS":"OUTROS",payment:p>=0?normalize(c[p])||"PIX":"PIX",installment:totalParcelas>1?`1/${totalParcelas}`:undefined,installmentCurrent:totalParcelas>1?1:undefined,installmentTotal:totalParcelas>1?totalParcelas:undefined}}).filter(r=>r.date&&r.description&&r.amount>0&&r.installmentTotal&&r.installmentTotal>1)}
-function ImportacaoPage(){const[rows,setRows]=useState<Row[]>([]);const[fileName,setFileName]=useState("");const[processing,setProcessing]=useState(false);const[analyzing,setAnalyzing]=useState(false);const[importing,setImporting]=useState(false);const[saved,setSaved]=useState(false);const[duplicates,setDuplicates]=useState<number[]>([]);const[decisions,setDecisions]=useState<Record<number,Decision>>({});const[existingIds,setExistingIds]=useState<Record<number,string>>({});const[analysisDone,setAnalysisDone]=useState(false);const total=useMemo(()=>rows.reduce((s,r)=>s+(r.type==="DESPESA"?-r.totalAmount:r.totalAmount),0),[rows]);
-function resetAnalysis(){setAnalysisDone(false);setDuplicates([]);setDecisions({});setExistingIds({});setSaved(false)}
-async function handleFile(file?:File){if(!file)return;resetAnalysis();setFileName(file.name);setProcessing(true);try{const ext=file.name.toLowerCase().split(".").pop();if(ext!=="csv"){setRows([]);toast.info("Nesta versão, PDF/XLS/XLSX precisam ser exportados para CSV antes da importação.");return}setRows(parseCsv(await file.text()));toast.success("Arquivo de parcelados carregado para revisão.")}catch(e){setRows([]);toast.error(e instanceof Error?e.message:"Não foi possível ler o arquivo.")}finally{setProcessing(false)}}
-async function analyzeDuplicates(){if(!rows.length)return toast.error("Nenhum parcelamento válido para analisar.");setAnalyzing(true);try{const seen=new Map<string,number[]>();rows.forEach((r,i)=>seen.set(duplicateKey(r),[...(seen.get(duplicateKey(r))??[]),i]));const local=Array.from(seen.values()).filter(g=>g.length>1).flat();const defaults:Record<number,Decision>={};Array.from(seen.values()).filter(g=>g.length>1).forEach(g=>g.slice(1).forEach(i=>defaults[i]="keep"));const{data:{user}}=await supabase.auth.getUser();if(!user)throw new Error("Faça login novamente para analisar.");const{data:profile,error:pe}=await supabase.from("profiles").select("household_id").eq("id",user.id).maybeSingle();if(pe)throw pe;const householdId=profile?.household_id;if(!householdId)throw new Error("Não foi possível identificar seu grupo.");const dates=rows.map(r=>r.date).filter(Boolean).sort();const ids:Record<number,string>={};if(dates.length){const{data:existing,error}=await supabase.from("transactions").select("id,date,description,amount,type,installment_current,installment_total").eq("household_id",householdId).gte("date",dates[0]).lte("date",dates[dates.length-1]).limit(5000);if(error)throw error;const map=new Map<string,string>();(existing??[]).forEach((r:any)=>{const totalInstallments=Number(r.installment_total??0);const totalAmount=totalInstallments>1?Number(r.amount)*totalInstallments:Number(r.amount);const k=duplicateKey({date:r.date,description:r.description??"",amount:Number(r.amount),totalAmount,type:String(r.type).toUpperCase().includes("RECE")?"RECEITA":"DESPESA",category:"",payment:"",installmentTotal:totalInstallments||undefined});if(!map.has(k))map.set(k,r.id)});rows.forEach((r,i)=>{const id=map.get(duplicateKey(r));if(id){ids[i]=id;defaults[i]="keep"}})}const all=Array.from(new Set([...local,...Object.keys(ids).map(Number)])).sort((a,b)=>a-b);setDuplicates(all);setExistingIds(ids);setDecisions(defaults);setAnalysisDone(true);toast.success(all.length?`${all.length} possível(is) duplicidade(s) encontrada(s).`:"Nenhuma duplicidade encontrada.")}catch(e){toast.error(e instanceof Error?e.message:"Não foi possível analisar duplicações.")}finally{setAnalyzing(false)}}
-function removeRow(i:number){setRows(prev=>prev.filter((_,x)=>x!==i));resetAnalysis();toast.success("Lançamento removido da importação.")}
-async function confirmImport(){if(!rows.length)return toast.error("Nenhum lançamento válido para importar.");if(!analysisDone)return toast.error("Analise as duplicações antes de confirmar.");const unresolved=duplicates.filter(i=>!decisions[i]);if(unresolved.length)return toast.error("Escolha uma ação para cada duplicação encontrada.");setImporting(true);setSaved(false);try{const{data:{user}}=await supabase.auth.getUser();if(!user)throw new Error("Faça login novamente para importar.");const{data:profile,error:pe}=await supabase.from("profiles").select("household_id").eq("id",user.id).maybeSingle();if(pe)throw pe;const householdId=profile?.household_id;if(!householdId)throw new Error("Não foi possível identificar seu grupo.");const batchId=crypto.randomUUID();const payload=rows.map((r,i)=>({date:r.date,description:r.description,amount:r.amount,type:r.type,category:r.category||"OUTROS",pay_method:normalizePayMethod(r.payment),payment_method_name:r.payment||normalizePayMethod(r.payment),responsible:"AMBAS",installment_current:r.installmentCurrent??null,installment_total:r.installmentTotal??null,paid:false,source_type:"IMPORT",source_index:i+1,source_total:rows.length,source_period:null,batch_id:batchId,household_id:householdId,total_amount:r.totalAmount,action:decisions[i]??"import",existing_id:existingIds[i]??null})).filter((_,i)=>!duplicates.includes(i)||decisions[i]!=="keep");if(!payload.length){setSaved(true);toast.success("Nenhum novo lançamento precisou ser importado.");return}const{data,error}=await supabase.functions.invoke("import-transactions-v3",{body:{household_id:householdId,batch_id:batchId,rows:payload}});if(error){let detail="";try{if("context" in error&&error.context instanceof Response){const b=await error.context.json();detail=b?.error||b?.message||""}}catch{}throw new Error(detail||error.message||"Não foi possível salvar a importação.")}if(data?.error)throw new Error(data.error);setSaved(true);toast.success(`${data?.imported??0} importado(s), ${data?.updated??0} atualizado(s), ${data?.skipped??0} ignorado(s).`)}catch(e){toast.error(e instanceof Error?e.message:"Não foi possível salvar a importação.")}finally{setImporting(false)}}
-function downloadTemplate(){const csv="Data;Descrição;Valor Total;Parcelas\n20/08/2026;Exemplo de compra;607,86;6x\n";const u=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));const a=document.createElement("a");a.href=u;a.download="modelo-importacao-parcelados-harmony-hub.csv";a.click();URL.revokeObjectURL(u)}
-return <div className="space-y-5"><PageHeader title="IMPORTAÇÃO" subtitle="IMPORTE PARCELAMENTOS POR CSV E RESOLVA DUPLICAÇÕES ANTES DE CONFIRMAR."/><Panel><div className="grid gap-3 md:grid-cols-2"><label className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-secondary/20 p-8 text-center hover:border-primary"><Upload className="h-7 w-7 text-primary"/><p className="label-caps text-xs">SELECIONAR ARQUIVO</p><p className="text-xs text-muted-foreground">CSV de parcelados · PDF/XLS/XLSX via conversão para CSV</p><input className="hidden" type="file" accept=".pdf,.xls,.xlsx,.csv" onChange={e=>handleFile(e.target.files?.[0])}/></label><button type="button" onClick={downloadTemplate} className="flex items-center justify-center gap-3 rounded-2xl border border-border bg-secondary/20 p-8 text-left hover:border-primary"><Download className="h-6 w-6 text-primary"/><span><span className="label-caps block text-xs">BAIXAR MODELO</span><span className="text-xs text-muted-foreground">Data · Descrição · Valor Total · Parcelas</span></span></button></div></Panel>{fileName&&<Panel><div className="flex items-center justify-between"><span className="text-sm">{fileName}</span>{processing&&<span className="text-xs">LENDO...</span>}</div></Panel>}{rows.length>0&&<Panel><div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3"><div><p className="label-caps text-xs">PRÉVIA DOS PARCELADOS</p><p className="text-xs text-muted-foreground">{rows.length} parcelamentos · valor total R$ {total.toFixed(2).replace(".",",")}</p></div><div className="flex gap-2"><button disabled={analyzing||importing} onClick={analyzeDuplicates} className="flex items-center gap-2 rounded-xl border px-4 py-2 text-xs font-semibold"><Search className="h-4 w-4"/>{analyzing?"ANALISANDO...":"ANALISAR DUPLICAÇÕES"}</button><button disabled={importing||analyzing||!analysisDone||duplicates.some(i=>!decisions[i])} onClick={confirmImport} className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground"><CheckCircle2 className="h-4 w-4"/>{importing?"PROCESSANDO...":"CONFIRMAR IMPORTAÇÃO"}</button></div></div>{analysisDone&&<div className="mt-3 rounded-xl border p-4"><div className="flex flex-wrap justify-between gap-2 text-xs font-semibold"><span>{duplicates.length?`${duplicates.length} duplicação(ões) para resolver`:"Nenhuma duplicação encontrada"}</span>{duplicates.length>0&&<div className="flex gap-2"><button onClick={()=>{const n={...decisions};duplicates.forEach(i=>n[i]="keep");setDecisions(n)}} className="rounded border px-2 py-1">MANTER EXISTENTES</button><button onClick={()=>{const n={...decisions};duplicates.forEach(i=>existingIds[i]&&(n[i]="replace"));setDecisions(n)}} disabled={!duplicates.every(i=>existingIds[i])} className="rounded border px-2 py-1 disabled:opacity-40"><RefreshCw className="mr-1 inline h-3 w-3"/>ATUALIZAR</button><button onClick={()=>{const n={...decisions};duplicates.forEach(i=>n[i]="import");setDecisions(n)}} className="rounded border px-2 py-1"><Copy className="mr-1 inline h-3 w-3"/>IMPORTAR TODOS</button></div>}</div><p className="mt-2 text-[11px] text-muted-foreground">Manter não importa; Atualizar altera o existente; Importar mesmo assim mantém os dois.</p></div>}{duplicates.length>0&&<div className="mt-3 space-y-2">{duplicates.map(i=>{const r=rows[i],d=decisions[i],has=!!existingIds[i];return <div key={i} className="rounded-xl border border-destructive/30 p-3"><div className="flex justify-between gap-3"><div><p className="text-xs font-semibold">{r.description}</p><p className="text-[11px] text-muted-foreground">{r.date} · R$ {r.totalAmount.toFixed(2).replace(".",",")} · {r.installment}</p><p className="text-[10px] text-muted-foreground">{has?"Já existe no banco":"Duplicação no arquivo"}</p></div><button onClick={()=>removeRow(i)} title="Remover lançamento"><X className="h-4 w-4"/></button></div><div className="mt-2 flex flex-wrap gap-2"><button onClick={()=>setDecisions(x=>({...x,[i]:"keep"}))} className={`rounded border px-3 py-1 text-[10px] ${d==="keep"?"bg-secondary":""}`}>MANTER EXISTENTE</button>{has&&<button onClick={()=>setDecisions(x=>({...x,[i]:"replace"}))} className={`rounded border px-3 py-1 text-[10px] ${d==="replace"?"bg-secondary":""}`}>ATUALIZAR</button>}<button onClick={()=>setDecisions(x=>({...x,[i]:"import"}))} className={`rounded border px-3 py-1 text-[10px] ${d==="import"?"bg-secondary":""}`}>IMPORTAR MESMO ASSIM</button></div></div>})}</div>}<div className="mt-3 overflow-x-auto"><table className="w-full text-left text-xs"><thead><tr className="border-b"><th className="p-2">DATA</th><th className="p-2">DESCRIÇÃO</th><th className="p-2">VALOR TOTAL</th><th className="p-2">VALOR PARCELA</th><th className="p-2">PARCELAS</th><th className="p-2">STATUS</th></tr></thead><tbody>{rows.slice(0,100).map((r,i)=><tr key={i} className="border-b"><td className="p-2">{r.date}</td><td className="p-2">{r.description}</td><td className="p-2">R$ {r.totalAmount.toFixed(2).replace(".",",")}</td><td className="p-2">R$ {r.amount.toFixed(2).replace(".",",")}</td><td className="p-2">{r.installment||"—"}</td><td className="p-2">{duplicates.includes(i)?(decisions[i]==="keep"?"MANTER":decisions[i]==="replace"?"ATUALIZAR":"IMPORTAR"):"OK"}</td></tr>)}</tbody></table></div>{saved&&<p className="mt-3 flex items-center gap-2 text-xs text-primary"><CheckCircle2 className="h-4 w-4"/>Importação processada e gravada no banco.</p></Panel>}{!rows.length&&fileName&&!processing&&<Panel><div className="flex gap-2 text-xs"><AlertCircle className="h-4 w-4"/>O arquivo precisa ter Data, Descrição, Valor Total e Parcelas. PDF/XLS/XLSX precisam ser convertidos para CSV nesta versão.</div></Panel>}</div>}
+
+type Row = {
+  date: string;
+  description: string;
+  amount: number;
+  totalAmount: number;
+  category: string;
+  payment: string;
+  installmentCurrent: number;
+  installmentTotal: number;
+};
+type Decision = "keep" | "replace" | "import";
+
+const text = (v: unknown) => String(v ?? "").trim();
+const normalize = (v: unknown) => text(v).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+function dateValue(v: unknown) {
+  const s = text(v);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const m = s.match(/^(\d{2})[/.\-](\d{2})[/.\-](\d{4})$/);
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : "";
+}
+
+function money(v: unknown) {
+  let s = text(v).replace(/R\$\s?/gi, "").replace(/\s/g, "");
+  if (s.includes(",")) s = s.replace(/\./g, "").replace(",", ".");
+  else s = s.replace(/,/g, "");
+  const n = Number(s.replace(/[^0-9.\-]/g, ""));
+  return Number.isFinite(n) ? Math.abs(n) : 0;
+}
+
+function parseCsv(textValue: string): Row[] {
+  const input = textValue.replace(/^\uFEFF/, "");
+  const lines: string[] = [];
+  let line = "";
+  let quoted = false;
+  for (let i = 0; i < input.length; i++) {
+    const c = input[i];
+    if (c === '"') {
+      if (quoted && input[i + 1] === '"') { line += '"'; i++; }
+      else quoted = !quoted;
+    } else if ((c === "\n" || c === "\r") && !quoted) {
+      if (c === "\r" && input[i + 1] === "\n") i++;
+      if (line.trim()) lines.push(line);
+      line = "";
+    } else line += c;
+  }
+  if (line.trim()) lines.push(line);
+  if (!lines.length) return [];
+
+  const delimiter = lines[0].split(";").length > lines[0].split(",").length ? ";" : ",";
+  const cells = (value: string) => {
+    const out: string[] = [];
+    let cell = "";
+    let q = false;
+    for (let i = 0; i < value.length; i++) {
+      const c = value[i];
+      if (c === '"') {
+        if (q && value[i + 1] === '"') { cell += '"'; i++; }
+        else q = !q;
+      } else if (c === delimiter && !q) { out.push(cell.trim()); cell = ""; }
+      else cell += c;
+    }
+    out.push(cell.trim());
+    return out;
+  };
+
+  const headers = cells(lines[0]).map(normalize);
+  const index = (...names: string[]) => headers.findIndex(h => names.some(n => h === n || h.includes(n)));
+  const d = index("data", "date");
+  const desc = index("descricao", "estabelecimento", "merchant", "historico");
+  const total = index("valor total", "total");
+  const value = index("valor", "amount", "value", "preco");
+  const inst = index("parcelas", "parcela", "installment");
+  const cat = index("categoria", "category");
+  const pay = index("pagamento", "forma de pagamento", "metodo", "cartao", "payment");
+  if (d < 0 || desc < 0 || (total < 0 && value < 0) || inst < 0) {
+    throw new Error("CSV inválido. Use as colunas: Data, Descrição, Valor Total e Parcelas.");
+  }
+
+  return lines.slice(1).map((lineValue) => {
+    const c = cells(lineValue);
+    const totalAmount = money(c[total >= 0 ? total : value]);
+    const installmentText = text(c[inst]);
+    const match = installmentText.match(/^(\d+)\s*(?:[/xX]\s*(\d+))?$/);
+    const count = match ? Number(match[2] ?? match[1]) : 0;
+    const amount = count > 0 ? Number((totalAmount / count).toFixed(2)) : totalAmount;
+    return {
+      date: dateValue(c[d]),
+      description: text(c[desc]),
+      amount,
+      totalAmount,
+      category: cat >= 0 ? text(c[cat]) || "OUTROS" : "OUTROS",
+      payment: pay >= 0 ? text(c[pay]) || "PIX" : "PIX",
+      installmentCurrent: 1,
+      installmentTotal: count,
+    };
+  }).filter(r => r.date && r.description && r.totalAmount > 0 && r.installmentTotal > 1);
+}
+
+const key = (r: Row) => `${r.date}|${normalize(r.description)}|${r.totalAmount.toFixed(2)}|${r.installmentTotal}`;
+
+function ImportacaoPage() {
+  const [rows, setRows] = useState<Row[]>([]);
+  const [fileName, setFileName] = useState("");
+  const [analysisDone, setAnalysisDone] = useState(false);
+  const [duplicates, setDuplicates] = useState<number[]>([]);
+  const [decisions, setDecisions] = useState<Record<number, Decision>>({});
+  const [existingIds, setExistingIds] = useState<Record<number, string>>({});
+  const [busy, setBusy] = useState(false);
+
+  const total = useMemo(() => rows.reduce((sum, r) => sum + r.totalAmount, 0), [rows]);
+  const reset = () => { setAnalysisDone(false); setDuplicates([]); setDecisions({}); setExistingIds({}); };
+
+  async function selectFile(file?: File) {
+    if (!file) return;
+    setFileName(file.name);
+    reset();
+    try {
+      const ext = file.name.toLowerCase().split(".").pop();
+      if (ext !== "csv") {
+        setRows([]);
+        toast.info("Para este importador, PDF/XLS/XLSX devem ser convertidos para CSV.");
+        return;
+      }
+      setRows(parseCsv(await file.text()));
+      toast.success("CSV carregado. Revise e analise as duplicidades.");
+    } catch (e) {
+      setRows([]);
+      toast.error(e instanceof Error ? e.message : "Não foi possível ler o CSV.");
+    }
+  }
+
+  async function analyze() {
+    if (!rows.length) return toast.error("Nenhum parcelamento válido encontrado.");
+    setBusy(true);
+    try {
+      const groups = new Map<string, number[]>();
+      rows.forEach((r, i) => groups.set(key(r), [...(groups.get(key(r)) ?? []), i]));
+      const found = Array.from(groups.values()).filter(g => g.length > 1).flat();
+      const decisionsNext: Record<number, Decision> = {};
+      found.forEach(i => decisionsNext[i] = "keep");
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Faça login novamente.");
+      const { data: profile, error: profileError } = await supabase.from("profiles").select("household_id").eq("id", user.id).maybeSingle();
+      if (profileError) throw profileError;
+      const householdId = profile?.household_id;
+      if (!householdId) throw new Error("Não foi possível identificar seu grupo.");
+
+      const dates = rows.map(r => r.date).sort();
+      const existing: Record<number, string> = {};
+      if (dates.length) {
+        const { data, error } = await supabase.from("transactions").select("id,date,description,amount,installment_total").eq("household_id", householdId).gte("date", dates[0]).lte("date", dates[dates.length - 1]).limit(5000);
+        if (error) throw error;
+        const map = new Map<string, string>();
+        (data ?? []).forEach((r: any) => {
+          const count = Number(r.installment_total ?? 0);
+          if (count > 1) map.set(key({ date: r.date, description: r.description ?? "", amount: Math.abs(Number(r.amount)), totalAmount: Math.abs(Number(r.amount)) * count, category: "", payment: "", installmentCurrent: 1, installmentTotal: count }), r.id);
+        });
+        rows.forEach((r, i) => { const id = map.get(key(r)); if (id) { existing[i] = id; decisionsNext[i] = "keep"; } });
+      }
+      setDuplicates(Array.from(new Set([...found, ...Object.keys(existing).map(Number)])).sort((a,b) => a-b));
+      setDecisions(decisionsNext);
+      setExistingIds(existing);
+      setAnalysisDone(true);
+      toast.success(found.length || Object.keys(existing).length ? "Duplicidades encontradas. Escolha a ação." : "Nenhuma duplicidade encontrada.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível analisar.");
+    } finally { setBusy(false); }
+  }
+
+  async function confirm() {
+    if (!rows.length) return toast.error("Nenhum lançamento para importar.");
+    if (!analysisDone) return toast.error("Analise as duplicidades antes de confirmar.");
+    if (duplicates.some(i => !decisions[i])) return toast.error("Escolha uma ação para cada duplicidade.");
+    setBusy(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Faça login novamente.");
+      const { data: profile, error } = await supabase.from("profiles").select("household_id").eq("id", user.id).maybeSingle();
+      if (error) throw error;
+      const householdId = profile?.household_id;
+      if (!householdId) throw new Error("Não foi possível identificar seu grupo.");
+      const batchId = crypto.randomUUID();
+      const payload = rows.map((r, i) => ({
+        date: r.date,
+        description: r.description,
+        amount: r.amount,
+        total_amount: r.totalAmount,
+        type: "DESPESA",
+        category: r.category,
+        pay_method: normalize(r.payment).includes("credito") || normalize(r.payment).includes("cartao") ? "CREDITO" : "PIX",
+        payment_method_name: r.payment || "PIX",
+        responsible: "AMBAS",
+        installment_current: r.installmentCurrent,
+        installment_total: r.installmentTotal,
+        paid: false,
+        source_type: "IMPORT",
+        source_index: i + 1,
+        source_total: rows.length,
+        source_period: null,
+        batch_id: batchId,
+        household_id: householdId,
+        action: decisions[i] ?? "import",
+        existing_id: existingIds[i] ?? null,
+      })).filter((_, i) => !duplicates.includes(i) || decisions[i] !== "keep");
+      if (!payload.length) { toast.success("Nenhum novo lançamento foi importado."); return; }
+      const { data, error: invokeError } = await supabase.functions.invoke("import-transactions-v3", { body: { household_id: householdId, batch_id: batchId, rows: payload } });
+      if (invokeError) throw invokeError;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`${data?.imported ?? payload.length} parcelamento(s) importado(s).`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível importar.");
+    } finally { setBusy(false); }
+  }
+
+  function template() {
+    const csv = "Data;Descrição;Valor Total;Parcelas\n20/08/2026;Exemplo de compra;607,86;6x\n";
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a"); a.href = url; a.download = "modelo-importacao-parcelados.csv"; a.click(); URL.revokeObjectURL(url);
+  }
+
+  return <div className="space-y-5">
+    <PageHeader title="IMPORTAÇÃO" subtitle="IMPORTE PARCELAMENTOS PELO FORMATO DO SEU CSV." />
+    <Panel><div className="grid gap-3 md:grid-cols-2">
+      <label className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-secondary/20 p-8 text-center hover:border-primary"><Upload className="h-7 w-7 text-primary" /><p className="label-caps text-xs">SELECIONAR CSV</p><p className="text-xs text-muted-foreground">Data · Descrição · Valor Total · Parcelas</p><input className="hidden" type="file" accept=".csv" onChange={e => selectFile(e.target.files?.[0])} /></label>
+      <button type="button" onClick={template} className="flex items-center justify-center gap-3 rounded-2xl border border-border bg-secondary/20 p-8 text-left hover:border-primary"><Download className="h-6 w-6 text-primary" /><span><span className="label-caps block text-xs">BAIXAR MODELO</span><span className="text-xs text-muted-foreground">Formato compatível com o importador</span></span></button>
+    </div></Panel>
+    {fileName && <Panel><div className="flex items-center justify-between text-sm"><span>{fileName}</span><button onClick={() => { setRows([]); setFileName(""); reset(); }}><X className="h-4 w-4" /></button></div></Panel>}
+    {rows.length > 0 && <Panel>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3"><div><p className="label-caps text-xs">PRÉVIA DOS PARCELADOS</p><p className="text-xs text-muted-foreground">{rows.length} parcelamentos · R$ {total.toFixed(2).replace(".", ",")}</p></div><div className="flex gap-2"><button disabled={busy} onClick={analyze} className="flex items-center gap-2 rounded-xl border px-4 py-2 text-xs font-semibold"><Search className="h-4 w-4" />{busy ? "ANALISANDO..." : "ANALISAR DUPLICAÇÕES"}</button><button disabled={busy || !analysisDone || duplicates.some(i => !decisions[i])} onClick={confirm} className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground"><CheckCircle2 className="h-4 w-4" />CONFIRMAR IMPORTAÇÃO</button></div></div>
+      {analysisDone && <div className="mt-3 rounded-xl border p-4 text-xs"><div className="flex flex-wrap justify-between gap-2"><span>{duplicates.length ? `${duplicates.length} lançamento(s) com possível duplicidade` : "Nenhuma duplicidade encontrada"}</span>{duplicates.length > 0 && <div className="flex gap-2"><button onClick={() => setDecisions(d => Object.fromEntries(duplicates.map(i => [i, "keep"])))} className="rounded border px-2 py-1">MANTER</button><button onClick={() => setDecisions(d => ({ ...d, ...Object.fromEntries(duplicates.filter(i => existingIds[i]).map(i => [i, "replace"])) }))} className="rounded border px-2 py-1"><RefreshCw className="mr-1 inline h-3 w-3" />ATUALIZAR</button><button onClick={() => setDecisions(d => ({ ...d, ...Object.fromEntries(duplicates.map(i => [i, "import"])) }))} className="rounded border px-2 py-1"><Copy className="mr-1 inline h-3 w-3" />IMPORTAR</button></div>}</div></div>}
+      <div className="mt-4 overflow-x-auto"><table className="w-full text-xs"><thead><tr className="border-b text-left"><th className="p-2">Data</th><th className="p-2">Descrição</th><th className="p-2">Valor total</th><th className="p-2">Parcelas</th><th className="p-2">Parcela</th></tr></thead><tbody>{rows.map((r, i) => <tr key={`${r.date}-${i}`} className="border-b"><td className="p-2">{r.date}</td><td className="p-2">{r.description}</td><td className="p-2">R$ {r.totalAmount.toFixed(2).replace(".", ",")}</td><td className="p-2">{r.installmentTotal}x</td><td className="p-2">R$ {r.amount.toFixed(2).replace(".", ",")}</td></tr>)}</tbody></table></div>
+    </Panel>}
+  </div>;
+}
