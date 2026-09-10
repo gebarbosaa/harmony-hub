@@ -38,6 +38,16 @@ function money(v: unknown) {
   return Number.isFinite(n) ? Math.abs(n) : 0;
 }
 
+function parseInstallment(v: unknown) {
+  const s = text(v).replace(/\s/g, "");
+  const match = s.match(/^(\d+)(?:[/xX](\d+))?$/);
+  if (!match) return { current: 1, total: 1 };
+  const first = Number(match[1]);
+  const second = match[2] ? Number(match[2]) : null;
+  if (second !== null) return { current: Math.min(Math.max(first, 1), Math.max(second, 1)), total: Math.max(second, 1) };
+  return { current: 1, total: Math.max(first, 1) };
+}
+
 function parseCsv(textValue: string): Row[] {
   const input = textValue.replace(/^\uFEFF/, "");
   const lines: string[] = [];
@@ -90,10 +100,8 @@ function parseCsv(textValue: string): Row[] {
   return lines.slice(1).map((lineValue) => {
     const c = cells(lineValue);
     const totalAmount = money(c[total >= 0 ? total : value]);
-    const installmentText = text(c[inst]);
-    const match = installmentText.match(/^(\d+)\s*(?:[/xX]\s*(\d+))?$/);
-    const count = match ? Number(match[2] ?? match[1]) : 0;
-    const amount = count > 0 ? Number((totalAmount / count).toFixed(2)) : totalAmount;
+    const installment = parseInstallment(c[inst]);
+    const amount = installment.total > 0 ? Number((totalAmount / installment.total).toFixed(2)) : totalAmount;
     return {
       date: dateValue(c[d]),
       description: text(c[desc]),
@@ -101,13 +109,13 @@ function parseCsv(textValue: string): Row[] {
       totalAmount,
       category: cat >= 0 ? text(c[cat]) || "OUTROS" : "OUTROS",
       payment: pay >= 0 ? text(c[pay]) || "PIX" : "PIX",
-      installmentCurrent: 1,
-      installmentTotal: count,
+      installmentCurrent: installment.current,
+      installmentTotal: installment.total,
     };
-  }).filter(r => r.date && r.description && r.totalAmount > 0 && r.installmentTotal > 1);
+  }).filter(r => r.date && r.description && r.totalAmount > 0 && r.installmentTotal >= 1);
 }
 
-const key = (r: Row) => `${r.date}|${normalize(r.description)}|${r.totalAmount.toFixed(2)}|${r.installmentTotal}`;
+const key = (r: Row) => `${r.date}|${normalize(r.description)}|${r.totalAmount.toFixed(2)}|${r.installmentCurrent}/${r.installmentTotal}`;
 
 function ImportacaoPage() {
   const [rows, setRows] = useState<Row[]>([]);
@@ -121,6 +129,7 @@ function ImportacaoPage() {
   const [imported, setImported] = useState(false);
 
   const total = useMemo(() => rows.reduce((sum, r) => sum + r.totalAmount, 0), [rows]);
+  const totalInstallments = useMemo(() => rows.filter(r => r.installmentTotal > 1).reduce((sum, r) => sum + r.installmentTotal, 0), [rows]);
   const reset = () => {
     setAnalysisDone(false);
     setAnalysisError("");
@@ -137,13 +146,13 @@ function ImportacaoPage() {
     try {
       if (file.name.toLowerCase().split(".").pop() !== "csv") {
         setRows([]);
-        toast.info("Este importador aceita o CSV no formato Data;Descrição;Valor Total;Parcelas.");
+        toast.info("Este importador aceita CSV no formato Data;Descrição;Valor Total;Parcelas.");
         return;
       }
       const parsed = parseCsv(await file.text());
-      if (!parsed.length) throw new Error("Nenhum parcelamento válido foi encontrado no arquivo.");
+      if (!parsed.length) throw new Error("Nenhum lançamento válido foi encontrado no arquivo.");
       setRows(parsed);
-      toast.success(`${parsed.length} parcelamentos carregados. A revisão já está disponível.`);
+      toast.success(`${parsed.length} lançamento(s) carregado(s). A revisão já está disponível.`);
       void analyze(parsed);
     } catch (e) {
       setRows([]);
@@ -182,10 +191,9 @@ function ImportacaoPage() {
       const map = new Map<string, string>();
       (data ?? []).forEach((r: any) => {
         const count = Number(r.installment_total ?? 0);
-        if (count > 1) {
-          const totalAmount = Number(r.total_amount ?? Math.abs(Number(r.amount)) * count);
-          map.set(key({ date: r.date, description: r.description ?? "", amount: Math.abs(Number(r.amount)), totalAmount: Math.abs(totalAmount), category: "", payment: "", installmentCurrent: 1, installmentTotal: count }), r.id);
-        }
+        const current = Number(r.installment_current ?? 1);
+        const totalAmount = Number(r.total_amount ?? Math.abs(Number(r.amount)) * Math.max(count, 1));
+        map.set(key({ date: r.date, description: r.description ?? "", amount: Math.abs(Number(r.amount)), totalAmount: Math.abs(totalAmount), category: "", payment: "", installmentCurrent: current, installmentTotal: Math.max(count, 1) }), r.id);
       });
       sourceRows.forEach((r, i) => {
         const id = map.get(key(r));
@@ -254,7 +262,9 @@ function ImportacaoPage() {
       if (invokeError) throw invokeError;
       if (data?.error) throw new Error(data.error);
       setImported(true);
-      toast.success(`${data?.imported ?? payload.length} parcelamento(s) importado(s) com sucesso.`);
+      const importedCount = Number(data?.imported ?? 0);
+      const createdInstallments = Number(data?.installmentsCreated ?? 0);
+      toast.success(`${importedCount || payload.length} lançamento(s) processado(s)${createdInstallments ? ` · ${createdInstallments} parcelamento(s) sincronizado(s)` : ""}.`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Não foi possível confirmar a importação.");
     } finally {
@@ -263,25 +273,25 @@ function ImportacaoPage() {
   }
 
   function template() {
-    const csv = "Data;Descrição;Valor Total;Parcelas\n20/08/2026;Exemplo de compra;607,86;6x\n";
+    const csv = "Data;Descrição;Valor Total;Parcelas;Pagamento\n20/08/2026;Exemplo de compra parcelada;607,86;1/6;Cartão\n20/08/2026;Exemplo de compra à vista;49,90;1;PIX\n";
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-    const a = document.createElement("a"); a.href = url; a.download = "modelo-importacao-parcelados.csv"; a.click(); URL.revokeObjectURL(url);
+    const a = document.createElement("a"); a.href = url; a.download = "modelo-importacao-harmony-hub.csv"; a.click(); URL.revokeObjectURL(url);
   }
 
   return <div className="space-y-5">
-    <PageHeader title="IMPORTAÇÃO" subtitle="CARREGUE, REVISE E SÓ ENTÃO CONFIRME OS PARCELAMENTOS." />
+    <PageHeader title="IMPORTAÇÃO" subtitle="CARREGUE, REVISE E SÓ ENTÃO CONFIRME OS LANÇAMENTOS." />
 
     <Panel>
       <div className="grid gap-3 md:grid-cols-2">
         <label className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-secondary/20 p-8 text-center hover:border-primary">
           <Upload className="h-7 w-7 text-primary" />
           <p className="label-caps text-xs">SELECIONAR CSV</p>
-          <p className="text-xs text-muted-foreground">Data · Descrição · Valor Total · Parcelas</p>
+          <p className="text-xs text-muted-foreground">Data · Descrição · Valor Total · Parcelas · Pagamento</p>
           <input className="hidden" type="file" accept=".csv,text/csv" onChange={e => selectFile(e.target.files?.[0])} />
         </label>
         <button type="button" onClick={template} className="flex items-center justify-center gap-3 rounded-2xl border border-border bg-secondary/20 p-8 text-left hover:border-primary">
           <Download className="h-6 w-6 text-primary" />
-          <span><span className="label-caps block text-xs">BAIXAR MODELO</span><span className="text-xs text-muted-foreground">Formato compatível com o importador</span></span>
+          <span><span className="label-caps block text-xs">BAIXAR MODELO</span><span className="text-xs text-muted-foreground">Parcelados e compras à vista</span></span>
         </button>
       </div>
     </Panel>
@@ -313,7 +323,7 @@ function ImportacaoPage() {
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <div className="rounded-xl border p-3"><p className="text-[10px] text-muted-foreground">LANÇAMENTOS</p><p className="mt-1 text-lg font-bold">{rows.length}</p></div>
           <div className="rounded-xl border p-3"><p className="text-[10px] text-muted-foreground">VALOR TOTAL</p><p className="mt-1 text-lg font-bold">{brl(total)}</p></div>
-          <div className="rounded-xl border p-3"><p className="text-[10px] text-muted-foreground">PARCELAS</p><p className="mt-1 text-lg font-bold">{rows.reduce((s, r) => s + r.installmentTotal, 0)}</p></div>
+          <div className="rounded-xl border p-3"><p className="text-[10px] text-muted-foreground">PARCELAS</p><p className="mt-1 text-lg font-bold">{totalInstallments || "—"}</p></div>
           <div className="rounded-xl border p-3"><p className="text-[10px] text-muted-foreground">STATUS</p><p className="mt-1 text-sm font-bold">{analysisDone ? (duplicates.length ? `${duplicates.length} DUPLICADOS` : "SEM DUPLICADOS") : "REVISÃO DISPONÍVEL"}</p></div>
         </div>
 
@@ -333,14 +343,14 @@ function ImportacaoPage() {
 
       <div className="mt-4 overflow-x-auto">
         <table className="w-full text-xs">
-          <thead><tr className="border-b text-left"><th className="p-2">Data</th><th className="p-2">Descrição</th><th className="p-2">Valor total</th><th className="p-2">Parcelas</th><th className="p-2">Valor da parcela</th><th className="p-2">Ação</th></tr></thead>
+          <thead><tr className="border-b text-left"><th className="p-2">Data</th><th className="p-2">Descrição</th><th className="p-2">Valor total</th><th className="p-2">Parcela</th><th className="p-2">Valor da parcela</th><th className="p-2">Ação</th></tr></thead>
           <tbody>{rows.map((r, i) => {
             const isDuplicate = duplicates.includes(i);
             return <tr key={`${r.date}-${r.description}-${i}`} className={`border-b ${isDuplicate ? "bg-amber-500/5" : ""}`}>
               <td className="p-2 whitespace-nowrap">{r.date.split("-").reverse().join("/")}</td>
               <td className="p-2 min-w-[220px]">{r.description}</td>
               <td className="p-2 whitespace-nowrap">{brl(r.totalAmount)}</td>
-              <td className="p-2">{r.installmentTotal}x</td>
+              <td className="p-2">{r.installmentTotal > 1 ? `${r.installmentCurrent}/${r.installmentTotal}` : "À VISTA"}</td>
               <td className="p-2 whitespace-nowrap">{brl(r.amount)}</td>
               <td className="p-2">{isDuplicate ? <select value={decisions[i] ?? "keep"} onChange={e => setDecisions(d => ({ ...d, [i]: e.target.value as Decision }))} className="rounded-lg border bg-background px-2 py-1"><option value="keep">Manter existente</option><option value="replace" disabled={!existingIds[i]}>Atualizar</option><option value="import">Importar também</option></select> : <span className="text-muted-foreground">Importar</span>}</td>
             </tr>;
@@ -353,7 +363,7 @@ function ImportacaoPage() {
       <div className="flex flex-col items-center gap-3 py-8 text-center">
         <CheckCircle2 className="h-10 w-10 text-primary" />
         <p className="label-caps text-sm">IMPORTAÇÃO CONFIRMADA</p>
-        <p className="text-sm text-muted-foreground">Os parcelamentos foram enviados para o Harmony Hub.</p>
+        <p className="text-sm text-muted-foreground">Os lançamentos foram enviados para o Harmony Hub e os parcelamentos foram sincronizados quando aplicável.</p>
         <button type="button" onClick={() => { setRows([]); setFileName(""); reset(); }} className="rounded-xl border px-4 py-2 text-xs font-semibold">IMPORTAR OUTRO ARQUIVO</button>
       </div>
     </Panel>}
