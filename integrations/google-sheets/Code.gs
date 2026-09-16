@@ -5,7 +5,7 @@
  */
 const CONFIG = {
   API_URL: 'https://cyopbtfcnyetoolgwqyt.supabase.co/functions/v1/spreadsheet-sync',
-  TOKEN: 'COLE_AQUI_O_TOKEN_GERADO_PELO_HARMONY_HUB',
+  TOKEN: 'c95120ce0790f3e6f18ab6f23b9515dd7aa6285c70ad71ebf9906b7971bf5f9f',
   SHEET_NAME: 'Lançamentos',
   POLL_MINUTES: 1,
 };
