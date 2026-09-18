@@ -163,8 +163,8 @@ function pushSheet_(sheetName) {
       pay_method: normalizePayMethod_(row.pay_method),
       card_name: row.card_name ? String(row.card_name).trim() : null,
       responsible: String(row.responsible || 'AMBAS').trim() || 'AMBAS',
-      installment_current: row.installment_current ? Number(row.installment_current) : null,
-      installment_total: row.installment_total ? Number(row.installment_total) : null,
+      installment_current: row.installment_current ? parseInstallmentValue_(row.installment_current, 'current') : null,
+      installment_total: row.installment_total ? parseInstallmentValue_(row.installment_total, 'total') : null,
       paid: row.paid === '' || row.paid == null ? true : !isNo_(row.paid),
       is_fixed: isYes_(row.is_fixed),
     });
@@ -185,18 +185,34 @@ function pushBatch_(rows, rowNumbers, sheet, headers, action, resultKey) {
     const batch = rows.slice(start, start + BATCH_SIZE);
     const batchRowNumbers = rowNumbers.slice(start, start + BATCH_SIZE);
 
-    const result = call_(action, { rows: batch });
-    const returned = result && Array.isArray(result[resultKey]) ? result[resultKey] : [];
+    // PostgreSQL não permite que o mesmo ID apareça duas vezes no mesmo
+    // INSERT ... ON CONFLICT DO UPDATE. Se a planilha tiver um ID repetido,
+    // tratamos a segunda ocorrência como um novo lançamento para que uma
+    // linha não sobrescreva outra acidentalmente.
+    const seenIds = {};
+    const safeBatch = batch.map(function(row) {
+      if (!row.id) return row;
 
-    const rowsWithoutId = [];
-    batch.forEach((row, index) => {
-      if (!row.id) rowsWithoutId.push({ rowNumber: batchRowNumbers[index] });
+      const id = String(row.id);
+      if (seenIds[id]) {
+        const copy = Object.assign({}, row);
+        delete copy.id;
+        return copy;
+      }
+
+      seenIds[id] = true;
+      return row;
     });
 
-    rowsWithoutId.forEach((item, resultIndex) => {
-      const returnedRow = returned[resultIndex];
-      if (returnedRow && returnedRow.id) {
-        writeId_(sheet, item.rowNumber, headers, returnedRow.id);
+    const result = call_(action, { rows: safeBatch });
+    const returned = result && Array.isArray(result[resultKey]) ? result[resultKey] : [];
+
+    safeBatch.forEach(function(row, index) {
+      if (!row.id) {
+        const returnedRow = returned[index];
+        if (returnedRow && returnedRow.id) {
+          writeId_(sheet, batchRowNumbers[index], headers, returnedRow.id);
+        }
       }
     });
   }
@@ -218,7 +234,7 @@ function pushInstallmentBatch_(sheet, headers, values) {
 
     const purchaseDate = normalizeDate_(row.purchase_date);
     const totalAmount = parseAmount_(row.total_amount);
-    const count = Math.max(1, Number(row.installments_count || 1));
+    const count = Math.max(1, parseInstallmentValue_(row.installments_count || 1, 'total'));
 
     if (!purchaseDate || totalAmount <= 0 || !String(row.name || '').trim()) return;
 
@@ -322,7 +338,7 @@ function pushInstallmentRow_(sheet, rowNumber, headers, values) {
 
   const purchaseDate = normalizeDate_(row.purchase_date);
   const totalAmount = parseAmount_(row.total_amount);
-  const count = Math.max(1, Number(row.installments_count || 1));
+  const count = Math.max(1, parseInstallmentValue_(row.installments_count || 1, 'total'));
 
   if (!purchaseDate || totalAmount <= 0 || !String(row.name || '').trim()) return;
 
@@ -429,6 +445,26 @@ function normalizeDate_(value) {
   }
 
   return '';
+}
+
+function parseInstallmentValue_(value, part) {
+  const text = String(value == null ? '' : value).trim();
+
+  if (!text) return 0;
+
+  // Aceita: 4x, 4 X, 4x de 10, 4/10 e 4.
+  const fraction = text.match(/^(\d+)\s*(?:\/|de)\s*(\d+)/i);
+  if (fraction) {
+    return part === 'current'
+      ? Number(fraction[1])
+      : Number(fraction[2]);
+  }
+
+  const x = text.match(/(\d+)\s*x/i);
+  if (x) return Number(x[1]);
+
+  const number = Number(text.replace(',', '.').replace(/[^0-9.]/g, ''));
+  return Number.isFinite(number) ? number : 0;
 }
 
 function parseAmount_(value) {
