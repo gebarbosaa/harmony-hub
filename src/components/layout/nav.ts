@@ -7,7 +7,6 @@ export const navItems: NavItem[] = [
 {label:"DESPESAS",to:"/despesas",icon:ArrowDownCircle},
 {label:"CONTAS A PAGAR",to:"/contas-a-pagar",icon:Wallet},
 {label:"CUSTOS FIXOS",to:"/custos-fixos",icon:Repeat},
-{label:"ASSINATURAS",to:"/assinatura",icon:Repeat},
 {label:"ORÇAMENTO",to:"/orcamento",icon:Wallet},
 {label:"CARTÕES E FATURAS",to:"/faturas",icon:ReceiptText},
 {label:"BANCOS",to:"/bancos",icon:Building2},
