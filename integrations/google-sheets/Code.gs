@@ -49,7 +49,7 @@ const INSTALLMENT_FIELDS = {
   name: ['name', 'nome', 'descrição', 'descricao', 'Descrição', 'Nome'],
   purchase_date: ['purchase_date', 'date', 'data_compra', 'data compra', 'data', 'Data'],
   total_amount: ['total_amount', 'valor_total', 'valor total', 'total', 'Valor Total', 'Valor'],
-  installments_count: ['installments_count', 'installments', 'parcelas', 'qtd_parcelas', 'quantidade_parcelas', 'Quantidade de Parcelas', 'parcela', 'Parcela'],
+  installments_count: ['installments_count', 'installments', 'parcelas', 'total_parcelas', 'total parcelas', 'Total de parcelas', 'Total de Parcelas', 'qtd_parcelas', 'quantidade_parcelas', 'Quantidade de Parcelas'],
   installment_current: ['installment_current', 'parcela_atual', 'parcela atual', 'Parcela Atual', 'parcela', 'Parcela'],
   paid_count: ['paid_count', 'parcelas_pagas', 'parcelas pagas', 'pagas', 'Parcelas Pagas'],
   category: ['category', 'categoria', 'Categoria'],
@@ -235,8 +235,8 @@ function pushInstallmentBatch_(sheet, headers, values) {
 
     const purchaseDate = normalizeDate_(row.purchase_date);
     const totalAmount = parseAmount_(row.total_amount);
-    const installmentSource = row.installments_count || row.installment_current || 1;
-    const count = Math.max(1, parseInstallmentValue_(installmentSource, 'total'));
+    const parts = resolveInstallmentParts_(row);
+    const count = parts.total;
 
     if (!purchaseDate || totalAmount <= 0 || !String(row.name || '').trim()) return;
 
@@ -245,7 +245,7 @@ function pushInstallmentBatch_(sheet, headers, values) {
       name: String(row.name).trim(),
       purchase_date: purchaseDate,
       total_amount: totalAmount,
-      installments_count: Number.isFinite(count) ? count : 1,
+      installments_count: count,
       paid_count: Math.max(0, Number(row.paid_count || 0)),
       category: String(row.category || 'OUTROS').trim() || 'OUTROS',
       pay_method: normalizePayMethod_(row.pay_method),
@@ -340,10 +340,9 @@ function pushInstallmentRow_(sheet, rowNumber, headers, values) {
 
   const purchaseDate = normalizeDate_(row.purchase_date);
   const totalAmount = parseAmount_(row.total_amount);
-  const installmentSource = row.installments_count || row.installment_current || 1;
-  const count = Math.max(1, parseInstallmentValue_(installmentSource, 'total'));
-  const parsedCurrent = row.installment_current ? parseInstallmentValue_(row.installment_current, 'current') : 0;
-  const parsedTotal = parseInstallmentValue_(installmentSource, 'total');
+  const parts = resolveInstallmentParts_(row);
+  const parsedCurrent = parts.current;
+  const parsedTotal = parts.total;
 
   if (!purchaseDate || totalAmount <= 0 || !String(row.name || '').trim()) return;
 
@@ -352,7 +351,7 @@ function pushInstallmentRow_(sheet, rowNumber, headers, values) {
     name: String(row.name).trim(),
     purchase_date: purchaseDate,
     total_amount: totalAmount,
-    installments_count: Number.isFinite(parsedTotal) && parsedTotal > 0 ? parsedTotal : (Number.isFinite(count) ? count : 1),
+    installments_count: parsedTotal,
     paid_count: Math.max(0, Number(row.paid_count || 0)),
     category: String(row.category || 'OUTROS').trim() || 'OUTROS',
     pay_method: normalizePayMethod_(row.pay_method),
@@ -471,6 +470,26 @@ function parseInstallmentValue_(value, part) {
 
   const number = Number(text.replace(',', '.').replace(/[^0-9.]/g, ''));
   return Number.isFinite(number) ? number : 0;
+}
+
+function resolveInstallmentParts_(row) {
+  const explicitTotal = parseInstallmentValue_(row.installments_count, 'total');
+  const currentText = String(row.installment_current == null ? '' : row.installment_current).trim();
+  const currentFromField = currentText ? parseInstallmentValue_(currentText, 'current') : 0;
+  const totalFromField = currentText ? parseInstallmentValue_(currentText, 'total') : 0;
+
+  // Prefer the explicit total column when it exists.
+  // If it is absent, recover the total from formats such as 01/06 or 4x.
+  const total = Math.max(1, explicitTotal || totalFromField || 1);
+
+  // If the sheet provides 01/06, keep 01 as the current installment.
+  // If it only provides a total, start at installment 1.
+  const current = Math.min(
+    total,
+    Math.max(1, currentFromField || 1)
+  );
+
+  return { current: current, total: total };
 }
 
 function parseAmount_(value) {
