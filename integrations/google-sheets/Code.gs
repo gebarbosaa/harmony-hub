@@ -347,9 +347,6 @@ function pushInstallmentRow_(sheet, rowNumber, headers, values) {
 
   if (!purchaseDate || totalAmount <= 0 || !String(row.name || '').trim()) return;
 
-  const parsedCurrent = row.installment_current ? parseInstallmentValue_(row.installment_current, 'current') : 0;
-  const parsedTotal = parseInstallmentValue_(installmentSource, 'total');
-
   const payload = {
     id: row.id ? String(row.id) : undefined,
     name: String(row.name).trim(),
@@ -460,8 +457,9 @@ function parseInstallmentValue_(value, part) {
 
   if (!text) return 0;
 
-  // Aceita: 4x, 4 X, 4x de 10, 4/10 e 4.
-  const fraction = text.match(/^(\d+)\s*(?:\/|de)\s*(\d+)/i);
+  // Aceita também textos como: "01/06 virtual", "4x", "4x de 10".
+  // Para formatos com parcela atual/total, o total é sempre o segundo número.
+  const fraction = text.match(/(\d+)\s*(?:\/|de)\s*(\d+)/i);
   if (fraction) {
     return part === 'current'
       ? Number(fraction[1])
@@ -470,14 +468,6 @@ function parseInstallmentValue_(value, part) {
 
   const x = text.match(/(\d+)\s*x/i);
   if (x) return Number(x[1]);
-
-  const embeddedFraction = text.match(/(\d+)\s*(?:\/|de)\s*(\d+)/i);
-  if (embeddedFraction) {
-    return part === 'current' ? Number(embeddedFraction[1]) : Number(embeddedFraction[2]);
-  }
-
-  const embeddedX = text.match(/(\d+)\s*x/i);
-  if (embeddedX) return Number(embeddedX[1]);
 
   const number = Number(text.replace(',', '.').replace(/[^0-9.]/g, ''));
   return Number.isFinite(number) ? number : 0;
