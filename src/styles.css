@@ -41,28 +41,3 @@
 @media (max-width: 380px) {
   .label-caps { letter-spacing: 0.055em; }
 }
-
-
-/* Harmony Hub responsive visual shell */
-.harmony-sidebar { color: var(--primary-foreground); }
-.harmony-sidebar .text-muted-foreground { color: color-mix(in oklab, var(--primary-foreground) 72%, transparent); }
-.harmony-sidebar .border-sidebar-border, .harmony-sidebar .border-sidebar-border\/70 { border-color: color-mix(in oklab, var(--primary-foreground) 16%, transparent); }
-.harmony-sidebar .bg-secondary\/50, .harmony-sidebar .bg-secondary\/40 { background-color: color-mix(in oklab, var(--primary-foreground) 10%, transparent); }
-.harmony-sidebar .hover\\:bg-sidebar-accent:hover { background-color: color-mix(in oklab, var(--primary-foreground) 12%, transparent); }
-.harmony-sidebar .gradient-soft { background-image: linear-gradient(135deg, color-mix(in oklab, var(--primary-foreground) 18%, transparent), color-mix(in oklab, var(--primary-foreground) 7%, transparent)); }
-.harmony-sidebar .bg-primary\/10 { background-color: color-mix(in oklab, var(--primary-foreground) 16%, transparent); }
-.harmony-sidebar .text-primary { color: var(--primary-foreground); }
-.harmony-sidebar .bg-primary\/5 { background-color: color-mix(in oklab, var(--primary-foreground) 10%, transparent); }
-.harmony-sidebar .border-primary\/10, .harmony-sidebar .border-primary\/20, .harmony-sidebar .border-primary\/30 { border-color: color-mix(in oklab, var(--primary-foreground) 18%, transparent); }
-.harmony-mobile-brand .text-muted-foreground { color: color-mix(in oklab, var(--primary-foreground) 78%, transparent); }
-@media (max-width: 1023px) {
-  .harmony-topbar { background: var(--primary); border-color: color-mix(in oklab, var(--primary-foreground) 18%, transparent); color: var(--primary-foreground); }
-  .harmony-topbar .text-muted-foreground { color: color-mix(in oklab, var(--primary-foreground) 78%, transparent); }
-  .harmony-topbar .harmony-mobile-brand .gradient-primary { background-image: none; background-color: color-mix(in oklab, var(--primary-foreground) 16%, transparent); }
-  .harmony-topbar .harmony-mobile-brand .label-caps { color: var(--primary-foreground); }
-  .harmony-topbar > .ml-auto button { border-color: color-mix(in oklab, var(--primary-foreground) 18%, transparent); }
-  .harmony-topbar > .ml-auto .bg-card { background-color: color-mix(in oklab, var(--primary-foreground) 12%, transparent); }
-}
-@media (min-width: 1024px) {
-  .harmony-topbar { box-shadow: 0 8px 30px -24px rgba(0,0,0,.65); }
-}
