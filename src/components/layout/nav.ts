@@ -1,5 +1,5 @@
 import { LayoutDashboard, ArrowLeftRight, Wallet, Repeat, CreditCard, Settings, ArrowDownCircle, ArrowUpCircle, TrendingUp, Target, Calculator, ReceiptText, Undo2, Table2, Users, Building2 } from "lucide-react";
-export type NavItem = { label: string; to: string; icon: typeof Wallet };
+export type NavItem = { label: string; to: string; icon: typeof Wallet; children?: NavItem[] };
 export const navItems: NavItem[] = [
 {label:"INÍCIO",to:"/",icon:LayoutDashboard},
 {label:"FLUXO",to:"/fluxo",icon:ArrowLeftRight},
