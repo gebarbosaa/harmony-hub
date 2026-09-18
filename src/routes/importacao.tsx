@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Upload, Download, Search, CheckCircle2, RefreshCw, Copy, X } from "lucide-react";
+import { Upload, Download, Search, CheckCircle2, RefreshCw, Copy, X, FileText } from "lucide-react";
 import { PageHeader, Panel } from "@/components/ui-kit";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -117,6 +117,53 @@ function parseCsv(textValue: string): Row[] {
 
 const key = (r: Row) => `${r.date}|${normalize(r.description)}|${r.totalAmount.toFixed(2)}|${r.installmentCurrent}/${r.installmentTotal}`;
 
+// Mesma lógica de reconhecimento usada no backend (import-transactions-v3), para não perder
+// débito/dinheiro/alimentação/transferência/boleto — antes isso tudo virava "PIX".
+function payMethodKind(v: string): "DEBITO" | "PIX" | "DINHEIRO" | "CREDITO" | "ALIMENTACAO" | "TRANSFERENCIA" | "BOLETO" {
+  const s = normalize(v);
+  if (s.includes("cred") || s.includes("cartao")) return "CREDITO";
+  if (s.includes("deb")) return "DEBITO";
+  if (s.includes("pix")) return "PIX";
+  if (s.includes("dinheiro") || s.includes("especie")) return "DINHEIRO";
+  if (s.includes("aliment") || s.includes("refeic")) return "ALIMENTACAO";
+  if (s.includes("transfer")) return "TRANSFERENCIA";
+  if (s.includes("boleto")) return "BOLETO";
+  return "PIX";
+}
+
+// PDFs de banco não podem ser lidos como arquivo binário no navegador sem uma lib pesada de PDF.
+// Em vez disso, o usuário abre o PDF, seleciona todo o texto do extrato (Ctrl+A/Cmd+A) e cola aqui.
+// Cada linha de lançamento normalmente vem como "DD/MM/AAAA  DESCRIÇÃO  VALOR" (extrato) ou
+// "DESCRIÇÃO  DD/MM  VALOR" (fatura de cartão) — tentamos os dois formatos.
+function parsePastedStatement(raw: string): Row[] {
+  const currentYear = new Date().getFullYear();
+  const lines = raw.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const out: Row[] = [];
+
+  const fullDateAtStart = /^(\d{2})[/.](\d{2})[/.](\d{4})\s+(.+?)\s+(-?R?\$?\s?-?[\d.,]+)\s*$/;
+  const fullDateAtEnd = /^(.+?)\s+(\d{2})[/.](\d{2})[/.](\d{4})\s+(-?R?\$?\s?-?[\d.,]+)\s*$/;
+  const shortDateAtEnd = /^(.+?)\s+(\d{2})[/.](\d{2})\s+(-?R?\$?\s?-?[\d.,]+)\s*$/;
+
+  for (const line of lines) {
+    let m = line.match(fullDateAtStart);
+    if (m) {
+      out.push({ date: `${m[3]}-${m[2]}-${m[1]}`, description: text(m[4]), amount: money(m[5]), totalAmount: money(m[5]), category: "OUTROS", payment: "PIX", installmentCurrent: 1, installmentTotal: 1 });
+      continue;
+    }
+    m = line.match(fullDateAtEnd);
+    if (m) {
+      out.push({ date: `${m[4]}-${m[3]}-${m[2]}`, description: text(m[1]), amount: money(m[5]), totalAmount: money(m[5]), category: "OUTROS", payment: "PIX", installmentCurrent: 1, installmentTotal: 1 });
+      continue;
+    }
+    m = line.match(shortDateAtEnd);
+    if (m) {
+      out.push({ date: `${currentYear}-${m[3]}-${m[2]}`, description: text(m[1]), amount: money(m[4]), totalAmount: money(m[4]), category: "OUTROS", payment: "PIX", installmentCurrent: 1, installmentTotal: 1 });
+      continue;
+    }
+  }
+  return out.filter((r) => r.date && r.description && r.totalAmount > 0);
+}
+
 function ImportacaoPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [fileName, setFileName] = useState("");
@@ -127,6 +174,23 @@ function ImportacaoPage() {
   const [existingIds, setExistingIds] = useState<Record<number, string>>({});
   const [busy, setBusy] = useState(false);
   const [imported, setImported] = useState(false);
+  const [pastedText, setPastedText] = useState("");
+  const [pasteMode, setPasteMode] = useState(false);
+
+  function processPastedText() {
+    reset();
+    try {
+      const parsed = parsePastedStatement(pastedText);
+      if (!parsed.length) throw new Error("Não encontrei lançamentos reconhecíveis no texto colado. Confira se cada linha tem data e valor.");
+      setFileName("TEXTO COLADO (PDF)");
+      setRows(parsed);
+      toast.success(`${parsed.length} lançamento(s) reconhecido(s) no texto colado. Confira a revisão antes de confirmar.`);
+      void analyze(parsed);
+    } catch (e) {
+      setRows([]);
+      toast.error(e instanceof Error ? e.message : "Não foi possível interpretar o texto colado.");
+    }
+  }
 
   const total = useMemo(() => rows.reduce((sum, r) => sum + r.totalAmount, 0), [rows]);
   const totalInstallments = useMemo(() => rows.filter(r => r.installmentTotal > 1).reduce((sum, r) => sum + r.installmentTotal, 0), [rows]);
@@ -181,7 +245,7 @@ function ImportacaoPage() {
       const dates = sourceRows.map(r => r.date).sort();
       const existing: Record<number, string> = {};
       const { data, error } = await supabase.from("transactions")
-        .select("id,date,description,amount,installment_current,installment_total,total_amount")
+        .select("id,date,description,amount,installment_current,installment_total")
         .eq("household_id", householdId)
         .gte("date", dates[0])
         .lte("date", dates[dates.length - 1])
@@ -190,10 +254,11 @@ function ImportacaoPage() {
 
       const map = new Map<string, string>();
       (data ?? []).forEach((r: any) => {
-        const count = Number(r.installment_total ?? 0);
-        const current = Number(r.installment_current ?? 1);
-        const totalAmount = Number(r.total_amount ?? Math.abs(Number(r.amount)) * Math.max(count, 1));
-        map.set(key({ date: r.date, description: r.description ?? "", amount: Math.abs(Number(r.amount)), totalAmount: Math.abs(totalAmount), category: "", payment: "", installmentCurrent: current, installmentTotal: Math.max(count, 1) }), r.id);
+        const count = Number(r.installment_total ?? 1) || 1;
+        const current = Number(r.installment_current ?? 1) || 1;
+        // amount aqui já é o valor da parcela; o valor total é amount * installment_total (mesma regra usada ao montar as linhas importadas)
+        const totalAmount = Math.abs(Number(r.amount)) * count;
+        map.set(key({ date: r.date, description: r.description ?? "", amount: Math.abs(Number(r.amount)), totalAmount, category: "", payment: "", installmentCurrent: current, installmentTotal: count }), r.id);
       });
       sourceRows.forEach((r, i) => {
         const id = map.get(key(r));
@@ -234,7 +299,7 @@ function ImportacaoPage() {
         total_amount: r.totalAmount,
         type: "DESPESA",
         category: r.category,
-        pay_method: normalize(r.payment).includes("credito") || normalize(r.payment).includes("cartao") ? "CREDITO" : "PIX",
+        pay_method: payMethodKind(r.payment),
         payment_method_name: r.payment || "PIX",
         responsible: "AMBAS",
         installment_current: r.installmentCurrent,
@@ -282,18 +347,30 @@ function ImportacaoPage() {
     <PageHeader title="IMPORTAÇÃO" subtitle="CARREGUE, REVISE E SÓ ENTÃO CONFIRME OS LANÇAMENTOS." />
 
     <Panel>
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid gap-3 md:grid-cols-3">
         <label className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-secondary/20 p-8 text-center hover:border-primary">
           <Upload className="h-7 w-7 text-primary" />
           <p className="label-caps text-xs">SELECIONAR CSV</p>
           <p className="text-xs text-muted-foreground">Data · Descrição · Valor Total · Parcelas · Pagamento</p>
           <input className="hidden" type="file" accept=".csv,text/csv" onChange={e => selectFile(e.target.files?.[0])} />
         </label>
+        <button type="button" onClick={() => setPasteMode((v) => !v)} className={`flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed p-8 text-center hover:border-primary ${pasteMode ? "border-primary bg-secondary/30" : "border-border bg-secondary/20"}`}>
+          <FileText className="h-7 w-7 text-primary" />
+          <p className="label-caps text-xs">COLAR PDF (EXTRATO/FATURA)</p>
+          <p className="text-xs text-muted-foreground">Abra o PDF, selecione tudo (Ctrl+A) e cole o texto aqui</p>
+        </button>
         <button type="button" onClick={template} className="flex items-center justify-center gap-3 rounded-2xl border border-border bg-secondary/20 p-8 text-left hover:border-primary">
           <Download className="h-6 w-6 text-primary" />
           <span><span className="label-caps block text-xs">BAIXAR MODELO</span><span className="text-xs text-muted-foreground">Parcelados e compras à vista</span></span>
         </button>
       </div>
+      {pasteMode && <div className="mt-4 space-y-3 border-t border-border pt-4">
+        <p className="text-xs text-muted-foreground">Cole abaixo o texto copiado do PDF (extrato bancário ou fatura de cartão). Reconhecemos linhas no formato <b>DD/MM/AAAA descrição valor</b> ou <b>descrição DD/MM valor</b>.</p>
+        <textarea value={pastedText} onChange={(e) => setPastedText(e.target.value)} rows={8} placeholder="Cole aqui o texto do PDF..." className="w-full rounded-xl border p-3 font-mono text-xs" />
+        <button type="button" disabled={!pastedText.trim()} onClick={processPastedText} className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-xs font-semibold text-primary-foreground disabled:opacity-50">
+          <Search className="h-4 w-4" />PROCESSAR TEXTO COLADO
+        </button>
+      </div>}
     </Panel>
 
     {fileName && <Panel>
