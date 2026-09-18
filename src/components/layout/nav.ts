@@ -8,7 +8,7 @@ export const navItems: NavItem[] = [
 {label:"CONTAS A PAGAR",to:"/contas-a-pagar",icon:Wallet},
 {label:"CUSTOS FIXOS",to:"/custos-fixos",icon:Repeat},
 {label:"ORÇAMENTO",to:"/orcamento",icon:Wallet},
-{label:"BANCOS",to:"/bancos",icon:Building2,children:[{label:"CARTÕES E FATURAS",to:"/faturas",icon:ReceiptText}]},
+{label:"BANCOS",to:"/bancos",icon:Building2},
 {label:"PARCELAS",to:"/parcelados",icon:CreditCard},
 {label:"INVESTIMENTOS",to:"/investimentos",icon:TrendingUp},
 {label:"METAS",to:"/metas",icon:Target},
