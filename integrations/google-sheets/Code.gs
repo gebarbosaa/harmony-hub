@@ -37,8 +37,8 @@ const TRANSACTION_FIELDS = {
   pay_method: ['pay_method', 'payment_method', 'forma_pagamento', 'forma de pagamento', 'pagamento', 'Pagamento'],
   card_name: ['card_name', 'cartao', 'cartão', 'cartao_nome', 'Cartão'],
   responsible: ['responsible', 'responsavel', 'responsável', 'Responsável'],
-  installment_current: ['installment_current', 'parcela_atual', 'parcela atual', 'Parcela Atual'],
-  installment_total: ['installment_total', 'parcelas', 'total_parcelas', 'total parcelas', 'Parcelas'],
+  installment_current: ['installment_current', 'parcela_atual', 'parcela atual', 'Parcela Atual', 'parcela', 'Parcela'],
+  installment_total: ['installment_total', 'parcelas', 'total_parcelas', 'total parcelas', 'Parcelas', 'quantidade de parcelas', 'qtd parcelas'],
   paid: ['paid', 'pago', 'PAGO', 'Pago'],
   is_fixed: ['is_fixed', 'fixo', 'fixa', 'Fixo', 'Fixa'],
   deleted: ['deleted', 'excluido', 'excluído', 'Excluir', 'excluir'],
@@ -49,7 +49,8 @@ const INSTALLMENT_FIELDS = {
   name: ['name', 'nome', 'descrição', 'descricao', 'Descrição', 'Nome'],
   purchase_date: ['purchase_date', 'date', 'data_compra', 'data compra', 'data', 'Data'],
   total_amount: ['total_amount', 'valor_total', 'valor total', 'total', 'Valor Total', 'Valor'],
-  installments_count: ['installments_count', 'installments', 'parcelas', 'qtd_parcelas', 'quantidade_parcelas', 'Quantidade de Parcelas'],
+  installments_count: ['installments_count', 'installments', 'parcelas', 'qtd_parcelas', 'quantidade_parcelas', 'Quantidade de Parcelas', 'parcela', 'Parcela'],
+  installment_current: ['installment_current', 'parcela_atual', 'parcela atual', 'Parcela Atual', 'parcela', 'Parcela'],
   paid_count: ['paid_count', 'parcelas_pagas', 'parcelas pagas', 'pagas', 'Parcelas Pagas'],
   category: ['category', 'categoria', 'Categoria'],
   pay_method: ['pay_method', 'payment_method', 'forma_pagamento', 'forma de pagamento', 'pagamento', 'Pagamento'],
@@ -234,7 +235,8 @@ function pushInstallmentBatch_(sheet, headers, values) {
 
     const purchaseDate = normalizeDate_(row.purchase_date);
     const totalAmount = parseAmount_(row.total_amount);
-    const count = Math.max(1, parseInstallmentValue_(row.installments_count || 1, 'total'));
+    const installmentSource = row.installments_count || row.installment_current || 1;
+    const count = Math.max(1, parseInstallmentValue_(installmentSource, 'total'));
 
     if (!purchaseDate || totalAmount <= 0 || !String(row.name || '').trim()) return;
 
@@ -316,8 +318,8 @@ function pushTransactionRow_(sheet, rowNumber, headers, values, type) {
     pay_method: normalizePayMethod_(row.pay_method),
     card_name: row.card_name ? String(row.card_name).trim() : null,
     responsible: String(row.responsible || 'AMBAS').trim() || 'AMBAS',
-    installment_current: row.installment_current ? Number(row.installment_current) : null,
-    installment_total: row.installment_total ? Number(row.installment_total) : null,
+    installment_current: row.installment_current ? parseInstallmentValue_(row.installment_current, 'current') : null,
+    installment_total: row.installment_total ? parseInstallmentValue_(row.installment_total, 'total') : null,
     paid: row.paid === '' || row.paid == null ? true : !isNo_(row.paid),
     is_fixed: isYes_(row.is_fixed),
   };
@@ -338,16 +340,22 @@ function pushInstallmentRow_(sheet, rowNumber, headers, values) {
 
   const purchaseDate = normalizeDate_(row.purchase_date);
   const totalAmount = parseAmount_(row.total_amount);
-  const count = Math.max(1, parseInstallmentValue_(row.installments_count || 1, 'total'));
+  const installmentSource = row.installments_count || row.installment_current || 1;
+  const count = Math.max(1, parseInstallmentValue_(installmentSource, 'total'));
+  const parsedCurrent = row.installment_current ? parseInstallmentValue_(row.installment_current, 'current') : 0;
+  const parsedTotal = parseInstallmentValue_(installmentSource, 'total');
 
   if (!purchaseDate || totalAmount <= 0 || !String(row.name || '').trim()) return;
+
+  const parsedCurrent = row.installment_current ? parseInstallmentValue_(row.installment_current, 'current') : 0;
+  const parsedTotal = parseInstallmentValue_(installmentSource, 'total');
 
   const payload = {
     id: row.id ? String(row.id) : undefined,
     name: String(row.name).trim(),
     purchase_date: purchaseDate,
     total_amount: totalAmount,
-    installments_count: Number.isFinite(count) ? count : 1,
+    installments_count: Number.isFinite(parsedTotal) && parsedTotal > 0 ? parsedTotal : (Number.isFinite(count) ? count : 1),
     paid_count: Math.max(0, Number(row.paid_count || 0)),
     category: String(row.category || 'OUTROS').trim() || 'OUTROS',
     pay_method: normalizePayMethod_(row.pay_method),
@@ -462,6 +470,14 @@ function parseInstallmentValue_(value, part) {
 
   const x = text.match(/(\d+)\s*x/i);
   if (x) return Number(x[1]);
+
+  const embeddedFraction = text.match(/(\d+)\s*(?:\/|de)\s*(\d+)/i);
+  if (embeddedFraction) {
+    return part === 'current' ? Number(embeddedFraction[1]) : Number(embeddedFraction[2]);
+  }
+
+  const embeddedX = text.match(/(\d+)\s*x/i);
+  if (embeddedX) return Number(embeddedX[1]);
 
   const number = Number(text.replace(',', '.').replace(/[^0-9.]/g, ''));
   return Number.isFinite(number) ? number : 0;
