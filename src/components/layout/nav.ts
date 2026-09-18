@@ -1,7 +1,7 @@
-import { LayoutDashboard, ArrowLeftRight, Wallet, Repeat, CreditCard, Settings, ArrowDownCircle, ArrowUpCircle, TrendingUp, Target, Calculator, ReceiptText, Undo2, CalendarDays, Table2, Users } from "lucide-react";
+import { LayoutDashboard, ArrowLeftRight, Wallet, Repeat, CreditCard, Settings, ArrowDownCircle, ArrowUpCircle, TrendingUp, Target, Calculator, ReceiptText, Undo2, Table2, Users } from "lucide-react";
 export type NavItem = { label: string; to: string; icon: typeof Wallet };
 export const navGroups: { group: string; icon: typeof Wallet; items: NavItem[] }[] = [
-{group:"PRINCIPAL",icon:LayoutDashboard,items:[{label:"INÍCIO",to:"/",icon:LayoutDashboard},{label:"FLUXO",to:"/fluxo",icon:ArrowLeftRight},{label:"CALENDÁRIO",to:"/calendario",icon:CalendarDays}]},
+{group:"PRINCIPAL",icon:LayoutDashboard,items:[{label:"INÍCIO",to:"/",icon:LayoutDashboard},{label:"FLUXO",to:"/fluxo",icon:ArrowLeftRight}]},
 {group:"FINANCEIRO",icon:Wallet,items:[{label:"RECEITAS",to:"/receitas",icon:ArrowUpCircle},{label:"DESPESAS",to:"/despesas",icon:ArrowDownCircle},{label:"CONTAS A PAGAR",to:"/contas-a-pagar",icon:Wallet},{label:"CUSTOS FIXOS",to:"/custos-fixos",icon:Repeat},{label:"ASSINATURAS",to:"/assinatura",icon:Repeat},{label:"ORÇAMENTO",to:"/orcamento",icon:Wallet},{label:"CARTÕES E FATURAS",to:"/faturas",icon:ReceiptText},{label:"PARCELAS",to:"/parcelados",icon:CreditCard}]},
 {group:"INVESTIMENTOS",icon:TrendingUp,items:[{label:"INVESTIMENTOS",to:"/investimentos",icon:TrendingUp},{label:"METAS",to:"/metas",icon:Target},{label:"CALCULADORA DE APORTES",to:"/calculadora-aportes",icon:Calculator}]},
 {group:"SISTEMA",icon:Settings,items:[{label:"GRUPOS",to:"/grupos",icon:Users},{label:"PLANILHA",to:"/integracao-planilha",icon:Table2},{label:"AJUSTES",to:"/ajustes",icon:Settings}]}];
