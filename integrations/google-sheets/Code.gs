@@ -126,8 +126,74 @@ function pushSheet_(sheetName) {
   const lastRow = sheet.getLastRow();
   if (lastRow <= 1) return;
 
-  for (let rowNumber = 2; rowNumber <= lastRow; rowNumber++) {
-    pushRow_(sheet, rowNumber);
+  const headers = getHeaders_(sheet);
+  const values = sheet.getRange(2, 1, lastRow - 1, headers.length).getValues();
+  const type = sheetName === CONFIG.SHEETS.RECEITAS ? 'RECEITA' : 'DESPESA';
+
+  const rows = [];
+  const rowNumbers = [];
+  const deletedRows = [];
+
+  values.forEach((rowValues, index) => {
+    const rowNumber = index + 2;
+    const row = mapRow_(headers, rowValues, TRANSACTION_FIELDS);
+
+    if (isYes_(row.deleted)) {
+      if (row.id) deletedRows.push({ rowNumber: rowNumber, id: String(row.id) });
+      return;
+    }
+
+    const date = normalizeDate_(row.date);
+    const amount = parseAmount_(row.amount);
+
+    if (!date || amount <= 0 || !String(row.description || '').trim()) return;
+
+    rows.push({
+      id: row.id ? String(row.id) : undefined,
+      date: date,
+      description: String(row.description).trim(),
+      amount: amount,
+      type: type,
+      category: String(row.category || 'OUTROS').trim() || 'OUTROS',
+      pay_method: normalizePayMethod_(row.pay_method),
+      card_name: row.card_name ? String(row.card_name).trim() : null,
+      responsible: String(row.responsible || 'AMBAS').trim() || 'AMBAS',
+      installment_current: row.installment_current ? Number(row.installment_current) : null,
+      installment_total: row.installment_total ? Number(row.installment_total) : null,
+      paid: row.paid === '' || row.paid == null ? true : !isNo_(row.paid),
+      is_fixed: isYes_(row.is_fixed),
+    });
+    rowNumbers.push(rowNumber);
+  });
+
+  pushBatch_(rows, rowNumbers, sheet, headers, 'upsert', 'transactions');
+
+  deletedRows.forEach(item => {
+    call_('delete', { id: item.id });
+  });
+}
+
+function pushBatch_(rows, rowNumbers, sheet, headers, action, resultKey) {
+  const BATCH_SIZE = 100;
+
+  for (let start = 0; start < rows.length; start += BATCH_SIZE) {
+    const batch = rows.slice(start, start + BATCH_SIZE);
+    const batchRowNumbers = rowNumbers.slice(start, start + BATCH_SIZE);
+
+    const result = call_(action, { rows: batch });
+    const returned = result && Array.isArray(result[resultKey]) ? result[resultKey] : [];
+
+    const rowsWithoutId = [];
+    batch.forEach((row, index) => {
+      if (!row.id) rowsWithoutId.push({ index: index, rowNumber: batchRowNumbers[index] });
+    });
+
+    rowsWithoutId.forEach((item, resultIndex) => {
+      const returnedRow = returned[resultIndex];
+      if (returnedRow && returnedRow.id) {
+        writeId_(sheet, item.rowNumber, headers, returnedRow.id);
+      }
+    });
   }
 }
 
@@ -143,7 +209,6 @@ function pushRow_(sheet, rowNumber) {
 
   pushTransactionRow_(sheet, rowNumber, headers, values, name === CONFIG.SHEETS.RECEITAS ? 'RECEITA' : 'DESPESA');
 }
-
 function pushTransactionRow_(sheet, rowNumber, headers, values, type) {
   const row = mapRow_(headers, values, TRANSACTION_FIELDS);
 
