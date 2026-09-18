@@ -128,8 +128,13 @@ function pushSheet_(sheetName) {
 
   const headers = getHeaders_(sheet);
   const values = sheet.getRange(2, 1, lastRow - 1, headers.length).getValues();
-  const type = sheetName === CONFIG.SHEETS.RECEITAS ? 'RECEITA' : 'DESPESA';
 
+  if (sheetName === CONFIG.SHEETS.PARCELAMENTOS) {
+    pushInstallmentBatch_(sheet, headers, values);
+    return;
+  }
+
+  const type = sheetName === CONFIG.SHEETS.RECEITAS ? 'RECEITA' : 'DESPESA';
   const rows = [];
   const rowNumbers = [];
   const deletedRows = [];
@@ -166,7 +171,7 @@ function pushSheet_(sheetName) {
     rowNumbers.push(rowNumber);
   });
 
-  pushBatch_(rows, rowNumbers, sheet, headers, 'upsert', 'transactions');
+  pushBatch_(rows, rowNumbers, sheet, headers, 'batch_upsert', 'transactions');
 
   deletedRows.forEach(item => {
     call_('delete', { id: item.id });
@@ -185,7 +190,7 @@ function pushBatch_(rows, rowNumbers, sheet, headers, action, resultKey) {
 
     const rowsWithoutId = [];
     batch.forEach((row, index) => {
-      if (!row.id) rowsWithoutId.push({ index: index, rowNumber: batchRowNumbers[index] });
+      if (!row.id) rowsWithoutId.push({ rowNumber: batchRowNumbers[index] });
     });
 
     rowsWithoutId.forEach((item, resultIndex) => {
@@ -197,6 +202,69 @@ function pushBatch_(rows, rowNumbers, sheet, headers, action, resultKey) {
   }
 }
 
+function pushInstallmentBatch_(sheet, headers, values) {
+  const rows = [];
+  const rowNumbers = [];
+  const deletedRows = [];
+
+  values.forEach((rowValues, index) => {
+    const rowNumber = index + 2;
+    const row = mapRow_(headers, rowValues, INSTALLMENT_FIELDS);
+
+    if (isYes_(row.deleted)) {
+      if (row.id) deletedRows.push({ rowNumber: rowNumber, id: String(row.id) });
+      return;
+    }
+
+    const purchaseDate = normalizeDate_(row.purchase_date);
+    const totalAmount = parseAmount_(row.total_amount);
+    const count = Math.max(1, Number(row.installments_count || 1));
+
+    if (!purchaseDate || totalAmount <= 0 || !String(row.name || '').trim()) return;
+
+    rows.push({
+      id: row.id ? String(row.id) : undefined,
+      name: String(row.name).trim(),
+      purchase_date: purchaseDate,
+      total_amount: totalAmount,
+      installments_count: Number.isFinite(count) ? count : 1,
+      paid_count: Math.max(0, Number(row.paid_count || 0)),
+      category: String(row.category || 'OUTROS').trim() || 'OUTROS',
+      pay_method: normalizePayMethod_(row.pay_method),
+      card_name: row.card_name ? String(row.card_name).trim() : null,
+      responsible: String(row.responsible || 'AMBAS').trim() || 'AMBAS',
+      payment_method_name: row.payment_method_name ? String(row.payment_method_name).trim() : null,
+      sync_key: row.sync_key ? String(row.sync_key).trim() : null,
+    });
+    rowNumbers.push(rowNumber);
+  });
+
+  const BATCH_SIZE = 100;
+
+  for (let start = 0; start < rows.length; start += BATCH_SIZE) {
+    const batch = rows.slice(start, start + BATCH_SIZE);
+    const batchRowNumbers = rowNumbers.slice(start, start + BATCH_SIZE);
+
+    const result = call_('batch_upsert_installment', { rows: batch });
+    const returned = result && Array.isArray(result.installments) ? result.installments : [];
+
+    const rowsWithoutId = [];
+    batch.forEach((row, index) => {
+      if (!row.id) rowsWithoutId.push({ rowNumber: batchRowNumbers[index] });
+    });
+
+    rowsWithoutId.forEach((item, resultIndex) => {
+      const returnedRow = returned[resultIndex];
+      if (returnedRow && returnedRow.id) {
+        writeId_(sheet, item.rowNumber, headers, returnedRow.id);
+      }
+    });
+  }
+
+  deletedRows.forEach(item => {
+    call_('delete_installment', { id: item.id });
+  });
+}
 function pushRow_(sheet, rowNumber) {
   const name = sheet.getName();
   const headers = getHeaders_(sheet);
