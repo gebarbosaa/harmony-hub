@@ -327,7 +327,7 @@ function ImportacaoPage() {
           <div className="rounded-xl border p-3"><p className="text-[10px] text-muted-foreground">STATUS</p><p className="mt-1 text-sm font-bold">{analysisDone ? (duplicates.length ? `${duplicates.length} DUPLICADOS` : "SEM DUPLICADOS") : "REVISÃO DISPONÍVEL"}</p></div>
         </div>
 
-        {analysisError && <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs">{analysisError}<br /><span className="text-muted-foreground">Você ainda pode revisar e confirmar a importação.</span></div>}
+        {analysisError && <div className="rounded-xl border border-primary/40 bg-primary/10 p-3 text-xs">{analysisError}<br /><span className="text-muted-foreground">Você ainda pode revisar e confirmar a importação.</span></div>}
 
         {analysisDone && duplicates.length > 0 && <div className="rounded-xl border p-4 text-xs">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -346,7 +346,7 @@ function ImportacaoPage() {
           <thead><tr className="border-b text-left"><th className="p-2">Data</th><th className="p-2">Descrição</th><th className="p-2">Valor total</th><th className="p-2">Parcela</th><th className="p-2">Valor da parcela</th><th className="p-2">Ação</th></tr></thead>
           <tbody>{rows.map((r, i) => {
             const isDuplicate = duplicates.includes(i);
-            return <tr key={`${r.date}-${r.description}-${i}`} className={`border-b ${isDuplicate ? "bg-amber-500/5" : ""}`}>
+            return <tr key={`${r.date}-${r.description}-${i}`} className={`border-b ${isDuplicate ? "bg-primary/5" : ""}`}>
               <td className="p-2 whitespace-nowrap">{r.date.split("-").reverse().join("/")}</td>
               <td className="p-2 min-w-[220px]">{r.description}</td>
               <td className="p-2 whitespace-nowrap">{brl(r.totalAmount)}</td>
