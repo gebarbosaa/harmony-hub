@@ -48,6 +48,20 @@ function parseInstallment(v: unknown) {
   return { current: 1, total: Math.max(first, 1) };
 }
 
+// Reconhece uma parcela escrita dentro de um texto livre, ex.: "01/03", "3/6", "PARC 3/6".
+const EMBEDDED_INSTALLMENT = /(?:parc(?:ela)?s?\.?\s*)?\b(\d{1,2})\s*[\/xX]\s*(\d{1,2})\b/;
+function detectInstallmentInText(value: string): { current: number; total: number } | null {
+  const m = value.match(EMBEDDED_INSTALLMENT);
+  if (!m) return null;
+  const current = Number(m[1]);
+  const total = Number(m[2]);
+  if (total >= 1 && current >= 1 && current <= total) return { current, total };
+  return null;
+}
+function stripInstallmentFromText(value: string): string {
+  return value.replace(EMBEDDED_INSTALLMENT, "").replace(/\s{2,}/g, " ").trim();
+}
+
 function parseCsv(textValue: string): Row[] {
   const input = textValue.replace(/^\uFEFF/, "");
   const lines: string[] = [];
@@ -99,12 +113,24 @@ function parseCsv(textValue: string): Row[] {
 
   return lines.slice(1).map((lineValue) => {
     const c = cells(lineValue);
-    const totalAmount = money(c[total >= 0 ? total : value]);
-    const installment = parseInstallment(c[inst]);
+    const totalAmountRaw = money(c[total >= 0 ? total : value]);
+    let installment = parseInstallment(c[inst]);
+    let description = text(c[desc]);
+    // A coluna de parcelas pode vir vazia mas o número da parcela estar dentro da própria
+    // descrição (comum em exportações de banco/cartão, ex.: "loja x 01/03"). Sem isso, a
+    // compra entrava sempre como 1/1 (à vista).
+    if (installment.total <= 1) {
+      const embedded = detectInstallmentInText(description);
+      if (embedded) {
+        installment = embedded;
+        description = stripInstallmentFromText(description);
+      }
+    }
+    const totalAmount = totalAmountRaw;
     const amount = installment.total > 0 ? Number((totalAmount / installment.total).toFixed(2)) : totalAmount;
     return {
       date: dateValue(c[d]),
-      description: text(c[desc]),
+      description,
       amount,
       totalAmount,
       category: cat >= 0 ? text(c[cat]) || "OUTROS" : "OUTROS",
@@ -143,25 +169,15 @@ function parsePastedStatement(raw: string): Row[] {
   const fullDateAtStart = /^(\d{2})[/.](\d{2})[/.](\d{4})\s+(.+?)\s+(-?R?\$?\s?-?[\d.,]+)\s*$/;
   const fullDateAtEnd = /^(.+?)\s+(\d{2})[/.](\d{2})[/.](\d{4})\s+(-?R?\$?\s?-?[\d.,]+)\s*$/;
   const shortDateAtEnd = /^(.+?)\s+(\d{2})[/.](\d{2})\s+(-?R?\$?\s?-?[\d.,]+)\s*$/;
-  // Parcela dentro da própria descrição: "03/06", "3/6", "PARC 3/6", "(3/6)"
-  const installmentInLine = /(?:parc(?:ela)?s?\.?\s*)?\b(\d{1,2})\s*[\/xX]\s*(\d{1,2})\b/;
 
   // A partir da descrição bruta e do valor lido na linha, monta o Row já com parcela e
   // forma de pagamento reconhecidas — antes isso vinha sempre fixo como PIX 1/1.
   function buildRow(date: string, rawDescription: string, rawAmount: string): Row {
     let description = rawDescription.trim();
-    let installmentCurrent = 1;
-    let installmentTotal = 1;
-    const instMatch = description.match(installmentInLine);
-    if (instMatch) {
-      const current = Number(instMatch[1]);
-      const totalInst = Number(instMatch[2]);
-      if (totalInst >= 1 && current >= 1 && current <= totalInst) {
-        installmentCurrent = current;
-        installmentTotal = totalInst;
-        description = description.replace(instMatch[0], "").replace(/\s{2,}/g, " ").trim();
-      }
-    }
+    const embedded = detectInstallmentInText(description);
+    const installmentCurrent = embedded?.current ?? 1;
+    const installmentTotal = embedded?.total ?? 1;
+    if (embedded) description = stripInstallmentFromText(description);
     const lineAmount = money(rawAmount);
     // O valor lido na linha é o da parcela (é o que aparece em fatura/extrato); o total da
     // compra é esse valor vezes o número de parcelas.
