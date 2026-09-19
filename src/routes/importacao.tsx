@@ -143,23 +143,43 @@ function parsePastedStatement(raw: string): Row[] {
   const fullDateAtStart = /^(\d{2})[/.](\d{2})[/.](\d{4})\s+(.+?)\s+(-?R?\$?\s?-?[\d.,]+)\s*$/;
   const fullDateAtEnd = /^(.+?)\s+(\d{2})[/.](\d{2})[/.](\d{4})\s+(-?R?\$?\s?-?[\d.,]+)\s*$/;
   const shortDateAtEnd = /^(.+?)\s+(\d{2})[/.](\d{2})\s+(-?R?\$?\s?-?[\d.,]+)\s*$/;
+  // Parcela dentro da própria descrição: "03/06", "3/6", "PARC 3/6", "(3/6)"
+  const installmentInLine = /(?:parc(?:ela)?s?\.?\s*)?\b(\d{1,2})\s*[\/xX]\s*(\d{1,2})\b/;
+
+  // A partir da descrição bruta e do valor lido na linha, monta o Row já com parcela e
+  // forma de pagamento reconhecidas — antes isso vinha sempre fixo como PIX 1/1.
+  function buildRow(date: string, rawDescription: string, rawAmount: string): Row {
+    let description = rawDescription.trim();
+    let installmentCurrent = 1;
+    let installmentTotal = 1;
+    const instMatch = description.match(installmentInLine);
+    if (instMatch) {
+      const current = Number(instMatch[1]);
+      const totalInst = Number(instMatch[2]);
+      if (totalInst >= 1 && current >= 1 && current <= totalInst) {
+        installmentCurrent = current;
+        installmentTotal = totalInst;
+        description = description.replace(instMatch[0], "").replace(/\s{2,}/g, " ").trim();
+      }
+    }
+    const lineAmount = money(rawAmount);
+    // O valor lido na linha é o da parcela (é o que aparece em fatura/extrato); o total da
+    // compra é esse valor vezes o número de parcelas.
+    const amount = lineAmount;
+    const totalAmount = installmentTotal > 1 ? Number((lineAmount * installmentTotal).toFixed(2)) : lineAmount;
+    // Compra parcelada quase sempre é no cartão de crédito; senão, tenta reconhecer a forma
+    // de pagamento pelo texto da linha (PIX, débito, boleto...), com PIX como último recurso.
+    const payment = installmentTotal > 1 ? "CRÉDITO" : (payMethodKind(description) !== "PIX" ? description : "PIX");
+    return { date, description, amount, totalAmount, category: "OUTROS", payment, installmentCurrent, installmentTotal };
+  }
 
   for (const line of lines) {
     let m = line.match(fullDateAtStart);
-    if (m) {
-      out.push({ date: `${m[3]}-${m[2]}-${m[1]}`, description: text(m[4]), amount: money(m[5]), totalAmount: money(m[5]), category: "OUTROS", payment: "PIX", installmentCurrent: 1, installmentTotal: 1 });
-      continue;
-    }
+    if (m) { out.push(buildRow(`${m[3]}-${m[2]}-${m[1]}`, m[4], m[5])); continue; }
     m = line.match(fullDateAtEnd);
-    if (m) {
-      out.push({ date: `${m[4]}-${m[3]}-${m[2]}`, description: text(m[1]), amount: money(m[5]), totalAmount: money(m[5]), category: "OUTROS", payment: "PIX", installmentCurrent: 1, installmentTotal: 1 });
-      continue;
-    }
+    if (m) { out.push(buildRow(`${m[4]}-${m[3]}-${m[2]}`, m[1], m[5])); continue; }
     m = line.match(shortDateAtEnd);
-    if (m) {
-      out.push({ date: `${currentYear}-${m[3]}-${m[2]}`, description: text(m[1]), amount: money(m[4]), totalAmount: money(m[4]), category: "OUTROS", payment: "PIX", installmentCurrent: 1, installmentTotal: 1 });
-      continue;
-    }
+    if (m) { out.push(buildRow(`${currentYear}-${m[3]}-${m[2]}`, m[1], m[4])); continue; }
   }
   return out.filter((r) => r.date && r.description && r.totalAmount > 0);
 }
