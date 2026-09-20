@@ -1,7 +1,7 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-const START_MONTH = "2026-07";
+const START_MONTH = "2026-01";
 const END_MONTH = "2027-12";
 
 function currentMonth() { const now = new Date(); const value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`; return value < START_MONTH ? START_MONTH : value > END_MONTH ? END_MONTH : value; }
