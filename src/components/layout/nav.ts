@@ -11,6 +11,7 @@ export const navItems: NavItem[] = [
 {label:"ORÇAMENTO",to:"/orcamento",icon:Wallet},
 {label:"BANCOS",to:"/bancos",icon:Building2},
 {label:"PARCELAS",to:"/parcelados",icon:CreditCard},
+{label:"FATURAS",to:"/faturas",icon:ReceiptText},
 {label:"INVESTIMENTOS",to:"/investimentos",icon:TrendingUp},
 {label:"METAS",to:"/metas",icon:Target},
 {label:"CALCULADORA DE APORTES",to:"/calculadora-aportes",icon:Calculator},
