@@ -208,7 +208,7 @@ function BanksPage() {
 
       <Panel
         title="CARTÕES DE CRÉDITO"
-        action={
+        aside={
           <button type="button" onClick={openNewCard} className="gradient-primary flex items-center gap-2 rounded-xl px-4 py-3 text-[10px] font-bold text-primary-foreground">
             <Plus className="h-4 w-4" />
             NOVO CARTÃO
