@@ -5,10 +5,12 @@ import { PageHeader, Panel, StatCard, Tag } from "@/components/ui-kit";
 import { formatCurrency } from "@/lib/finance";
 import { useHouseholdTable } from "@/hooks/use-household-data";
 import { MonthSelector, useGlobalMonth } from "@/hooks/use-global-month";
+import { supabase } from "@/integrations/supabase/client";
 export const Route=createFileRoute("/faturas")({head:()=>({meta:[{title:"FATURAS — HARMONY HUB"}]}),component:InvoicesPage});
 type Card={id:string;name:string;brand:string|null;last4:string|null;credit_limit:number;due_day:number;close_day:number;household_id:string};
 type Invoice={id:string;card_id:string|null;period:string;total:number;status:string;household_id:string};
 type Tx={id:string;date:string;description:string;amount:number;category:string;pay_method:string;responsible:string;type:string;paid:boolean;card_id:string|null;card_name:string|null;source_type:string|null;source_index:number|null;installment_current:number|null;installment_total:number|null;household_id:string};
+type Installment={id:string;card_id:string|null;purchase_date:string;installments_count:number;paid_count:number;household_id:string};
 function invoicePeriod(card:Card,date:string){const d=new Date(`${date}T12:00:00`);let y=d.getFullYear(),m=d.getMonth()+1;if(d.getDate()>card.close_day){m++;if(m===13){m=1;y++}}return `${y}-${String(m).padStart(2,"0")}`}
 function InvoicesPage(){
  const{month,setMonth}=useGlobalMonth("faturas");
@@ -26,7 +28,31 @@ function InvoicesPage(){
  function openEdit(c:Card){setEditing(c);setName(c.name);setLimit(String(c.credit_limit));setDue(String(c.due_day));setClose(String(c.close_day));setBrand(c.brand??"");setLast4(c.last4??"")}
  async function saveCard(){const value=Number(limit.replace(",","."));const closeDay=Number(close);const dueDay=Number(due);if(!name.trim()||value<=0)return toast.error("PREENCHA NOME E LIMITE");if(closeDay<1||closeDay>31||dueDay<1||dueDay>31)return toast.error("INFORME DIAS VÁLIDOS DE FECHAMENTO E VENCIMENTO");try{const payload={name:name.trim().toUpperCase(),credit_limit:value,due_day:dueDay,close_day:closeDay,brand:brand.trim().toUpperCase()||null,last4:last4.trim()||null};if(editing){await cards.update(editing.id,payload);toast.success("CARTÃO ATUALIZADO")}else{await cards.insert(payload);toast.success("CARTÃO CADASTRADO E SINCRONIZADO")}clearForm()}catch(e){toast.error(e instanceof Error?e.message:"ERRO AO SALVAR CARTÃO")}}
  async function deleteCard(id:string){if(!window.confirm("EXCLUIR ESTE CARTÃO? AS TRANSAÇÕES EXISTENTES SERÃO PRESERVADAS."))return;try{await cards.remove(id);setSelected(null);toast.success("CARTÃO EXCLUÍDO")}catch(e){toast.error(e instanceof Error?e.message:"ERRO AO EXCLUIR CARTÃO")}}
- async function toggleInvoice(i:Invoice){try{await invoices.update(i.id,{status:i.status==="PAGA"?"ABERTA":"PAGA"})}catch(e){toast.error(e instanceof Error?e.message:"ERRO AO ATUALIZAR")}}
+ const installments=useHouseholdTable<Installment>("installments","id,card_id,purchase_date,installments_count,paid_count,household_id","purchase_date");
+ async function toggleInvoice(i:Invoice){
+   const next=i.status==="PAGA"?"ABERTA":"PAGA";
+   try{
+     await invoices.update(i.id,{status:next});
+     const card=cards.rows.find(c=>c.id===i.card_id);
+     if(card){
+       const rowsInInvoice=tx.rows.filter(t=>t.card_id===card.id&&t.type==="DESPESA"&&invoicePeriod(card,t.date)===i.period);
+       await Promise.all(rowsInInvoice.map(r=>tx.update(r.id,{paid:next==="PAGA"})));
+       const cardInstallments=installments.rows.filter(inst=>inst.card_id===card.id);
+       for(const inst of cardInstallments){
+         const count=Math.max(1,Number(inst.installments_count));
+         for(let idx=1;idx<=count;idx++){
+           const {data,error}=await supabase.rpc("installment_invoice_period",{p_card_id:card.id,p_purchase_date:inst.purchase_date,p_installment_index:idx});
+           if(!error&&String(data)===i.period){
+             if(next==="PAGA"&&Number(inst.paid_count)<idx) await installments.update(inst.id,{paid_count:idx});
+             else if(next==="ABERTA"&&Number(inst.paid_count)===idx) await installments.update(inst.id,{paid_count:idx-1});
+             break;
+           }
+         }
+       }
+     }
+     toast.success(next==="PAGA"?"FATURA MARCADA COMO PAGA":"FATURA REABERTA");
+   }catch(e){toast.error(e instanceof Error?e.message:"ERRO AO ATUALIZAR")}
+ }
  return <div className="space-y-5">
  <PageHeader title="FATURAS" subtitle={`CARTÕES E FATURAS DE ${month}.`} action={<MonthSelector month={month} setMonth={setMonth}/>}/>
  <div className="grid grid-cols-2 gap-3 lg:grid-cols-3"><StatCard label="TOTAL DA FATURA" value={formatCurrency(calculatedInvoiceTotal)} tone="primary"/><StatCard label="LIMITE TOTAL" value={formatCurrency(cards.rows.reduce((s,c)=>s+Number(c.credit_limit),0))} tone="success"/><StatCard label="CARTÕES" value={String(cards.rows.length)} tone="info"/></div>
