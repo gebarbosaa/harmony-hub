@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Building2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Building2, CreditCard, Pencil, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader, Panel } from "@/components/ui-kit";
 import { useHouseholdTable } from "@/hooks/use-household-data";
@@ -13,6 +13,8 @@ type Account = {
   notes: string | null;
   household_id: string;
 };
+
+type Card = { id: string; name: string; brand: string | null; last4: string | null; credit_limit: number; close_day: number; due_day: number; account_id: string | null; household_id: string };
 
 export const Route = createFileRoute("/bancos")({
   head: () => ({ meta: [{ title: "BANCOS — HARMONY HUB" }] }),
@@ -31,6 +33,40 @@ function BanksPage() {
   const [institution, setInstitution] = useState("");
   const [accountType, setAccountType] = useState("CONTA CORRENTE");
   const [notes, setNotes] = useState("");
+
+  const cards = useHouseholdTable<Card>("cards", "id,name,brand,last4,credit_limit,close_day,due_day,account_id,household_id");
+  const [cardModalOpen, setCardModalOpen] = useState(false);
+  const [cardEdit, setCardEdit] = useState<string | null>(null);
+  const [cardName, setCardName] = useState("");
+  const [brand, setBrand] = useState("");
+  const [last4, setLast4] = useState("");
+  const [limit, setLimit] = useState("");
+  const [close, setClose] = useState("28");
+  const [due, setDue] = useState("5");
+  const [cardAccountId, setCardAccountId] = useState("");
+
+  function clearCardForm() { setCardEdit(null); setCardName(""); setBrand(""); setLast4(""); setLimit(""); setClose("28"); setDue("5"); setCardAccountId(""); }
+  function openNewCard() { clearCardForm(); setCardModalOpen(true); }
+  function startCardEdit(card: Card) { setCardEdit(card.id); setCardName(card.name); setBrand(card.brand ?? ""); setLast4(card.last4 ?? ""); setLimit(String(card.credit_limit ?? 0)); setClose(String(card.close_day ?? 28)); setDue(String(card.due_day ?? 5)); setCardAccountId(card.account_id ?? ""); setCardModalOpen(true); }
+  async function saveCard() {
+    const value = Number(limit.replace(",", "."));
+    const closeDay = Number(close);
+    const dueDay = Number(due);
+    if (!cardName.trim() || value <= 0) return toast.error("PREENCHA O CARTÃO E O LIMITE");
+    if (closeDay < 1 || closeDay > 31 || dueDay < 1 || dueDay > 31) return toast.error("INFORME DIAS VÁLIDOS DE FECHAMENTO E VENCIMENTO");
+    const payload = { name: cardName.trim().toUpperCase(), brand: brand.trim().toUpperCase() || null, last4: last4.trim() || null, credit_limit: value, close_day: closeDay, due_day: dueDay, account_id: cardAccountId || null };
+    try {
+      if (cardEdit) { await cards.update(cardEdit, payload); toast.success("CARTÃO ATUALIZADO"); }
+      else { await cards.insert(payload); toast.success("CARTÃO CADASTRADO E VINCULADO AO BANCO"); }
+      clearCardForm();
+      setCardModalOpen(false);
+    } catch (error) { toast.error(error instanceof Error ? error.message : "ERRO AO SALVAR CARTÃO"); }
+  }
+  async function deleteCard(id: string) {
+    if (!window.confirm("EXCLUIR ESTE CARTÃO?")) return;
+    try { await cards.remove(id); toast.success("CARTÃO EXCLUÍDO"); }
+    catch (error) { toast.error(error instanceof Error ? error.message : "ERRO AO EXCLUIR CARTÃO"); }
+  }
 
   function reset() {
     setEditing(null);
@@ -169,6 +205,108 @@ function BanksPage() {
           </div>
         )}
       </Panel>
+
+      <Panel
+        title="CARTÕES DE CRÉDITO"
+        action={
+          <button type="button" onClick={openNewCard} className="gradient-primary flex items-center gap-2 rounded-xl px-4 py-3 text-[10px] font-bold text-primary-foreground">
+            <Plus className="h-4 w-4" />
+            NOVO CARTÃO
+          </button>
+        }
+      >
+        {cards.rows.length === 0 ? (
+          <div className="rounded-2xl border border-dashed p-8 text-center">
+            <CreditCard className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
+            <p className="text-sm font-semibold">NENHUM CARTÃO CADASTRADO.</p>
+            <p className="mt-1 text-xs text-muted-foreground">VINCULE UM CARTÃO A UM BANCO PARA ORGANIZAR AS FATURAS.</p>
+          </div>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {cards.rows.map((card) => {
+              const linkedAccount = accounts.rows.find((a) => a.id === card.account_id);
+              return (
+                <div key={card.id} className="rounded-2xl border bg-card p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <CreditCard className="h-5 w-5" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold">{card.name}</p>
+                        <p className="text-[10px] text-muted-foreground">{card.brand ?? "CARTÃO"}{card.last4 ? ` •••• ${card.last4}` : ""}</p>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 gap-1">
+                      <button type="button" onClick={() => startCardEdit(card)} className="rounded-lg p-2 text-muted-foreground hover:bg-secondary hover:text-primary" aria-label="EDITAR CARTÃO">
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button type="button" onClick={() => void deleteCard(card.id)} className="rounded-lg p-2 text-muted-foreground hover:bg-secondary hover:text-danger" aria-label="EXCLUIR CARTÃO">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="mt-3 grid grid-cols-3 gap-2 text-[10px]">
+                    <div><p className="text-muted-foreground">LIMITE</p><p className="font-semibold">R$ {Number(card.credit_limit ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p></div>
+                    <div><p className="text-muted-foreground">FECHA</p><p className="font-semibold">DIA {card.close_day}</p></div>
+                    <div><p className="text-muted-foreground">VENCE</p><p className="font-semibold">DIA {card.due_day}</p></div>
+                  </div>
+                  <div className="mt-3">
+                    {linkedAccount ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-lg bg-secondary px-2.5 py-1 text-[10px] font-semibold">
+                        <Building2 className="h-3 w-3" />{linkedAccount.institution || linkedAccount.name}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 rounded-lg border border-dashed px-2.5 py-1 text-[10px] text-muted-foreground">SEM BANCO VINCULADO</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Panel>
+
+      {cardModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label={cardEdit ? "Editar cartão" : "Adicionar cartão"}
+          onMouseDown={(event) => { if (event.target === event.currentTarget) { clearCardForm(); setCardModalOpen(false); } }}
+        >
+          <div className="max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-background p-5 shadow-2xl sm:max-w-lg sm:rounded-3xl">
+            <div className="mb-5 flex items-center justify-between">
+              <div>
+                <p className="text-lg font-bold">{cardEdit ? "EDITAR CARTÃO" : "ADICIONAR CARTÃO"}</p>
+                <p className="mt-1 text-[10px] text-muted-foreground">Vincule o cartão a um banco cadastrado. Ele também é sincronizado automaticamente em Formas de Pagamento como crédito.</p>
+              </div>
+              <button onClick={() => { clearCardForm(); setCardModalOpen(false); }} className="rounded-full p-2 hover:bg-secondary" aria-label="Fechar"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="space-y-3">
+              <input autoFocus value={cardName} onChange={(event) => setCardName(event.target.value)} placeholder="NOME DO CARTÃO *" className="w-full rounded-xl border p-3" />
+              <label className="block">
+                <span className="label-caps text-[10px]">BANCO VINCULADO</span>
+                <select value={cardAccountId} onChange={(event) => setCardAccountId(event.target.value)} className="mt-1 w-full rounded-xl border bg-background p-3">
+                  <option value="">SEM BANCO VINCULADO</option>
+                  {accounts.rows.map((a) => <option key={a.id} value={a.id}>{a.name}{a.institution ? ` — ${a.institution}` : ""}</option>)}
+                </select>
+              </label>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <input value={brand} onChange={(event) => setBrand(event.target.value)} placeholder="BANDEIRA" className="rounded-xl border p-3" />
+                <input value={last4} onChange={(event) => setLast4(event.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="4 ÚLTIMOS DÍGITOS" inputMode="numeric" className="rounded-xl border p-3" />
+                <input value={limit} onChange={(event) => setLimit(event.target.value)} placeholder="LIMITE *" inputMode="decimal" className="rounded-xl border p-3 sm:col-span-2" />
+                <input value={close} onChange={(event) => setClose(event.target.value.replace(/\D/g, "").slice(0, 2))} placeholder="DIA DE FECHAMENTO" inputMode="numeric" className="rounded-xl border p-3" />
+                <input value={due} onChange={(event) => setDue(event.target.value.replace(/\D/g, "").slice(0, 2))} placeholder="DIA DE VENCIMENTO" inputMode="numeric" className="rounded-xl border p-3" />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button onClick={() => void saveCard()} className="gradient-primary flex-1 rounded-xl p-3 text-[11px] font-bold text-primary-foreground">{cardEdit ? "SALVAR ALTERAÇÕES" : "CADASTRAR CARTÃO"}</button>
+                <button onClick={() => { clearCardForm(); setCardModalOpen(false); }} className="rounded-xl border px-4 text-[11px]">CANCELAR</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {open && (
         <div
