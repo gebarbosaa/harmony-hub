@@ -22,7 +22,7 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Typecheck
+      - name: Generate routes and typecheck
         run: npm run typecheck
 
       - name: Lint
