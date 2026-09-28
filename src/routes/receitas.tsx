@@ -68,7 +68,7 @@ function ReceitasPage() {const isDesktop = useIsDesktop();
   function reset() { setDescription(""); setAmount(""); setCategory(categoryOptions[0] ?? ""); setPaymentId(payments.rows[0]?.id ?? ""); setAccountId(""); setResponsible("AMBAS"); setDate(`${month}-01`); setEditing(null); }
   async function save() {
     const value = parsed; const payment = payments.rows.find((p) => p.id === paymentId); const normalizedDescription = description.trim().toUpperCase();
-    if (!normalizedDescription || !Number.isFinite(value) || value <= 0) return void toast.error("PREENCHA UMA DESCRIÇÃO E UM VALOR VÁLIDO");
+    if (!normalizedDescription || value == null || !Number.isFinite(value) || value <= 0) return void toast.error("PREENCHA UMA DESCRIÇÃO E UM VALOR VÁLIDO");
     if (!date) return void toast.error("INFORME A DATA DA RECEITA");
     if (!category || !categoryOptions.includes(category)) return void toast.error("SELECIONE UMA CATEGORIA VÁLIDA EM AJUSTES");
     if (!payment) return void toast.error("SELECIONE UMA FORMA DE PAGAMENTO VÁLIDA EM AJUSTES");
