@@ -26,7 +26,7 @@ const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", curren
 function dateValue(v: unknown) {
   const s = text(v);
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-  const m = s.match(/^(\d{2})[/.\-](\d{2})[/.\-](\d{4})$/);
+  const m = s.match(/^(\d{2})[/.-](\d{2})[/.-](\d{4})$/);
   return m ? `${m[3]}-${m[2]}-${m[1]}` : "";
 }
 
@@ -34,7 +34,7 @@ function money(v: unknown) {
   let s = text(v).replace(/R\$\s?/gi, "").replace(/\s/g, "");
   if (s.includes(",")) s = s.replace(/\./g, "").replace(",", ".");
   else s = s.replace(/,/g, "");
-  const n = Number(s.replace(/[^0-9.\-]/g, ""));
+  const n = Number(s.replace(/[^0-9.-]/g, ""));
   return Number.isFinite(n) ? Math.abs(n) : 0;
 }
 
@@ -49,7 +49,7 @@ function parseInstallment(v: unknown) {
 }
 
 // Reconhece uma parcela escrita dentro de um texto livre, ex.: "01/03", "3/6", "PARC 3/6".
-const EMBEDDED_INSTALLMENT = /(?:parc(?:ela)?s?\.?\s*)?\b(\d{1,2})\s*[\/xX]\s*(\d{1,2})\b/;
+const EMBEDDED_INSTALLMENT = /(?:parc(?:ela)?s?\.?\s*)?\b(\d{1,2})\s*[/xX]\s*(\d{1,2})\b/;
 function detectInstallmentInText(value: string): { current: number; total: number } | null {
   const m = value.match(EMBEDDED_INSTALLMENT);
   if (!m) return null;
@@ -289,7 +289,7 @@ function ImportacaoPage() {
       if (error) throw error;
 
       const map = new Map<string, string>();
-      (data ?? []).forEach((r: any) => {
+      (data ?? []).forEach((r: Record<string, unknown>) => {
         const count = Number(r.installment_total ?? 1) || 1;
         const current = Number(r.installment_current ?? 1) || 1;
         // amount aqui já é o valor da parcela; o valor total é amount * installment_total (mesma regra usada ao montar as linhas importadas)
