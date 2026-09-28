@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 type ReportProfile = { name?: string | null; household_id?: string | null } | null | undefined;
-type AnyRow = Record<string, any>;
+type AnyRow = Record<string, unknown>;
 
 const esc = (v: unknown) => String(v ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
 const brl = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(v) || 0);
@@ -12,7 +12,7 @@ const dateBR = (v: unknown) => {
   const d = new Date(`${s.slice(0, 10)}T12:00:00`);
   return Number.isNaN(d.getTime()) ? s : d.toLocaleDateString("pt-BR");
 };
-const rows = (items: AnyRow[], columns: { key: string; label: string; format?: (v: any, r: AnyRow) => string }[]) =>
+const rows = (items: AnyRow[], columns: { key: string; label: string; format?: (v: unknown, r: AnyRow) => string }[]) =>
   items.length
     ? `<table><thead><tr>${columns.map(c => `<th>${esc(c.label)}</th>`).join("")}</tr></thead><tbody>${items.map(r => `<tr>${columns.map(c => `<td>${esc(c.format ? c.format(r[c.key], r) : r[c.key] ?? "—")}</td>`).join("")}</tr>`).join("")}</tbody></table>`
     : `<div class="empty">Nenhum registro no período.</div>`;
