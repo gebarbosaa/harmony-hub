@@ -7,7 +7,7 @@ type AuthState = { loading: boolean; profileLoading: boolean; session: Session |
 const AuthContext = createContext<AuthState | undefined>(undefined);
 const ACTIVE_HOUSEHOLD_KEY = "harmony-active-household";
 function getStoredHousehold() { try { return localStorage.getItem(ACTIVE_HOUSEHOLD_KEY); } catch { return null; } }
-function storeHousehold(id: string | null) { try { if (id) localStorage.setItem(ACTIVE_HOUSEHOLD_KEY, id); else localStorage.removeItem(ACTIVE_HOUSEHOLD_KEY); } catch {} }
+function storeHousehold(id: string | null) { try { if (id) localStorage.setItem(ACTIVE_HOUSEHOLD_KEY, id); else localStorage.removeItem(ACTIVE_HOUSEHOLD_KEY); } catch { /* ignore storage failures */ } }
 function initialsFrom(name: string) { return name.trim().split(/\s+/).map(part => part[0]).join("").slice(0, 2).toUpperCase() || "U"; }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
