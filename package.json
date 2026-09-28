@@ -10,10 +10,11 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "npm run generate-routes && tsc --noEmit",
     "format": "prettier --write .",
     "verify:env": "node scripts/verify-env.mjs",
-    "check": "npm run verify:env && npm run typecheck && npm run lint && npm run build"
+    "check": "npm run verify:env && npm run typecheck && npm run lint && npm run build",
+    "generate-routes": "vite build --mode development"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
