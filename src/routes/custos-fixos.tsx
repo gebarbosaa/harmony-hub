@@ -2,10 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { PageHeader, Panel, StatCard, Tag, PersonDot } from "@/components/ui-kit";
+import { ResponsibleField } from "@/components/responsible-field";
 import { formatCurrency } from "@/lib/finance";
 import { useHouseholdTable } from "@/hooks/use-household-data";
 import { useHouseholdPaymentMethods } from "@/hooks/use-household-payment-methods";
-import { useHouseholdMembers } from "@/hooks/use-household-members";
 import { useIsDesktop } from "@/hooks/use-is-desktop";
 import { MonthSelector, useGlobalMonth } from "@/hooks/use-global-month";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -31,7 +31,7 @@ type Category = { id: string; name: string; kind: string; household_id: string }
 const MONTHS = ["JAN","FEV","MAR","ABR","MAI","JUN","JUL","AGO","SET","OUT","NOV","DEZ"];
 const emptyForm = (subscription = false): FormState => ({
   name: "", amount: "", category: subscription ? "ASSINATURAS" : "", day: "5",
-  responsible: "AMBAS / COMPARTILHADO", paymentId: "", months: Array(12).fill(true),
+  responsible: "AMBAS", paymentId: "", months: Array(12).fill(true),
 });
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -47,7 +47,6 @@ function FixedCostsPage() {const isDesktop = useIsDesktop();
   );
   const payments = useHouseholdPaymentMethods();
   const categories = useHouseholdTable<Category>("categories", "id,name,kind,household_id", "name");
-  const members = useHouseholdMembers();
   const [tab, setTab] = useState<"CUSTOS" | "ASSINATURAS">("CUSTOS");
   const [form, setForm] = useState<FormState>(emptyForm());
   const [editing, setEditing] = useState<Row | null>(null);
