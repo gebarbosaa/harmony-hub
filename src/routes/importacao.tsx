@@ -289,7 +289,8 @@ function ImportacaoPage() {
       if (error) throw error;
 
       const map = new Map<string, string>();
-      (data ?? []).forEach((r: Record<string, unknown>) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (data ?? []).forEach((r: any) => {
         const count = Number(r.installment_total ?? 1) || 1;
         const current = Number(r.installment_current ?? 1) || 1;
         // amount aqui já é o valor da parcela; o valor total é amount * installment_total (mesma regra usada ao montar as linhas importadas)
