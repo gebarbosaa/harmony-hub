@@ -32,7 +32,7 @@ export const businessNavItems: NavItem[] = [
 ];
 export const personalQuickAddOptions=[{label:"NOVA DESPESA",icon:ArrowDownCircle,kind:"DESPESA"},{label:"NOVA RECEITA",icon:ArrowUpCircle,kind:"RECEITA"},{label:"NOVA CONTA A PAGAR",icon:Wallet,kind:"CONTA_A_PAGAR"},{label:"NOVA PARCELA",icon:CreditCard,kind:"PARCELA"},{label:"NOVA ASSINATURA",icon:Repeat,kind:"ASSINATURA"},{label:"NOVO INVESTIMENTO",icon:TrendingUp,kind:"INVESTIMENTO"},{label:"NOVO RESGATE",icon:Undo2,kind:"RESGATE"},{label:"NOVA META",icon:Target,kind:"META"},{label:"NOVO CUSTO FIXO",icon:Repeat,kind:"CUSTO_FIXO"}] as const;
 export const businessQuickAddOptions=[
-{label:"CADASTRAR EMPRESA",icon:Building2,kind:"EMPRESA"},
+{label:"CADASTRO FÁCIL",icon:Building2,kind:"EMPRESA"},
 {label:"NOVO INSUMO",icon:Wallet,kind:"INSUMO"},
 {label:"NOVA RECEITA",icon:ArrowUpCircle,kind:"RECEITA_EMPRESARIAL"},
 {label:"NOVO PRODUTO",icon:Calculator,kind:"PRODUTO"},
