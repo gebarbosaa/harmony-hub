@@ -5,6 +5,7 @@ import { PageHeader, Panel, StatCard, Tag } from "@/components/ui-kit";
 import { useHouseholdTable } from "@/hooks/use-household-data";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/empresarial")({ head: () => ({ meta: [{ title: "EMPRESARIAL — HARMONY HUB" }] }), component: EmpresarialPage });
 type Tab="DASHBOARD"|"EMPRESA"|"INSUMOS"|"RECEITAS"|"PRECIFICAÇÃO"|"FORNECEDORES"|"PRODUÇÃO"|"VENDAS"|"FINANCEIRO";
@@ -59,49 +60,28 @@ function EmpresarialPage(){
 }
 
 function Dashboard({ingredients,recipes,products,productions,stockValue,salesTotal,cashIn,cashOut,onNavigate}:{ingredients:Ingredient[];recipes:Recipe[];products:Product[];productions:Production[];stockValue:number;salesTotal:number;cashIn:number;cashOut:number;onNavigate:(tab:Tab)=>void}){
+ const { profile } = useAuth();
+ const [isMounted,setIsMounted]=useState(false);
+ useEffect(()=>{setIsMounted(true)},[]);
  const low=ingredients.filter(x=>Number(x.stock_quantity)<=Number(x.minimum_stock));
  const missingRecipeProducts=products.filter(x=>!x.recipe_id);
  const cashBalance=cashIn-cashOut;
- const setupSteps=[
-  {done:ingredients.length>0,label:"Cadastrar insumos",tab:"INSUMOS" as Tab},
-  {done:recipes.length>0,label:"Criar fichas técnicas",tab:"RECEITAS" as Tab},
-  {done:products.length>0,label:"Cadastrar produtos",tab:"PRECIFICAÇÃO" as Tab},
-  {done:products.length>0&&ingredients.length>0,label:"Preparar operação",tab:"PRODUÇÃO" as Tab},
- ];
+ const now=new Date();
+ const monthName=now.toLocaleDateString("pt-BR",{month:"long",year:"numeric"}).toUpperCase();
+ const greeting=now.getHours()<12?"BOM DIA":now.getHours()<18?"BOA TARDE":"BOA NOITE";
+ const setupSteps=[{done:ingredients.length>0,label:"Cadastrar insumos",tab:"INSUMOS" as Tab},{done:recipes.length>0,label:"Criar fichas técnicas",tab:"RECEITAS" as Tab},{done:products.length>0,label:"Cadastrar produtos",tab:"PRECIFICAÇÃO" as Tab},{done:products.length>0&&ingredients.length>0,label:"Preparar operação",tab:"PRODUÇÃO" as Tab}];
  const completed=setupSteps.filter(x=>x.done).length;
- return <div className="space-y-4">
-  <PageHeader title="DASHBOARD" subtitle="VISÃO RÁPIDA DA OPERAÇÃO, ESTOQUE, VENDAS E CAIXA."/>
-  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-   <StatCard label="VENDAS" value={money(salesTotal)} tone="success"/>
-   <StatCard label="ESTOQUE" value={money(stockValue)} tone="info"/>
-   <StatCard label="CAIXA" value={money(cashBalance)} tone={cashBalance>=0?"primary":"danger"}/>
-   <StatCard label="ESTOQUE EM ATENÇÃO" value={String(low.length)} tone={low.length?"danger":"success"}/>
-  </div>
-  <div className="grid gap-4 lg:grid-cols-3">
-   <Panel title="PRÓXIMOS PASSOS" className="lg:col-span-2">
-    <div className="space-y-2">
-     {setupSteps.map(step=><button key={step.label} type="button" onClick={()=>onNavigate(step.tab)} className="flex w-full items-center justify-between rounded-xl border border-border/70 p-3 text-left transition hover:border-primary/40 hover:bg-primary/5">
-      <span className="flex items-center gap-3"><span className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold ${step.done?"bg-success/10 text-success":"bg-primary/10 text-primary"}`}>{step.done?"✓":"→"}</span><span className="text-sm font-semibold">{step.label}</span></span>
-      <span className="text-[9px] font-bold text-muted-foreground">{step.done?"CONCLUÍDO":"CONFIGURAR"}</span>
-     </button>)}
-    </div>
-    <div className="mt-3 rounded-xl bg-secondary/50 p-3 text-[10px] text-muted-foreground"><b className="text-foreground">{completed}/{setupSteps.length}</b> etapas básicas configuradas. O painel usa os dados reais cadastrados para orientar os próximos passos.</div>
-   </Panel>
-   <Panel title="OPERAÇÃO">
-    <div className="grid grid-cols-2 gap-3 text-center">
-     {[["INSUMOS",ingredients.length],["RECEITAS",recipes.length],["PRODUTOS",products.length],["PRODUÇÕES",productions.length]].map(([label,value])=><button key={String(label)} type="button" onClick={()=>onNavigate(label==="INSUMOS"?"INSUMOS":label==="RECEITAS"?"RECEITAS":label==="PRODUTOS"?"PRECIFICAÇÃO":"PRODUÇÃO")} className="rounded-xl p-2 hover:bg-secondary/60"><p className="text-2xl font-bold">{value}</p><p className="label-caps text-[9px] text-muted-foreground">{label}</p></button>)}
-    </div>
-   </Panel>
-  </div>
-  <div className="grid gap-4 lg:grid-cols-2">
-   <Panel title="ESTOQUE — AÇÃO NECESSÁRIA">
-    {low.length===0?<p className="py-6 text-center text-sm text-muted-foreground">NENHUM INSUMO ABAIXO DO MÍNIMO.</p>:<div className="space-y-2">{low.slice(0,8).map(x=><button key={x.id} type="button" onClick={()=>onNavigate("INSUMOS")} className="flex w-full items-center justify-between rounded-xl border border-warning/30 bg-warning/5 p-3 text-left"><span><span className="block text-sm font-semibold">{x.name}</span><span className="text-[10px] text-muted-foreground">MÍNIMO {x.minimum_stock} {x.base_unit}</span></span><span className="flex items-center gap-2 text-warning"><span className="text-xs font-bold">{x.stock_quantity} {x.base_unit}</span><AlertTriangle className="h-4 w-4"/></span></button>)}</div>}
-   </Panel>
-   <Panel title="CADASTRO INTELIGENTE">
-    {missingRecipeProducts.length===0?<p className="py-6 text-center text-sm text-muted-foreground">TODOS OS PRODUTOS ESTÃO VINCULADOS A UMA RECEITA OU NÃO HÁ PRODUTOS CADASTRADOS.</p>:<div className="space-y-2"><p className="text-xs text-muted-foreground">Estes produtos ainda não têm ficha técnica vinculada. Sem ela, o custo e o consumo de estoque ficam incompletos.</p>{missingRecipeProducts.slice(0,6).map(x=><button key={x.id} type="button" onClick={()=>onNavigate("PRECIFICAÇÃO")} className="flex w-full items-center justify-between rounded-xl border p-3 text-left"><span className="text-sm font-semibold">{x.name}</span><span className="text-[9px] font-bold text-primary">REVISAR →</span></button>)}</div>}
-   </Panel>
-  </div>
- </div>
+ const monthlyEvolution=useMemo(()=>Array.from({length:6},(_,idx)=>{const d=new Date(now.getFullYear(),now.getMonth()-5+idx,1);return{mes:d.toLocaleDateString("pt-BR",{month:"short"}).replace(".","").toUpperCase(),vendas:0,entradas:0,saidas:0}},[]),[]);
+ const productDistribution=useMemo(()=>products.slice().sort((a,b)=>Number(b.price)-Number(a.price)).slice(0,5).map(p=>({name:p.name,value:Number(p.price)||0})),[products]);
+ const PIE_COLORS=["var(--orange-primary)","var(--orange-light)","var(--graphite-light)","var(--muted-foreground)","var(--danger)"];
+ return <div className="space-y-5">
+  <PageHeader title={greeting+", "+(profile?.name?.split(" ")[0]?.toUpperCase()||"")} subtitle={"Veja como está a operação de "+monthName.toLowerCase()+"."} action={<Tag tone="primary">{monthName}</Tag>}/>
+  <div className="grid grid-cols-2 gap-3 lg:grid-cols-4"><StatCard label="VENDAS DO MÊS" value={money(salesTotal)} delta="Vendas registradas" tone="success" icon={<ShoppingCart className="h-4 w-4"/>}/><StatCard label="CAIXA" value={money(cashBalance)} delta="Saldo operacional" tone={cashBalance>=0?"primary":"danger"} icon={<Wallet className="h-4 w-4"/>}/><StatCard label="ESTOQUE" value={money(stockValue)} delta={ingredients.length+" insumos"} tone="info" icon={<Package className="h-4 w-4"/>}/><StatCard label="ESTOQUE EM ATENÇÃO" value={String(low.length)} delta={low.length?"Requer ação":"Tudo dentro do mínimo"} tone={low.length?"danger":"success"} icon={<AlertTriangle className="h-4 w-4"/>}/></div>
+  <Panel className="border-warning/50"><div className="flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning/15 text-warning"><AlertTriangle className="h-5 w-5"/></span><div><h2 className="label-caps text-sm">AÇÃO NECESSÁRIA</h2><p className="text-xs text-muted-foreground">{low.length?low.length+" insumo(s) abaixo do estoque mínimo.":"Nenhum alerta crítico de estoque."}</p></div></div><button type="button" onClick={()=>onNavigate("INSUMOS")} className="label-caps rounded-xl border border-primary/60 px-3 py-2 text-[11px] text-primary">VER ESTOQUE</button></div></Panel>
+  <div className="grid gap-4 lg:grid-cols-3"><Panel title="EVOLUÇÃO RECENTE" className="lg:col-span-2"><div className="h-64">{isMounted&&<ResponsiveContainer width="100%" height="100%"><AreaChart data={monthlyEvolution}><CartesianGrid stroke="var(--border)" vertical={false}/><XAxis dataKey="mes" stroke="var(--muted-foreground)" fontSize={11} tickLine={false}/><YAxis stroke="var(--muted-foreground)" fontSize={11} tickLine={false} width={48}/><Tooltip formatter={(v:number)=>money(v)}/><Area type="monotone" dataKey="vendas" stroke="var(--orange-primary)" fill="var(--orange-primary)" fillOpacity={0.15}/><Area type="monotone" dataKey="entradas" stroke="var(--success)" fill="transparent"/><Area type="monotone" dataKey="saidas" stroke="var(--danger)" fill="transparent"/></AreaChart></ResponsiveContainer>}</div></Panel><Panel title="PRODUTOS"><div className="h-64">{isMounted&&(productDistribution.length?<ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={productDistribution} dataKey="value" nameKey="name" innerRadius={55} outerRadius={85} paddingAngle={3} stroke="none">{productDistribution.map((entry,index)=><Cell key={entry.name} fill={PIE_COLORS[index%5]}/>)}</Pie><Legend wrapperStyle={{fontSize:10}}/><Tooltip formatter={(v:number)=>money(v)}/></PieChart></ResponsiveContainer>:<div className="flex h-full items-center justify-center text-sm text-muted-foreground">Cadastre produtos para visualizar.</div>)}</div></Panel></div>
+  <div className="grid gap-4 lg:grid-cols-2"><Panel title="PRÓXIMOS PASSOS"><div className="space-y-2">{setupSteps.map(step=><button key={step.label} type="button" onClick={()=>onNavigate(step.tab)} className="flex w-full items-center justify-between rounded-xl border border-border bg-secondary/20 p-3 text-left transition hover:border-primary/40 hover:bg-primary/5"><span className="flex items-center gap-3"><span className={"flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold "+(step.done?"bg-success/10 text-success":"bg-primary/10 text-primary")}>{step.done?"✓":"→"}</span><span className="text-sm font-semibold">{step.label}</span></span><span className="text-[9px] font-bold text-muted-foreground">{step.done?"CONCLUÍDO":"CONFIGURAR"}</span></button>)}</div><div className="mt-3 rounded-xl bg-secondary/50 p-3 text-[10px] text-muted-foreground"><b className="text-foreground">{completed}/{setupSteps.length}</b> etapas básicas configuradas.</div></Panel><Panel title="OPERAÇÃO"><div className="grid grid-cols-2 gap-3 text-center">{[["INSUMOS",ingredients.length,"INSUMOS"],["RECEITAS",recipes.length,"RECEITAS"],["PRODUTOS",products.length,"PRECIFICAÇÃO"],["PRODUÇÕES",productions.length,"PRODUÇÃO"]].map(([label,value,target])=><button key={String(label)} type="button" onClick={()=>onNavigate(target as Tab)} className="rounded-xl p-2 hover:bg-secondary/60"><p className="text-2xl font-bold">{value}</p><p className="label-caps text-[9px] text-muted-foreground">{label}</p></button>)}</div></Panel></div>
+  <div className="grid gap-4 lg:grid-cols-2"><Panel title="ESTOQUE — AÇÃO NECESSÁRIA">{low.length===0?<p className="py-8 text-center text-sm text-muted-foreground">Nenhum insumo abaixo do mínimo.</p>:<div className="space-y-2">{low.slice(0,6).map(x=><button key={x.id} type="button" onClick={()=>onNavigate("INSUMOS")} className="flex w-full items-center justify-between rounded-xl border border-warning/30 bg-warning/5 p-3 text-left"><span><span className="block text-sm font-semibold">{x.name}</span><span className="text-[10px] text-muted-foreground">MÍNIMO {x.minimum_stock} {x.base_unit}</span></span><span className="flex items-center gap-2 text-warning"><span className="text-xs font-bold">{x.stock_quantity} {x.base_unit}</span><AlertTriangle className="h-4 w-4"/></span></button>)}</div>}</Panel><Panel title="CADASTRO INTELIGENTE">{missingRecipeProducts.length===0?<p className="py-8 text-center text-sm text-muted-foreground">Todos os produtos estão vinculados a uma ficha técnica ou ainda não há produtos.</p>:<div className="space-y-2"><p className="text-xs text-muted-foreground">Produtos sem ficha técnica não calculam custo e consumo de estoque corretamente.</p>{missingRecipeProducts.slice(0,6).map(x=><button key={x.id} type="button" onClick={()=>onNavigate("PRECIFICAÇÃO")} className="flex w-full items-center justify-between rounded-xl border p-3 text-left"><span className="text-sm font-semibold">{x.name}</span><span className="text-[9px] font-bold text-primary">REVISAR <ArrowRight className="ml-1 inline h-3 w-3"/></span></button>)}</div>}</Panel></div>
+ </div>;
 }
 function CompanyTab({business,table,onSelected}:{business:Business|null;table:TableApi<Business>;onSelected:(id:string)=>void}){
  const [open,setOpen]=useState(!business),[more,setMore]=useState(false),[name,setName]=useState(business?.name??""),[legal,setLegal]=useState(business?.legal_name??""),[document,setDocument]=useState(business?.document??""),[taxRegime,setTaxRegime]=useState(business?.tax_regime??""),[phone,setPhone]=useState(business?.phone??""),[email,setEmail]=useState(business?.email??""),[address,setAddress]=useState(business?.address??""),[city,setCity]=useState(business?.city??""),[state,setState]=useState(business?.state??""),[notes,setNotes]=useState(business?.notes??"");
