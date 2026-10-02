@@ -47,7 +47,7 @@ function EmpresarialPage(){
  {!activeId&&tab!=="EMPRESA"?<Panel><div className="py-10 text-center"><Building2 className="mx-auto mb-3 h-9 w-9 text-primary"/><p className="font-bold">CADASTRE SUA EMPRESA PRIMEIRO</p><p className="mt-1 text-sm text-muted-foreground">O módulo empresarial mantém estoque, receitas, produção e caixa separados do financeiro pessoal.</p><button className={saveBtnClass+" mt-4"} onClick={()=>setTab("EMPRESA")}><Plus className="h-4 w-4"/>CADASTRAR EMPRESA</button></div></Panel>:
  <>
  {businesses.rows.length>1&&<div className="flex items-center gap-2"><span className="label-caps text-[9px] text-muted-foreground">EMPRESA ATIVA</span><select className={inputClass+" max-w-xs"} value={activeId??""} onChange={e=>setBusinessId(e.target.value)}>{businesses.rows.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></div>}
- {tab==="DASHBOARD"&&<Dashboard ingredients={bi} recipes={br} products={bp} productions={bprod} stockValue={stockValue} salesTotal={salesTotal} cashIn={cashIn} cashOut={cashOut} onNavigate={setTab}/>}
+ {tab==="DASHBOARD"&&<Dashboard ingredients={bi} recipes={br} products={bp} productions={bprod} stockValue={stockValue} salesTotal={salesTotal} cashIn={cashIn} cashOut={cashOut} salesRows={bsa} cashRows={bc} onNavigate={setTab}/>}
  {tab==="EMPRESA"&&<CompanyTab business={business} table={businesses} onSelected={setBusinessId}/>}
  {tab==="INSUMOS"&&<IngredientsTab business={business} rows={bi} table={ingredients} suppliers={bs}/>}
  {tab==="RECEITAS"&&<RecipesTab business={business} rows={br} items={bri} ingredients={bi} recipesTable={recipes} itemsTable={recipeItems}/>}
@@ -59,7 +59,7 @@ function EmpresarialPage(){
  </>}</div>
 }
 
-function Dashboard({ingredients,recipes,products,productions,stockValue,salesTotal,cashIn,cashOut,onNavigate}:{ingredients:Ingredient[];recipes:Recipe[];products:Product[];productions:Production[];stockValue:number;salesTotal:number;cashIn:number;cashOut:number;onNavigate:(tab:Tab)=>void}){
+function Dashboard({ingredients,recipes,products,productions,stockValue,salesTotal,cashIn,cashOut,onNavigate}:{ingredients:Ingredient[];recipes:Recipe[];products:Product[];productions:Production[];stockValue:number;salesTotal:number;cashIn:number;cashOut:number;salesRows:Sale[];cashRows:Cash[];onNavigate:(tab:Tab)=>void}){
  const { profile } = useAuth();
  const [isMounted,setIsMounted]=useState(false);
  useEffect(()=>{setIsMounted(true)},[]);
@@ -71,7 +71,7 @@ function Dashboard({ingredients,recipes,products,productions,stockValue,salesTot
  const greeting=now.getHours()<12?"BOM DIA":now.getHours()<18?"BOA TARDE":"BOA NOITE";
  const setupSteps=[{done:ingredients.length>0,label:"Cadastrar insumos",tab:"INSUMOS" as Tab},{done:recipes.length>0,label:"Criar fichas técnicas",tab:"RECEITAS" as Tab},{done:products.length>0,label:"Cadastrar produtos",tab:"PRECIFICAÇÃO" as Tab},{done:products.length>0&&ingredients.length>0,label:"Preparar operação",tab:"PRODUÇÃO" as Tab}];
  const completed=setupSteps.filter(x=>x.done).length;
- const monthlyEvolution=useMemo(()=>Array.from({length:6},(_,idx)=>{const d=new Date(now.getFullYear(),now.getMonth()-5+idx,1);return{mes:d.toLocaleDateString("pt-BR",{month:"short"}).replace(".","").toUpperCase(),vendas:0,entradas:0,saidas:0}},[]),[]);
+ const monthlyEvolution=useMemo(()=>Array.from({length:6},(_,idx)=>{const d=new Date(now.getFullYear(),now.getMonth()-5+idx,1);const key=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");return{mes:d.toLocaleDateString("pt-BR",{month:"short"}).replace(".","").toUpperCase(),vendas:salesRows.filter(x=>x.sale_date?.startsWith(key)&&x.status!=="CANCELADA").reduce((s,x)=>s+Number(x.total_amount),0),entradas:cashRows.filter(x=>x.entry_date?.startsWith(key)&&x.entry_type==="ENTRADA").reduce((s,x)=>s+Number(x.amount),0),saidas:cashRows.filter(x=>x.entry_date?.startsWith(key)&&x.entry_type==="SAIDA").reduce((s,x)=>s+Number(x.amount),0)}}),[salesRows,cashRows]);
  const productDistribution=useMemo(()=>products.slice().sort((a,b)=>Number(b.price)-Number(a.price)).slice(0,5).map(p=>({name:p.name,value:Number(p.price)||0})),[products]);
  const PIE_COLORS=["var(--orange-primary)","var(--orange-light)","var(--graphite-light)","var(--muted-foreground)","var(--danger)"];
  return <div className="space-y-5">
