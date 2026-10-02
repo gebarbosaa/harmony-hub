@@ -84,7 +84,7 @@ function GroupsPage() {
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
             <input value={groupName} onChange={(e) => setGroupName(e.target.value)} disabled={!canManage} className="w-full rounded-xl border p-3" placeholder="NOME DO GRUPO" />
-            {canManage && <button onClick={() => void renameGroup()} disabled={saving} className="gradient-primary rounded-xl px-4 py-3 text-[10px] font-bold"><Save className="mr-1 inline h-4 w-4"/>SALVAR NOME</button>}
+            {canManage && <button onClick={() => void renameGroup()} disabled={saving} className="gradient-primary label-caps inline-flex w-fit items-center justify-center rounded-lg px-3 py-1.5 text-[9px] font-semibold"><Save className="mr-1 inline h-4 w-4"/>SALVAR NOME</button>}
           </div>
           <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
             <div className="flex items-center gap-2"><UserPlus className="h-4 w-4 text-primary"/><p className="label-caps text-[11px] font-bold">CÓDIGO PARA COMPARTILHAR</p></div>
@@ -101,10 +101,10 @@ function GroupsPage() {
       </Panel>
     </> : <>
       <Panel title="CRIAR UM GRUPO">
-        <div className="space-y-3"><p className="text-sm text-muted-foreground">Crie um grupo para compartilhar seus dados financeiros com sua parceira ou outra pessoa autorizada.</p><input value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder="NOME DO GRUPO" className="w-full rounded-xl border p-3"/><button onClick={() => void createGroup()} disabled={saving} className="gradient-primary w-full rounded-xl p-3 text-[10px] font-bold">CRIAR GRUPO</button></div>
+        <div className="space-y-3"><p className="text-sm text-muted-foreground">Crie um grupo para compartilhar seus dados financeiros com sua parceira ou outra pessoa autorizada.</p><input value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder="NOME DO GRUPO" className="w-full rounded-xl border p-3"/><button onClick={() => void createGroup()} disabled={saving} className="gradient-primary label-caps inline-flex w-fit items-center justify-center rounded-lg px-3 py-1.5 text-[9px] font-semibold">CRIAR GRUPO</button></div>
       </Panel>
       <Panel title="ENTRAR EM UM GRUPO">
-        <div className="space-y-3"><p className="text-sm text-muted-foreground">Recebeu um código? Informe abaixo para acessar o mesmo ambiente financeiro.</p><input value={invite} onChange={(e) => setInvite(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8))} placeholder="CÓDIGO DO GRUPO" className="w-full rounded-xl border p-3 font-mono tracking-[0.2em]"/><button onClick={() => void joinGroup()} disabled={saving} className="gradient-primary w-full rounded-xl p-3 text-[10px] font-bold">ENTRAR NO GRUPO</button></div>
+        <div className="space-y-3"><p className="text-sm text-muted-foreground">Recebeu um código? Informe abaixo para acessar o mesmo ambiente financeiro.</p><input value={invite} onChange={(e) => setInvite(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8))} placeholder="CÓDIGO DO GRUPO" className="w-full rounded-xl border p-3 font-mono tracking-[0.2em]"/><button onClick={() => void joinGroup()} disabled={saving} className="gradient-primary label-caps inline-flex w-fit items-center justify-center rounded-lg px-3 py-1.5 text-[9px] font-semibold">ENTRAR NO GRUPO</button></div>
       </Panel>
     </>}
   </div>;
