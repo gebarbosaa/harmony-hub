@@ -80,3 +80,5 @@ As migrações ficam em `supabase/migrations` e representam o histórico do sche
 ## Observação
 
 O repositório mantém **Grupos** e o **Calendário** atuais. Módulos antigos de rotina, produtividade, compras e tarefas não fazem mais parte do aplicativo.
+
+<!-- Vercel deployment trigger: 2026-10-02 -->
