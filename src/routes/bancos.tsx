@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Building2, CreditCard, Pencil, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader, Panel } from "@/components/ui-kit";
+import { OpenFinancePanel } from "@/components/open-finance/OpenFinancePanel";
 import { useHouseholdTable } from "@/hooks/use-household-data";
 
 type Account = {
@@ -154,6 +155,8 @@ function BanksPage() {
           </button>
         }
       />
+
+      <OpenFinancePanel />
 
       <Panel title="BANCOS E CONTAS">
         {accounts.isLoading ? (
