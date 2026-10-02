@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Building2, Calculator, ChefHat, Package, Factory, ShoppingCart, Wallet, Users, Plus, Save, AlertTriangle } from "lucide-react";
 import { PageHeader, Panel, StatCard, Tag } from "@/components/ui-kit";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
