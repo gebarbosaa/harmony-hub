@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Building2, RefreshCw, ShieldCheck, Unplug } from "lucide-react";
 import { toast } from "sonner";
+import { Panel } from "@/components/ui-kit";
 import { supabase } from "@/integrations/supabase/client";
 
 type OpenFinanceConnection = {
