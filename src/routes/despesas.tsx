@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Plus } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
 import { toast } from "sonner";
 import { PageHeader, Panel, StatCard, Tag, PersonDot } from "@/components/ui-kit";
