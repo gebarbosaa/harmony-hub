@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Building2, Calculator, ChefHat, Package, Factory, ShoppingCart, Wallet, Users, Plus, Save, AlertTriangle } from "lucide-react";
+import { Building2, Calculator, ChefHat, Package, Factory, ShoppingCart, Wallet, Users, Plus, Save, AlertTriangle, ArrowRight } from "lucide-react";
+import { Area, AreaChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { PageHeader, Panel, StatCard, Tag } from "@/components/ui-kit";
 import { useHouseholdTable } from "@/hooks/use-household-data";
 import { supabase } from "@/integrations/supabase/client";
@@ -59,7 +60,7 @@ function EmpresarialPage(){
  </>}</div>
 }
 
-function Dashboard({ingredients,recipes,products,productions,stockValue,salesTotal,cashIn,cashOut,onNavigate}:{ingredients:Ingredient[];recipes:Recipe[];products:Product[];productions:Production[];stockValue:number;salesTotal:number;cashIn:number;cashOut:number;salesRows:Sale[];cashRows:Cash[];onNavigate:(tab:Tab)=>void}){
+function Dashboard({ingredients,recipes,products,productions,stockValue,salesTotal,cashIn,cashOut,salesRows,cashRows,onNavigate}:{ingredients:Ingredient[];recipes:Recipe[];products:Product[];productions:Production[];stockValue:number;salesTotal:number;cashIn:number;cashOut:number;salesRows:Sale[];cashRows:Cash[];onNavigate:(tab:Tab)=>void}){
  const { profile } = useAuth();
  const [isMounted,setIsMounted]=useState(false);
  useEffect(()=>{setIsMounted(true)},[]);
