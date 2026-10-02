@@ -108,6 +108,7 @@ create trigger business_sync_sale_cash
 after insert on public.business_sales
 for each row execute function public.business_sync_sale_cash();
 
+revoke execute on function public.business_consume_recipe_for_production() from public, anon, authenticated;
 revoke execute on function public.business_sync_sale_cash() from public, anon, authenticated;
 
 commit;
