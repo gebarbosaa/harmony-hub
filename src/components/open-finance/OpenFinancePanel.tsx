@@ -91,7 +91,7 @@ export function OpenFinancePanel() {
       const PluggyConnect = await loadPluggyWidget();
       const widget = new PluggyConnect({
         connectToken: data.accessToken,
-        includeSandbox: true,
+        includeSandbox: Boolean(import.meta.env.DEV),
         language: "pt",
         onSuccess: async () => {
           toast.success("BANCO CONECTADO. SINCRONIZANDO SALDO E TRANSAÇÕES...");
