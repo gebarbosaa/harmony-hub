@@ -43,7 +43,7 @@ function EmpresarialPage(){
  {!activeId&&tab!=="EMPRESA"?<Panel><div className="py-10 text-center"><Building2 className="mx-auto mb-3 h-9 w-9 text-primary"/><p className="font-bold">CADASTRE SUA EMPRESA PRIMEIRO</p><p className="mt-1 text-sm text-muted-foreground">O módulo empresarial mantém estoque, receitas, produção e caixa separados do financeiro pessoal.</p><button className={btnClass+" mt-4"} onClick={()=>setTab("EMPRESA")}><Plus className="h-4 w-4"/>CADASTRAR EMPRESA</button></div></Panel>:
  <>
  {businesses.rows.length>1&&<div className="flex items-center gap-2"><span className="label-caps text-[9px] text-muted-foreground">EMPRESA ATIVA</span><select className={inputClass+" max-w-xs"} value={activeId??""} onChange={e=>setBusinessId(e.target.value)}>{businesses.rows.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></div>}
- {tab==="DASHBOARD"&&<Dashboard ingredients={bi} recipes={br} products={bp} productions={bprod} stockValue={stockValue} salesTotal={salesTotal} cashIn={cashIn} cashOut={cashOut}/>}
+ {tab==="DASHBOARD"&&<Dashboard ingredients={bi} recipes={br} products={bp} productions={bprod} stockValue={stockValue} salesTotal={salesTotal} cashIn={cashIn} cashOut={cashOut} onNavigate={setTab}/>}
  {tab==="EMPRESA"&&<CompanyTab business={business} table={businesses} onSelected={setBusinessId}/>}
  {tab==="INSUMOS"&&<IngredientsTab business={business} rows={bi} table={ingredients} suppliers={bs}/>}
  {tab==="RECEITAS"&&<RecipesTab business={business} rows={br} items={bri} ingredients={bi} recipesTable={recipes} itemsTable={recipeItems}/>}
@@ -55,11 +55,51 @@ function EmpresarialPage(){
  </>}</div>
 }
 
-function Dashboard({ingredients,recipes,products,productions,stockValue,salesTotal,cashIn,cashOut}:{ingredients:Ingredient[];recipes:Recipe[];products:Product[];productions:Production[];stockValue:number;salesTotal:number;cashIn:number;cashOut:number}){
+function Dashboard({ingredients,recipes,products,productions,stockValue,salesTotal,cashIn,cashOut,onNavigate}:{ingredients:Ingredient[];recipes:Recipe[];products:Product[];productions:Production[];stockValue:number;salesTotal:number;cashIn:number;cashOut:number;onNavigate:(tab:Tab)=>void}){
  const low=ingredients.filter(x=>Number(x.stock_quantity)<=Number(x.minimum_stock));
- return <div className="space-y-4"><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><StatCard label="VENDAS" value={money(salesTotal)} tone="success"/><StatCard label="ESTOQUE" value={money(stockValue)} tone="info"/><StatCard label="ENTRADAS" value={money(cashIn)} tone="success"/><StatCard label="SAÍDAS" value={money(cashOut)} tone="danger"/></div><div className="grid gap-4 lg:grid-cols-2"><Panel title="VISÃO DA OPERAÇÃO"><div className="grid grid-cols-2 gap-3 text-center"><div><p className="text-2xl font-bold">{ingredients.length}</p><p className="label-caps text-[9px] text-muted-foreground">INSUMOS</p></div><div><p className="text-2xl font-bold">{recipes.length}</p><p className="label-caps text-[9px] text-muted-foreground">RECEITAS</p></div><div><p className="text-2xl font-bold">{products.length}</p><p className="label-caps text-[9px] text-muted-foreground">PRODUTOS</p></div><div><p className="text-2xl font-bold">{productions.length}</p><p className="label-caps text-[9px] text-muted-foreground">PRODUÇÕES</p></div></div></Panel><Panel title="ESTOQUE ATENÇÃO">{low.length===0?<p className="py-6 text-center text-sm text-muted-foreground">NENHUM INSUMO ABAIXO DO MÍNIMO.</p>:low.map(x=><div key={x.id} className="mb-2 flex items-center justify-between rounded-xl border border-warning/30 bg-warning/5 p-3"><span>{x.name}</span><span className="text-warning">{x.stock_quantity} {x.base_unit}</span><AlertTriangle className="h-4 w-4 text-warning"/></div>)}</Panel></div></div>
+ const missingRecipeProducts=products.filter(x=>!x.recipe_id);
+ const cashBalance=cashIn-cashOut;
+ const setupSteps=[
+  {done:ingredients.length>0,label:"Cadastrar insumos",tab:"INSUMOS" as Tab},
+  {done:recipes.length>0,label:"Criar fichas técnicas",tab:"RECEITAS" as Tab},
+  {done:products.length>0,label:"Cadastrar produtos",tab:"PRECIFICAÇÃO" as Tab},
+  {done:products.length>0&&ingredients.length>0,label:"Preparar operação",tab:"PRODUÇÃO" as Tab},
+ ];
+ const completed=setupSteps.filter(x=>x.done).length;
+ return <div className="space-y-4">
+  <PageHeader title="DASHBOARD EMPRESARIAL" subtitle="VISÃO RÁPIDA DA OPERAÇÃO, ESTOQUE, VENDAS E CAIXA."/>
+  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+   <StatCard label="VENDAS" value={money(salesTotal)} tone="success"/>
+   <StatCard label="ESTOQUE" value={money(stockValue)} tone="info"/>
+   <StatCard label="CAIXA" value={money(cashBalance)} tone={cashBalance>=0?"primary":"danger"}/>
+   <StatCard label="ESTOQUE EM ATENÇÃO" value={String(low.length)} tone={low.length?"danger":"success"}/>
+  </div>
+  <div className="grid gap-4 lg:grid-cols-3">
+   <Panel title="PRÓXIMOS PASSOS" className="lg:col-span-2">
+    <div className="space-y-2">
+     {setupSteps.map(step=><button key={step.label} type="button" onClick={()=>onNavigate(step.tab)} className="flex w-full items-center justify-between rounded-xl border border-border/70 p-3 text-left transition hover:border-primary/40 hover:bg-primary/5">
+      <span className="flex items-center gap-3"><span className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold ${step.done?"bg-success/10 text-success":"bg-primary/10 text-primary"}`}>{step.done?"✓":"→"}</span><span className="text-sm font-semibold">{step.label}</span></span>
+      <span className="text-[9px] font-bold text-muted-foreground">{step.done?"CONCLUÍDO":"CONFIGURAR"}</span>
+     </button>)}
+    </div>
+    <div className="mt-3 rounded-xl bg-secondary/50 p-3 text-[10px] text-muted-foreground"><b className="text-foreground">{completed}/{setupSteps.length}</b> etapas básicas configuradas. O painel usa os dados reais cadastrados para orientar os próximos passos.</div>
+   </Panel>
+   <Panel title="OPERAÇÃO">
+    <div className="grid grid-cols-2 gap-3 text-center">
+     {[["INSUMOS",ingredients.length],["RECEITAS",recipes.length],["PRODUTOS",products.length],["PRODUÇÕES",productions.length]].map(([label,value])=><button key={String(label)} type="button" onClick={()=>onNavigate(label==="INSUMOS"?"INSUMOS":label==="RECEITAS"?"RECEITAS":label==="PRODUTOS"?"PRECIFICAÇÃO":"PRODUÇÃO")} className="rounded-xl p-2 hover:bg-secondary/60"><p className="text-2xl font-bold">{value}</p><p className="label-caps text-[9px] text-muted-foreground">{label}</p></button>)}
+    </div>
+   </Panel>
+  </div>
+  <div className="grid gap-4 lg:grid-cols-2">
+   <Panel title="ESTOQUE — AÇÃO NECESSÁRIA">
+    {low.length===0?<p className="py-6 text-center text-sm text-muted-foreground">NENHUM INSUMO ABAIXO DO MÍNIMO.</p>:<div className="space-y-2">{low.slice(0,8).map(x=><button key={x.id} type="button" onClick={()=>onNavigate("INSUMOS")} className="flex w-full items-center justify-between rounded-xl border border-warning/30 bg-warning/5 p-3 text-left"><span><span className="block text-sm font-semibold">{x.name}</span><span className="text-[10px] text-muted-foreground">MÍNIMO {x.minimum_stock} {x.base_unit}</span></span><span className="flex items-center gap-2 text-warning"><span className="text-xs font-bold">{x.stock_quantity} {x.base_unit}</span><AlertTriangle className="h-4 w-4"/></span></button>)}</div>}
+   </Panel>
+   <Panel title="CADASTRO INTELIGENTE">
+    {missingRecipeProducts.length===0?<p className="py-6 text-center text-sm text-muted-foreground">TODOS OS PRODUTOS ESTÃO VINCULADOS A UMA RECEITA OU NÃO HÁ PRODUTOS CADASTRADOS.</p>:<div className="space-y-2"><p className="text-xs text-muted-foreground">Estes produtos ainda não têm ficha técnica vinculada. Sem ela, o custo e o consumo de estoque ficam incompletos.</p>{missingRecipeProducts.slice(0,6).map(x=><button key={x.id} type="button" onClick={()=>onNavigate("PRECIFICAÇÃO")} className="flex w-full items-center justify-between rounded-xl border p-3 text-left"><span className="text-sm font-semibold">{x.name}</span><span className="text-[9px] font-bold text-primary">REVISAR →</span></button>)}</div>}
+   </Panel>
+  </div>
+ </div>
 }
-
 function CompanyTab({business,table,onSelected}:{business:Business|null;table:TableApi<Business>;onSelected:(id:string)=>void}){
  const [open,setOpen]=useState(!business),[more,setMore]=useState(false),[name,setName]=useState(business?.name??""),[legal,setLegal]=useState(business?.legal_name??""),[document,setDocument]=useState(business?.document??""),[taxRegime,setTaxRegime]=useState(business?.tax_regime??""),[phone,setPhone]=useState(business?.phone??""),[email,setEmail]=useState(business?.email??""),[address,setAddress]=useState(business?.address??""),[city,setCity]=useState(business?.city??""),[state,setState]=useState(business?.state??""),[notes,setNotes]=useState(business?.notes??"");
  async function save(){if(!name.trim())return toast.error("INFORME O NOME DA EMPRESA");try{const row=business?await table.update(business.id,{name:name.trim().toUpperCase(),legal_name:legal||null,document:document||null,tax_regime:taxRegime||null,phone:phone||null,email:email||null,address:address||null,city:city||null,state:state||null,notes:notes||null}):await table.insert({name:name.trim().toUpperCase(),legal_name:legal||null,document:document||null,tax_regime:taxRegime||null,phone:phone||null,email:email||null,address:address||null,city:city||null,state:state||null,notes:notes||null});onSelected(row.id);setOpen(false);toast.success("EMPRESA SALVA")}catch(e){toast.error(e instanceof Error?e.message:"ERRO AO SALVAR EMPRESA")}}
