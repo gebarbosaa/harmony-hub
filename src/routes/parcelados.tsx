@@ -20,7 +20,8 @@ type Category = { id:string; name:string; kind:string; household_id:string };
 type SortKey = "nome" | "valor" | "restantes" | "data";
 export const Route = createFileRoute("/parcelados")({ head:()=>({meta:[{title:"PARCELADOS — HARMONY HUB"}]}), component:InstallmentsPage });
 
-const TODAY_MONTH = new Date().toISOString().slice(0,7);
+const nowForMonth = new Date();
+const TODAY_MONTH = `${nowForMonth.getFullYear()}-${String(nowForMonth.getMonth()+1).padStart(2,"0")}`;
 
 function InstallmentsPage(){const isDesktop = useIsDesktop();
  const {profile}=useAuth();
@@ -29,7 +30,7 @@ function InstallmentsPage(){const isDesktop = useIsDesktop();
  const paymentsQuery=useHouseholdPaymentMethods(); const payments=paymentsQuery.rows as Payment[];
  const categories=useHouseholdTable<Category>("categories","id,name,kind,household_id","name");
  const categoryOptions=useMemo(()=>categories.rows.map(c=>c.name.toUpperCase()).filter(Boolean),[categories.rows]);
- const [formOpen,setFormOpen]=useState(false); const [editing,setEditing]=useState<Row|null>(null); const [name,setName]=useState(""); const [total,setTotal]=useState(""); const [count,setCount]=useState("2"); const [category,setCategory]=useState(""); const [purchaseDate,setPurchaseDate]=useState(new Date().toISOString().slice(0,10)); const [paymentId,setPaymentId]=useState(""); const [responsible,setResponsible]=useState("");
+ const [formOpen,setFormOpen]=useState(false); const [editing,setEditing]=useState<Row|null>(null); const [name,setName]=useState(""); const [total,setTotal]=useState(""); const [count,setCount]=useState("2"); const [category,setCategory]=useState(""); const [purchaseDate,setPurchaseDate]=useState(`${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,"0")}-${String(new Date().getDate()).padStart(2,"0")}`); const [paymentId,setPaymentId]=useState(""); const [responsible,setResponsible]=useState("");
  const selectedPayment=useMemo(()=>payments.find(p=>p.id===paymentId)??null,[payments,paymentId]);
  useEffect(()=>{if(!paymentId&&payments[0])setPaymentId(payments[0].id);if(paymentId&&payments.length&&!payments.some(p=>p.id===paymentId))setPaymentId(payments[0]?.id||"")},[paymentId,payments]);
  useEffect(()=>{if(!categoryOptions.includes(category))setCategory(categoryOptions[0]||"")},[categoryOptions,category]);
