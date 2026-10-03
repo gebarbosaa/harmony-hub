@@ -66,7 +66,7 @@ function EmpresarialPage(){
  {tab==="PRODUÇÃO"&&<ProductionTab business={business} rows={bprod} products={bp} table={productions} ingredients={bi}/>}
  {tab==="VENDAS"&&<SalesTab business={business} rows={bsa} products={bp} table={sales} paymentMethods={personalPayments.rows} accounts={personalAccounts.rows}/>}
  {tab==="FINANCEIRO"&&<FinanceTab business={business} cash={bc} cashTable={cash} categories={personalCategories.rows} paymentMethods={personalPayments.rows} accounts={personalAccounts.rows}/>}
- {tab==="LUCRO_PRESUMIDO"&&<PresumedProfitTab sales={bsa} cash={bc}/> }
+ {tab==="LUCRO_PRESUMIDO"&&<PresumedProfitTab sales={bsa}/> }
  </>}</div>
 }
 
@@ -165,7 +165,7 @@ function SalesTab({business,rows,products,table,paymentMethods,accounts}:{busine
 }
 
 
-function PresumedProfitTab({sales,cash}:{sales:Sale[];cash:Cash[]}){
+function PresumedProfitTab({sales}:{sales:Sale[]}){
  const monthKey=todaySP().slice(0,7);
  const monthlySales=sales.filter(x=>x.sale_date?.startsWith(monthKey)&&x.status!=="CANCELADA").reduce((sum,x)=>sum+Number(x.total_amount||0),0);
  const [revenue,setRevenue]=useState(String(monthlySales||""));
