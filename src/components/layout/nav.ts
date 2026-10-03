@@ -22,7 +22,9 @@ export const personalNavItems = navItems;
 export const businessNavItems: NavItem[] = [
 {label:"DASHBOARD",to:"/empresarial#DASHBOARD",icon:LayoutDashboard},
 {label:"EMPRESA",to:"/empresarial#EMPRESA",icon:Factory},
-{label:"INSUMOS",to:"/empresarial#INSUMOS",icon:Wallet},
+{label:"INSUMOS / NECESSIDADES",to:"/empresarial#INSUMOS",icon:Wallet},
+{label:"ESTOQUE DE INSUMOS",to:"/empresarial#ESTOQUE_INSUMOS",icon:Wallet},
+{label:"COMPRAS",to:"/empresarial#COMPRAS",icon:ShoppingCart},
 {label:"RECEITAS",to:"/empresarial#RECEITAS",icon:ArrowUpCircle},
 {label:"PRECIFICAÇÃO",to:"/empresarial#PRECIFICAÇÃO",icon:Calculator},
 {label:"FORNECEDORES",to:"/empresarial#FORNECEDORES",icon:Users},
