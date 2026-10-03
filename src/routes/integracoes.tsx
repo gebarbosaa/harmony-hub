@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Bell, CalendarDays, CheckCircle2, RefreshCw } from "lucide-react";
+import { Bell, CalendarDays, CheckCircle2, RefreshCw, Link2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader, Panel, Tag } from "@/components/ui-kit";
 import { supabase } from "@/integrations/supabase/client";
@@ -41,7 +41,7 @@ function IntegracoesPage() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [push, setPush] = useState(false);
-  const [pushBusy, setPushBusy] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);\n  const [jarvisCode, setJarvisCode] = useState("");\n  const [jarvisBusy, setJarvisBusy] = useState(false);\n  const [jarvisConnected, setJarvisConnected] = useState(false);
 
   async function authFetch(url: string, init?: RequestInit) {
     const { data } = await supabase.auth.getSession();
@@ -61,7 +61,7 @@ function IntegracoesPage() {
       const response = await authFetch(fn("google-calendar-oauth") + "?action=status");
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Erro ao carregar o Google Calendar.");
-      setConnection(data.connection ?? null);
+      setConnection(data.connection ?? null);\n\n      const { data: currentUser } = await supabase.auth.getUser();\n      if (currentUser.user && profileHouseholdId()) {\n        const { data: jarvis } = await supabase.from("jarvis_integrations").select("id").eq("household_id", profileHouseholdId()!).eq("status", "connected").limit(1).maybeSingle();\n        setJarvisConnected(Boolean(jarvis));\n      }
 
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError) throw userError;
@@ -88,7 +88,7 @@ function IntegracoesPage() {
     }
   }
 
-  useEffect(() => {
+  function profileHouseholdId() { return (window as typeof window & { __harmonyHouseholdId?: string }).__harmonyHouseholdId ?? null; }\n\n  useEffect(() => {
     void load();
 
     const onMessage = (event: MessageEvent) => {
@@ -106,7 +106,7 @@ function IntegracoesPage() {
     return () => window.removeEventListener("message", onMessage);
   }, []);
 
-  async function connect() {
+  async function connectJarvis() {\n    if (!jarvisCode.trim()) { toast.error("Informe o código gerado no JARVIS."); return; }\n    setJarvisBusy(true);\n    try {\n      const { data: userData, error: userError } = await supabase.auth.getUser();\n      if (userError) throw userError;\n      if (!userData.user) throw new Error("Faça login novamente.");\n      const { data: profileData, error: profileError } = await supabase.from("profiles").select("household_id").eq("id", userData.user.id).maybeSingle();\n      if (profileError) throw profileError;\n      const householdId = profileData?.household_id;\n      if (!householdId) throw new Error("Nenhuma casa/grupo ativo encontrado.");\n      const response = await fetch("https://this-jarvis-5hlofueuv-gedograuuu.vercel.app/api/integrations/harmony/connect", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: jarvisCode, household_id: householdId, harmony_user_id: userData.user.id }) });\n      const data = await response.json();\n      if (!response.ok) throw new Error(data.error ?? "Não foi possível vincular.");\n      const { error: saveError } = await supabase.from("jarvis_integrations").upsert({ household_id: householdId, jarvis_token: data.token, jarvis_user_id: null, status: "connected", connected_at: new Date().toISOString(), updated_at: new Date().toISOString() }, { onConflict: "id" });\n      if (saveError) throw saveError;\n      setJarvisConnected(true); setJarvisCode(""); toast.success("JARVIS vinculado ao Harmony Hub.");\n    } catch (error) { toast.error(error instanceof Error ? error.message : "Erro ao vincular o JARVIS."); } finally { setJarvisBusy(false); }\n  }\n\n  async function connect() {
     try {
       const response = await authFetch(fn("google-calendar-start"));
       const data = await response.json();
@@ -284,7 +284,7 @@ function IntegracoesPage() {
         subtitle="LEMBRETES DE VENCIMENTOS E NOTIFICAÇÕES DO HARMONY HUB."
       />
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">\n\n        <Panel title="JARVIS — SECRETÁRIA">\n          <div className="space-y-4">\n            <div className="flex items-start gap-3 rounded-xl border bg-secondary/30 p-4">\n              <Link2 className="mt-0.5 h-5 w-5 text-primary" />\n              <div><p className="text-sm font-semibold">VINCULAR A SECRETÁRIA</p><p className="mt-1 text-xs text-muted-foreground">Use o código temporário gerado em Ajustes → Harmony Hub no JARVIS.</p></div>\n            </div>\n            {jarvisConnected ? <div className="flex items-center gap-2 rounded-xl border border-success/20 bg-success/5 p-3 text-xs"><CheckCircle2 className="h-4 w-4 text-success" />JARVIS VINCULADO</div> : <><input value={jarvisCode} onChange={e=>setJarvisCode(e.target.value.toUpperCase().slice(0,8))} maxLength={8} placeholder="CÓDIGO DE 8 CARACTERES" className="h-11 w-full rounded-xl border border-border bg-background px-3 text-center font-mono text-lg tracking-[0.2em] outline-none focus:border-primary" /><button onClick={()=>void connectJarvis()} disabled={jarvisBusy || jarvisCode.length!==8} className="gradient-primary w-full rounded-xl p-3 text-[10px] text-primary-foreground">{jarvisBusy ? "VINCULANDO..." : "VINCULAR JARVIS"}</button></>}\n          </div>\n        </Panel>
         <Panel title="GOOGLE CALENDAR">
           <div className="space-y-4">
             <div className="flex items-start gap-3 rounded-xl border bg-secondary/30 p-4">
