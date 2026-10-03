@@ -168,7 +168,7 @@ function SalesTab({business,rows,products,table,paymentMethods,accounts}:{busine
 function PresumedProfitTab({sales,cash}:{sales:Sale[];cash:Cash[]}){
  const monthKey=todaySP().slice(0,7);
  const monthlySales=sales.filter(x=>x.sale_date?.startsWith(monthKey)&&x.status!=="CANCELADA").reduce((sum,x)=>sum+Number(x.total_amount||0),0);
- const [revenue,setRevenue]=useState(String(monthlySales||monthlyEntries||""));
+ const [revenue,setRevenue]=useState(String(monthlySales||""));
  const [presumption,setPresumption]=useState("");
  const [irpjRate,setIrpjRate]=useState("15");
  const [csllRate,setCsllRate]=useState("");
