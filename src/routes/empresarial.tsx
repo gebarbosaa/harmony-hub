@@ -42,7 +42,7 @@ function EmpresarialPage(){
  const business=businesses.rows.find(x=>x.id===businessId)??businesses.rows[0]??null,activeId=business?.id??null;
  const filter=<T extends {business_id:string}>(rows:T[]):T[]=>activeId?rows.filter(x=>x.business_id===activeId):[];
  const bi=filter(ingredients.rows),br=filter(recipes.rows),bri=filter(recipeItems.rows),bp=filter(products.rows),bs=filter(suppliers.rows),bprod=filter(productions.rows),bsa=filter(sales.rows),bc=filter(cash.rows);
- const stockValue=bi.reduce((s,x)=>s+Number(x.stock_quantity)*Number(x.cost_per_base_unit),0),salesTotal=bsa.reduce((s,x)=>s+Number(x.total_amount),0),cashIn=bc.filter(x=>x.entry_type==="ENTRADA").reduce((s,x)=>s+Number(x.amount),0),cashOut=bc.filter(x=>x.entry_type==="SAIDA").reduce((s,x)=>s+Number(x.amount),0);
+ const stockValue=bi.reduce((s,x)=>s+Number(x.stock_quantity)*Number(x.cost_per_base_unit),0),monthKey=todaySP().slice(0,7),salesTotal=bsa.filter(x=>x.sale_date?.startsWith(monthKey)&&x.status!=="CANCELADA").reduce((s,x)=>s+Number(x.total_amount),0),cashIn=bc.filter(x=>x.entry_type==="ENTRADA").reduce((s,x)=>s+Number(x.amount),0),cashOut=bc.filter(x=>x.entry_type==="SAIDA").reduce((s,x)=>s+Number(x.amount),0);
  return <div className="space-y-5">
 
  {!activeId&&tab!=="EMPRESA"?<Panel><div className="py-10 text-center"><Building2 className="mx-auto mb-3 h-9 w-9 text-primary"/><p className="font-bold">CADASTRE SUA EMPRESA PRIMEIRO</p><p className="mt-1 text-sm text-muted-foreground">O módulo empresarial mantém estoque, receitas, produção e caixa separados do financeiro pessoal.</p><button className={saveBtnClass+" mt-4"} onClick={()=>setTab("EMPRESA")}><Plus className="h-4 w-4"/>CADASTRAR EMPRESA</button></div></Panel>:
