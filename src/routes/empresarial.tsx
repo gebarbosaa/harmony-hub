@@ -9,11 +9,11 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/empresarial")({ head: () => ({ meta: [{ title: "EMPRESARIAL — HARMONY HUB" }] }), component: EmpresarialPage });
-type Tab="DASHBOARD"|"EMPRESA"|"INSUMOS"|"ESTOQUE_INSUMOS"|"COMPRAS"|"RECEITAS"|"PRECIFICAÇÃO"|"FORNECEDORES"|"PRODUÇÃO"|"VENDAS"|"FINANCEIRO";
+type Tab="DASHBOARD"|"EMPRESA"|"INSUMOS"|"ESTOQUE_INSUMOS"|"COMPRAS"|"RECEITAS"|"PRECIFICAÇÃO"|"FORNECEDORES"|"PRODUÇÃO"|"VENDAS"|"FINANCEIRO"|"LUCRO_PRESUMIDO";
 const tabs:{id:Tab;label:string;icon:typeof Building2}[]=[
 {id:"DASHBOARD",label:"DASHBOARD",icon:Wallet},{id:"EMPRESA",label:"EMPRESA",icon:Building2},{id:"INSUMOS",label:"INSUMOS / NECESSIDADES",icon:ClipboardList},{id:"ESTOQUE_INSUMOS",label:"ESTOQUE DE INSUMOS",icon:Package},{id:"COMPRAS",label:"COMPRAS",icon:ShoppingCart},
 {id:"RECEITAS",label:"RECEITAS",icon:ChefHat},{id:"PRECIFICAÇÃO",label:"PRECIFICAÇÃO",icon:Calculator},{id:"FORNECEDORES",label:"FORNECEDORES",icon:Users},
-{id:"PRODUÇÃO",label:"PRODUÇÃO / ESTOQUE",icon:Factory},{id:"VENDAS",label:"VENDAS",icon:ShoppingCart},{id:"FINANCEIRO",label:"FINANCEIRO",icon:Wallet}];
+{id:"PRODUÇÃO",label:"PRODUÇÃO / ESTOQUE",icon:Factory},{id:"VENDAS",label:"VENDAS",icon:ShoppingCart},{id:"FINANCEIRO",label:"FINANCEIRO",icon:Wallet},{id:"LUCRO_PRESUMIDO",label:"LUCRO PRESUMIDO",icon:Calculator}];
 type Business={id:string;household_id:string;name:string;legal_name:string|null;document:string|null;tax_regime:string|null;phone:string|null;email:string|null;address:string|null;city:string|null;state:string|null;notes:string|null};
 type Ingredient={id:string;household_id:string;business_id:string;supplier_id:string|null;name:string;category:string|null;base_unit:"G"|"ML"|"UN";purchase_quantity:number;purchase_unit:string;purchase_cost:number;cost_per_base_unit:number;stock_quantity:number;minimum_stock:number;notes:string|null};
 type Recipe={id:string;household_id:string;business_id:string;name:string;category:string|null;yield_quantity:number;yield_unit:string;preparation:string|null;notes:string|null};
@@ -66,6 +66,7 @@ function EmpresarialPage(){
  {tab==="PRODUÇÃO"&&<ProductionTab business={business} rows={bprod} products={bp} table={productions} ingredients={bi}/>}
  {tab==="VENDAS"&&<SalesTab business={business} rows={bsa} products={bp} table={sales} paymentMethods={personalPayments.rows} accounts={personalAccounts.rows}/>}
  {tab==="FINANCEIRO"&&<FinanceTab business={business} cash={bc} cashTable={cash} categories={personalCategories.rows} paymentMethods={personalPayments.rows} accounts={personalAccounts.rows}/>}
+ {tab==="LUCRO_PRESUMIDO"&&<PresumedProfitTab sales={bsa} cash={bc}/> }
  </>}</div>
 }
 
@@ -161,6 +162,55 @@ function SalesTab({business,rows,products,table,paymentMethods,accounts}:{busine
  useEffect(()=>{if(!paymentMethods.some(p=>p.id===paymentMethod))setPaymentMethod(paymentMethods[0]?.id??"")},[paymentMethods,paymentMethod]);
  async function save(){if(!business||!product||num(qty)<=0)return;try{const total=num(price)*num(qty);const selected=paymentMethods.find(p=>p.id===paymentMethod);const sale=await table.insert({business_id:business.id,sale_date:date,customer_name:customer||null,payment_method:selected?.name??null,total_amount:total,status:"RECEBIDA"});const {error}=await supabase.from("business_sale_items").insert({household_id:sale.household_id,business_id:business.id,sale_id:sale.id,product_id:product,quantity:num(qty),unit_price:num(price)});if(error)throw error;setOpen(false);toast.success("VENDA REGISTRADA")}catch(e){toast.error(e instanceof Error?e.message:"ERRO")}}
  return <div className="space-y-4"><PageHeader title="VENDAS" subtitle="PRODUTO, QUANTIDADE, PREÇO E RECEITA GERADA." action={<button className={btnClass} onClick={()=>setOpen(v=>!v)}><Plus className="h-4 w-4"/>{open?"FECHAR FORMULÁRIO":"NOVA VENDA"}</button>}/><FormShell title="NOVA VENDA" open={open} setOpen={setOpen}><div className="grid gap-3 md:grid-cols-4"><Field label="PRODUTO"><select className={inputClass} value={product} onChange={e=>{setProduct(e.target.value);const p=products.find(x=>x.id===e.target.value);if(p)setPrice(String(p.price))}}><option value="">SELECIONE</option>{products.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></Field><Field label="QUANTIDADE"><input className={inputClass} value={qty} onChange={e=>setQty(e.target.value)}/></Field><Field label="PREÇO UNITÁRIO"><input className={inputClass} value={price} onChange={e=>setPrice(e.target.value)}/></Field><Field label="FORMA DE PAGAMENTO"><select className={inputClass} value={paymentMethod} onChange={e=>setPaymentMethod(e.target.value)}><option value="">SELECIONE</option>{paymentMethods.map(p=><option key={p.id} value={p.id}>{p.name}{p.account_id?` — ${accounts.find(a=>a.id===p.account_id)?.name??"CONTA"}`:""}</option>)}</select></Field><Field label="CLIENTE"><input className={inputClass} value={customer} onChange={e=>setCustomer(e.target.value)}/></Field></div><button className={saveBtnClass+" mt-4"} onClick={()=>void save()}><ShoppingCart className="h-4 w-4"/>REGISTRAR VENDA</button></FormShell><Panel title="VENDAS"><div className="divide-y divide-border">{rows.map(x=><div key={x.id} className="flex justify-between py-3"><div><p className="font-semibold">{x.customer_name??"VENDA"}</p><p className="text-[10px] text-muted-foreground">{x.sale_date} · {x.status}</p></div><p className="font-bold text-success">{money(Number(x.total_amount))}</p></div>)}</div></Panel></div>
+}
+
+
+function PresumedProfitTab({sales,cash}:{sales:Sale[];cash:Cash[]}){
+ const monthKey=todaySP().slice(0,7);
+ const monthlySales=sales.filter(x=>x.sale_date?.startsWith(monthKey)&&x.status!=="CANCELADA").reduce((sum,x)=>sum+Number(x.total_amount||0),0);
+ const monthlyEntries=cash.filter(x=>x.entry_date?.startsWith(monthKey)&&x.entry_type==="ENTRADA").reduce((sum,x)=>sum+Number(x.amount||0),0);
+ const [revenue,setRevenue]=useState(String(monthlySales||monthlyEntries||""));
+ const [presumption,setPresumption]=useState("");
+ const [irpjRate,setIrpjRate]=useState("15");
+ const [csllRate,setCsllRate]=useState("");
+ const [pisRate,setPisRate]=useState("");
+ const [cofinsRate,setCofinsRate]=useState("");
+ const [serviceOrGoodsRate,setServiceOrGoodsRate]=useState("");
+ const gross=Math.max(0,num(revenue));
+ const base=Math.max(0,num(presumption));
+ const irpj=Math.max(0,gross*base/100*num(irpjRate)/100);
+ const csll=Math.max(0,gross*base/100*num(csllRate)/100);
+ const pis=Math.max(0,gross*num(pisRate)/100);
+ const cofins=Math.max(0,gross*num(cofinsRate)/100);
+ const localTax=Math.max(0,gross*num(serviceOrGoodsRate)/100);
+ const configured=presumption!==""&&irpjRate!==""&&csllRate!==""&&pisRate!==""&&cofinsRate!==""&&serviceOrGoodsRate!=="";
+ const total=configured?irpj+csll+pis+cofins+localTax:0;
+ return <div className="space-y-4">
+  <PageHeader title="LUCRO PRESUMIDO" subtitle="SIMULAÇÃO MENSAL DE TRIBUTOS SOBRE A RECEITA INFORMADA. CONFIRA AS ALÍQUOTAS COM SUA CONTABILIDADE."/>
+  <div className="rounded-xl border border-primary/25 bg-primary/5 p-4 text-sm"><p className="font-semibold">Antes de calcular</p><p className="mt-1 text-muted-foreground">As bases de presunção e alíquotas dependem da atividade, do município, do tipo de receita e da situação fiscal. Os campos não configurados ficam sem estimativa; esta tela não substitui a apuração contábil nem inclui automaticamente adicionais, retenções ou regras específicas.</p></div>
+  <Panel title="BASE DE CÁLCULO — MÊS ATUAL">
+   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <Field label="RECEITA BRUTA DO MÊS (R$)"><input className={inputClass} inputMode="decimal" value={revenue} onChange={e=>setRevenue(e.target.value)} placeholder="0,00"/></Field>
+    <Field label="BASE DE PRESUNÇÃO (%)"><input className={inputClass} inputMode="decimal" value={presumption} onChange={e=>setPresumption(e.target.value)} placeholder="Defina conforme a atividade"/></Field>
+    <Field label="IRPJ (%)"><input className={inputClass} inputMode="decimal" value={irpjRate} onChange={e=>setIrpjRate(e.target.value)} placeholder="Alíquota aplicável"/></Field>
+    <Field label="CSLL (%)"><input className={inputClass} inputMode="decimal" value={csllRate} onChange={e=>setCsllRate(e.target.value)} placeholder="Defina conforme a atividade"/></Field>
+    <Field label="PIS (%)"><input className={inputClass} inputMode="decimal" value={pisRate} onChange={e=>setPisRate(e.target.value)} placeholder="Alíquota aplicável"/></Field>
+    <Field label="COFINS (%)"><input className={inputClass} inputMode="decimal" value={cofinsRate} onChange={e=>setCofinsRate(e.target.value)} placeholder="Alíquota aplicável"/></Field>
+    <Field label="ISS OU ICMS APLICÁVEL (%)"><input className={inputClass} inputMode="decimal" value={serviceOrGoodsRate} onChange={e=>setServiceOrGoodsRate(e.target.value)} placeholder="Informe o tributo aplicável"/></Field>
+   </div>
+   <p className="mt-3 text-xs text-muted-foreground">Receita registrada em Vendas neste mês: {money(monthlySales)}. A receita acima pode ser ajustada para incluir outras receitas tributáveis; a tela não soma automaticamente vendas e caixa para evitar duplicidade.</p>
+  </Panel>
+  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+   <StatCard label="BASE PRESUMIDA" value={presumption!==""?money(gross*base/100):"Configure a base"} tone="info"/>
+   <StatCard label="TRIBUTOS ESTIMADOS" value={configured?money(total):"Preencha as alíquotas"} tone="primary"/>
+   <StatCard label="ALÍQUOTA EFETIVA ESTIMADA" value={configured&&gross>0?((total/gross)*100).toLocaleString("pt-BR",{maximumFractionDigits:2})+"%":"—"} tone="success"/>
+  </div>
+  <Panel title="COMPOSIÇÃO ESTIMADA">
+   <div className="divide-y divide-border">
+    {([["IRPJ",irpj,irpjRate!==""],["CSLL",csll,csllRate!==""],["PIS",pis,pisRate!==""],["COFINS",cofins,cofinsRate!==""],["ISS / ICMS",localTax,serviceOrGoodsRate!==""]] as [string,number,boolean][]).map(([label,value,isConfigured])=><div key={label} className="flex items-center justify-between gap-4 py-3"><span className="text-sm font-medium">{label}</span><span className="text-sm font-semibold">{isConfigured?money(value):"Configure a alíquota"}</span></div>)}
+   </div>
+  </Panel>
+ </div>
 }
 
 function FinanceTab({business,cash,cashTable,categories,paymentMethods,accounts}:{business:Business|null;cash:Cash[];cashTable:TableApi<Cash>;categories:PersonalCategory[];paymentMethods:PersonalPayment[];accounts:PersonalAccount[]}){
