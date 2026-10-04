@@ -198,7 +198,7 @@ function ThirdPartiesPage() {
       <StatCard label="REEMBOLSADO" value={formatCurrency(reimbursed)} tone="success" />
       <StatCard label="A REEMBOLSAR" value={formatCurrency(pending)} tone="warning" />
     </div>
-    {open && <Panel title="REGISTRAR GASTO DE TERCEIRO"><div className="grid gap-3 md:grid-cols-2">
+    {open && <Panel title="DADOS DO GASTO DE TERCEIRO"><div className="grid gap-3 md:grid-cols-2">
       <label className="md:col-span-2"><span className="label-caps mb-1.5 block text-[9px] font-semibold text-muted-foreground">TERCEIRO</span><div className="flex gap-2"><select value={partyId} onChange={(e) => setPartyId(e.target.value)} className="w-full rounded-xl border bg-background px-3 py-2.5 text-sm"><option value="">SELECIONE</option>{parties.rows.filter((p) => p.active).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select><button type="button" onClick={() => setPartyModal(true)} className="rounded-xl border px-3" title="Cadastrar terceiro"><Plus className="h-4 w-4"/></button></div></label>
       <label><span className="label-caps mb-1.5 block text-[9px] font-semibold text-muted-foreground">DESCRIÇÃO</span><input value={description} onChange={(e) => setDescription(e.target.value)} className="w-full rounded-xl border bg-background px-3 py-2.5 text-sm" placeholder="EX.: COMPRA DO JOÃO"/></label>
       <label><span className="label-caps mb-1.5 block text-[9px] font-semibold text-muted-foreground">VALOR</span><input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full rounded-xl border bg-background px-3 py-2.5 text-sm" placeholder="0,00"/></label>
