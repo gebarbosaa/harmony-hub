@@ -6,6 +6,7 @@ export const navItems: NavItem[] = [
 {label:"RECEITAS",to:"/receitas",icon:ArrowUpCircle},
 {label:"DESPESAS",to:"/despesas",icon:ArrowDownCircle},
 {label:"TERCEIROS",to:"/terceiros",icon:UserRound},
+{label:"TERCEIROS",to:"/terceiros",icon:UserRound},
 {label:"IMPORTAÇÃO",to:"/importacao",icon:Upload},
 {label:"CONTAS A PAGAR",to:"/contas-a-pagar",icon:Wallet},
 {label:"CUSTOS FIXOS",to:"/custos-fixos",icon:Repeat},
