@@ -67,13 +67,23 @@ function ThirdPartiesPage() {
     async function loadThirdPartyInstallments() {
       try {
         const client = (await import("@/integrations/supabase/client")).supabase;
+        const expenseIds = expenses.rows.map((expense) => expense.id).filter(Boolean);
+        if (!expenseIds.length) {
+          if (!cancelled) { setThirdPartyInstallmentIds(new Set()); setThirdPartyInstallmentTxs([]); }
+          return;
+        }
+        // Use the explicit third_party_expense_id link as the source of truth.
+        // This avoids depending on the first installment transaction or on a
+        // separate lookup that can be filtered by RLS before the UI resolves.
         const { data: linkedTransactions, error: transactionError } = await client
           .from("transactions")
           .select("id,source_id,source_index,source_total,amount,paid,date,description,third_party_expense_id")
           .eq("source_type", "INSTALLMENT")
-          .not("third_party_expense_id", "is", null);
+          .in("third_party_expense_id", expenseIds);
         if (transactionError) throw transactionError;
-        const installmentIds = (linkedTransactions ?? []).map((row) => row.source_id).filter((id): id is string => Boolean(id));
+        const installmentIds = [...new Set((linkedTransactions ?? [])
+          .map((row) => row.source_id)
+          .filter((id): id is string => Boolean(id)))];
         if (!installmentIds.length) {
           if (!cancelled) { setThirdPartyInstallmentIds(new Set()); setThirdPartyInstallmentTxs([]); }
           return;
@@ -89,7 +99,8 @@ function ThirdPartiesPage() {
           setThirdPartyInstallmentIds(new Set(installmentIds));
           setThirdPartyInstallmentTxs((allInstallmentTransactions ?? []) as ThirdPartyInstallmentTx[]);
         }
-      } catch {
+      } catch (error) {
+        console.error("ERRO AO CARREGAR PARCELAMENTOS DE TERCEIROS", error);
         if (!cancelled) { setThirdPartyInstallmentIds(new Set()); setThirdPartyInstallmentTxs([]); }
       }
     }
