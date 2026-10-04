@@ -61,7 +61,7 @@ function ThirdPartiesPage() {
   }).map((installment) => {
     const expense = expenses.rows.find((item) => item.transaction_id);
     return expense ? { expense, installment } : null;
-  }).filter(Boolean) as Array<{expense: Expense; installment: Installment}>;
+  }).filter(Boolean) as Array<{expense: Expense; installment: Installment}>);
   const total = useMemo(() => expenseRows.reduce((sum, row) => sum + Number(row.amount), 0), [expenseRows]);
   const pending = useMemo(() => expenseRows.reduce((sum, row) => sum + Math.max(Number(row.amount) - Number(row.reimbursed_amount), 0), 0), [expenseRows]);
   const reimbursed = useMemo(() => expenseRows.reduce((sum, row) => sum + Number(row.reimbursed_amount), 0), [expenseRows]);
@@ -206,7 +206,7 @@ function ThirdPartiesPage() {
         reimbursed_amount: reimbursedValue,
         reimbursed_at: reimbursedValue > 0 ? date : null,
         notes: notes.trim() || null,
-        paid,
+        paid: true,
       });
       if (createdExpense?.id && transactionId) {
         const client = (await import("@/integrations/supabase/client")).supabase;
