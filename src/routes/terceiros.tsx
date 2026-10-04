@@ -55,7 +55,10 @@ function ThirdPartiesPage() {
   const [reimbursementStatus, setReimbursementStatus] = useState<Expense["reimbursement_status"]>("PENDENTE");
   const [reimbursedAmount, setReimbursedAmount] = useState("0");
   const [notes, setNotes] = useState("");
+  type ThirdPartyInstallmentTx = { id: string; source_id: string; source_index: number; source_total: number; amount: number; paid: boolean; date: string; description: string; third_party_expense_id: string | null; };
+  type ThirdPartyInstallmentRow = { installment: Installment; expense: Expense; party: ThirdParty | undefined; transactions: ThirdPartyInstallmentTx[] };
   const [thirdPartyInstallmentIds, setThirdPartyInstallmentIds] = useState<Set<string>>(new Set());
+  const [thirdPartyInstallmentTxs, setThirdPartyInstallmentTxs] = useState<ThirdPartyInstallmentTx[]>([]);
 
   const expenseRows = useMemo(() => expenses.rows.filter((row) => row.date.startsWith(month)), [expenses.rows, month]);
 
@@ -64,39 +67,55 @@ function ThirdPartiesPage() {
     async function loadThirdPartyInstallments() {
       try {
         const client = (await import("@/integrations/supabase/client")).supabase;
-        const { data: thirdPartyExpenses, error: expenseError } = await client
+        const { data: linkedExpenses, error: expenseError } = await client
           .from("third_party_expenses")
-          .select("transaction_id")
+          .select("id,third_party_id,transaction_id")
           .not("transaction_id", "is", null);
         if (expenseError) throw expenseError;
-        const transactionIds = (thirdPartyExpenses ?? [])
-          .map((row) => row.transaction_id)
-          .filter((id): id is string => Boolean(id));
+        const transactionIds = (linkedExpenses ?? []).map((row) => row.transaction_id).filter((id): id is string => Boolean(id));
         if (!transactionIds.length) {
-          if (!cancelled) setThirdPartyInstallmentIds(new Set());
+          if (!cancelled) { setThirdPartyInstallmentIds(new Set()); setThirdPartyInstallmentTxs([]); }
           return;
         }
         const { data: linkedTransactions, error: transactionError } = await client
           .from("transactions")
-          .select("source_id")
+          .select("id,source_id,source_index,source_total,amount,paid,date,description,third_party_expense_id")
           .eq("source_type", "INSTALLMENT")
           .in("id", transactionIds);
         if (transactionError) throw transactionError;
-        if (!cancelled) setThirdPartyInstallmentIds(new Set((linkedTransactions ?? []).map((row) => row.source_id).filter((id): id is string => Boolean(id))));
+        const installmentIds = (linkedTransactions ?? []).map((row) => row.source_id).filter((id): id is string => Boolean(id));
+        if (!installmentIds.length) {
+          if (!cancelled) { setThirdPartyInstallmentIds(new Set()); setThirdPartyInstallmentTxs([]); }
+          return;
+        }
+        const { data: allInstallmentTransactions, error: allTxError } = await client
+          .from("transactions")
+          .select("id,source_id,source_index,source_total,amount,paid,date,description,third_party_expense_id")
+          .eq("source_type", "INSTALLMENT")
+          .in("source_id", installmentIds)
+          .order("source_index", { ascending: true });
+        if (allTxError) throw allTxError;
+        if (!cancelled) {
+          setThirdPartyInstallmentIds(new Set(installmentIds));
+          setThirdPartyInstallmentTxs((allInstallmentTransactions ?? []) as ThirdPartyInstallmentTx[]);
+        }
       } catch {
-        if (!cancelled) setThirdPartyInstallmentIds(new Set());
+        if (!cancelled) { setThirdPartyInstallmentIds(new Set()); setThirdPartyInstallmentTxs([]); }
       }
     }
     void loadThirdPartyInstallments();
     return () => { cancelled = true; };
-  }, [expenses.rows]);
+  }, [expenses.rows, installments.rows]);
 
-  const thirdPartyInstallmentRows = useMemo(() => installments.rows.filter((installment) => {
-    return thirdPartyInstallmentIds.has(installment.id) && Number(installment.paid_count) < Number(installment.installments_count);
-  }).map((installment) => {
-    const expense = expenses.rows.find((item) => item.transaction_id && thirdPartyInstallmentIds.has(installment.id));
-    return expense ? { expense, installment } : null;
-  }).filter(Boolean) as Array<{expense: Expense; installment: Installment}>);
+  const thirdPartyInstallmentRows = useMemo(() => installments.rows
+    .filter((installment) => thirdPartyInstallmentIds.has(installment.id))
+    .map((installment) => {
+      const expense = expenses.rows.find((item) => item.transaction_id && thirdPartyInstallmentTxs.some((tx) => tx.id === item.transaction_id && tx.source_id === installment.id));
+      const party = expense ? parties.rows.find((item) => item.id === expense.third_party_id) : undefined;
+      const transactions = thirdPartyInstallmentTxs.filter((tx) => tx.source_id === installment.id);
+      return expense ? { installment, expense, party, transactions } : null;
+    })
+    .filter(Boolean) as ThirdPartyInstallmentRow[]);
 
   const total = useMemo(() => expenseRows.reduce((sum, row) => sum + Number(row.amount), 0), [expenseRows]);
   const pending = useMemo(() => expenseRows.reduce((sum, row) => sum + Math.max(Number(row.amount) - Number(row.reimbursed_amount), 0), 0), [expenseRows]);
@@ -283,6 +302,18 @@ function ThirdPartiesPage() {
     }
   }
 
+  async function toggleInstallmentPaid(tx: ThirdPartyInstallmentTx, nextPaid: boolean) {
+    try {
+      const client = (await import("@/integrations/supabase/client")).supabase;
+      const { error } = await client.from("transactions").update({ paid: nextPaid }).eq("id", tx.id);
+      if (error) throw error;
+      setThirdPartyInstallmentTxs((current) => current.map((item) => item.id === tx.id ? { ...item, paid: nextPaid } : item));
+      toast.success(nextPaid ? `PARCELA ${tx.source_index} MARCADA COMO PAGA` : `PARCELA ${tx.source_index} MARCADA COMO NÃO PAGA`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "ERRO AO ATUALIZAR PARCELA");
+    }
+  }
+
   async function markReimbursed(row: Expense) {
     try {
       await expenses.update(row.id, { reimbursement_status: "REEMBOLSADO", reimbursed_amount: Number(row.amount), reimbursed_at: new Date().toISOString().slice(0, 10) });
@@ -340,7 +371,39 @@ function ThirdPartiesPage() {
         <button type="button" onClick={() => openEditParty(party)} className="shrink-0 rounded-lg border px-3 py-2 text-[9px] font-bold">EDITAR</button>
       </div>)}</div>}
     </Panel>
-    {thirdPartyInstallmentRows.length > 0 && <Panel title="PARCELAMENTOS DE TERCEIROS"><div className="space-y-3">{thirdPartyInstallmentRows.map(({ expense, installment }) => <div key={installment.id} className="rounded-xl border p-4"><div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between"><div><p className="text-sm font-semibold">{installment.name}</p><p className="text-[10px] text-muted-foreground">{expense.description} · {installment.installments_count}X · {installment.purchase_date}</p></div><div className="text-right"><p className="font-bold text-danger">-{formatCurrency(Number(installment.total_amount))}</p><p className="text-[10px] text-muted-foreground">PARCELA {Math.min(Number(installment.paid_count)+1,Number(installment.installments_count))}/{Number(installment.installments_count)}</p></div></div></div>)}</div></Panel>}
+    {thirdPartyInstallmentRows.length > 0 && <Panel title="PARCELAMENTOS DE TERCEIROS">
+      <div className="space-y-4">
+        {thirdPartyInstallmentRows.map(({ expense, installment, party, transactions }) => {
+          const paidCount = transactions.filter((tx) => tx.paid).length;
+          const totalCount = Math.max(Number(installment.installments_count), transactions.length);
+          const installmentValue = transactions[0]?.amount ? Number(transactions[0].amount) : Number(installment.total_amount) / Math.max(1, Number(installment.installments_count));
+          return <div key={installment.id} className="rounded-2xl border p-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-sm font-bold">{party?.name ?? "TERCEIRO"}</p>
+                <p className="text-xs text-muted-foreground">{expense.description} · {paidCount}/{totalCount} PAGAS</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-bold text-danger">{formatCurrency(installmentValue)} / PARCELA</p>
+                <p className="text-[10px] text-muted-foreground">{formatCurrency(Number(installment.total_amount))} TOTAL</p>
+              </div>
+            </div>
+            <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {transactions.map((tx) => <label key={tx.id} className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border px-3 py-2.5 transition hover:border-primary/50">
+                <span className="flex min-w-0 items-center gap-3">
+                  <input type="checkbox" checked={tx.paid} onChange={(e) => void toggleInstallmentPaid(tx, e.target.checked)} className="h-4 w-4 accent-primary" />
+                  <span className="min-w-0">
+                    <span className="block text-xs font-semibold">PARCELA {tx.source_index}/{tx.source_total}</span>
+                    <span className="block text-[10px] text-muted-foreground">{tx.date}</span>
+                  </span>
+                </span>
+                <span className={tx.paid ? "text-[10px] font-bold text-success" : "text-[10px] font-bold text-muted-foreground"}>{formatCurrency(Number(tx.amount))}</span>
+              </label>)}
+            </div>
+          </div>;
+        })}
+      </div>
+    </Panel>}
     <Panel title={`GASTOS DE TERCEIROS — ${month}`}>
       {expenseRows.length === 0 ? <div className="py-12 text-center"><UserRound className="mx-auto mb-3 h-8 w-8 text-muted-foreground"/><p className="text-sm font-semibold">NENHUM GASTO DE TERCEIRO</p><p className="mt-1 text-xs text-muted-foreground">Registre quem gastou, quanto, onde saiu o dinheiro e se houve reembolso.</p></div> :
       <div className="space-y-3">{expenseRows.map((row) => { const party = parties.rows.find((p) => p.id === row.third_party_id); const payment = payments.rows.find((p) => p.id === row.payment_method_id); const card = cards.rows.find((c) => c.id === row.card_id); const account = accounts.rows.find((a) => a.id === row.account_id); return <div key={row.id} className="rounded-xl border p-4"><div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><UserRound className="h-4 w-4 text-primary"/><p className="text-sm font-semibold">{party?.name ?? "TERCEIRO"}</p><Tag>{row.category}</Tag><Tag tone={row.reimbursement_status === "REEMBOLSADO" ? "success" : row.reimbursement_status === "PARCIAL" ? "warning" : "danger"}>{row.reimbursement_status}</Tag></div><p className="mt-1 text-xs">{row.description}</p><div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground"><span>{row.date}</span>{payment && <span>• {payment.name}</span>}{card && <span>• {card.name}</span>}{account && <span>• {account.name}</span>}</div></div><div className="flex items-center gap-3"><div className="text-right"><p className="text-sm font-bold text-danger">-{formatCurrency(Number(row.amount))}</p><p className="text-[10px] text-muted-foreground">REEMBOLSADO {formatCurrency(Number(row.reimbursed_amount))}</p></div><label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-[9px] font-bold"><input type="checkbox" checked={row.paid} onChange={(e) => void togglePaid(row, e.target.checked)} className="h-4 w-4"/><span>{row.paid ? "PAGO" : "NÃO PAGO"}</span></label>{row.reimbursement_status !== "REEMBOLSADO" && <button type="button" onClick={() => void markReimbursed(row)} className="rounded-lg border px-3 py-2 text-[9px] font-bold text-success"><CheckCircle2 className="mr-1 inline h-3 w-3"/>REEMBOLSADO</button>}<button type="button" onClick={() => void removeExpense(row)} className="rounded-lg border px-3 py-2 text-[9px] font-bold text-danger"><X className="mr-1 inline h-3 w-3"/>EXCLUIR</button></div></div></div>})}</div>}
