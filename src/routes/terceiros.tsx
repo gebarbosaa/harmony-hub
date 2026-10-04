@@ -36,6 +36,9 @@ function ThirdPartiesPage() {
   const [open, setOpen] = useState(false);
   const [partyModal, setPartyModal] = useState(false);
   const [partyName, setPartyName] = useState("");
+  const [partyNotes, setPartyNotes] = useState("");
+  const [partyActive, setPartyActive] = useState(true);
+  const [editingParty, setEditingParty] = useState<ThirdParty | null>(null);
   const [partyId, setPartyId] = useState("");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
@@ -84,12 +87,37 @@ function ThirdPartiesPage() {
     if (!name) return toast.error("INFORME O NOME DO TERCEIRO");
     if (parties.rows.some((p) => p.name.toUpperCase() === name)) return toast.error("ESSE TERCEIRO JÁ ESTÁ CADASTRADO");
     try {
-      const created = await parties.insert({ name, notes: null, active: true });
-      setPartyName("");
-      setPartyModal(false);
+      const created = await parties.insert({ name, notes: partyNotes.trim() || null, active: partyActive });
+      setPartyName(""); setPartyNotes(""); setPartyActive(true); setPartyModal(false);
       if (created?.id) setPartyId(String(created.id));
       toast.success("TERCEIRO CADASTRADO");
     } catch (error) { toast.error(error instanceof Error ? error.message : "ERRO AO CADASTRAR TERCEIRO"); }
+  }
+
+  function openEditParty(party: ThirdParty) {
+    setEditingParty(party);
+    setPartyName(party.name);
+    setPartyNotes(party.notes ?? "");
+    setPartyActive(party.active);
+    setPartyModal(true);
+  }
+
+  async function saveParty() {
+    const name = partyName.trim().toUpperCase();
+    if (!name) return toast.error("INFORME O NOME DO TERCEIRO");
+    const duplicate = parties.rows.some((p) => p.id !== editingParty?.id && p.name.toUpperCase() === name);
+    if (duplicate) return toast.error("ESSE TERCEIRO JÁ ESTÁ CADASTRADO");
+    try {
+      if (editingParty) {
+        await parties.update(editingParty.id, { name, notes: partyNotes.trim() || null, active: partyActive });
+        if (!partyActive && partyId === editingParty.id) setPartyId(parties.rows.find((p) => p.active && p.id !== editingParty.id)?.id ?? "");
+        toast.success("TERCEIRO ATUALIZADO");
+      } else {
+        await createParty();
+        return;
+      }
+      setPartyName(""); setPartyNotes(""); setPartyActive(true); setEditingParty(null); setPartyModal(false);
+    } catch (error) { toast.error(error instanceof Error ? error.message : "ERRO AO SALVAR TERCEIRO"); }
   }
 
   async function saveExpense() {
@@ -184,10 +212,17 @@ function ThirdPartiesPage() {
       <label className="md:col-span-2"><span className="label-caps mb-1.5 block text-[9px] font-semibold text-muted-foreground">OBSERVAÇÕES</span><textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="min-h-20 w-full rounded-xl border bg-background px-3 py-2.5 text-sm"/></label>
       <div className="flex gap-2 md:col-span-2"><button type="button" onClick={() => setOpen(false)} className="rounded-xl border px-4 py-2 text-[10px] font-semibold">CANCELAR</button><button type="button" onClick={() => void saveExpense()} className="gradient-primary rounded-xl px-4 py-2 text-[10px] font-bold text-primary-foreground">SALVAR GASTO</button></div>
     </div></Panel>}
+    <Panel title="TERCEIROS CADASTRADOS" aside={<button type="button" onClick={() => { setEditingParty(null); setPartyName(""); setPartyNotes(""); setPartyActive(true); setPartyModal(true); }} className="rounded-lg border px-3 py-1.5 text-[9px] font-bold">NOVO TERCEIRO</button>}>
+      {parties.rows.length === 0 ? <p className="py-5 text-center text-xs text-muted-foreground">NENHUM TERCEIRO CADASTRADO.</p> :
+      <div className="grid gap-2 md:grid-cols-2">{parties.rows.map((party) => <div key={party.id} className="flex items-center justify-between gap-3 rounded-xl border p-3">
+        <div className="min-w-0"><div className="flex items-center gap-2"><UserRound className="h-4 w-4 text-primary"/><p className="truncate text-sm font-semibold">{party.name}</p><Tag tone={party.active ? "success" : "danger"}>{party.active ? "ATIVO" : "INATIVO"}</Tag></div>{party.notes && <p className="mt-1 truncate text-[10px] text-muted-foreground">{party.notes}</p>}</div>
+        <button type="button" onClick={() => openEditParty(party)} className="shrink-0 rounded-lg border px-3 py-2 text-[9px] font-bold">EDITAR</button>
+      </div>)}</div>}
+    </Panel>
     <Panel title={`GASTOS DE TERCEIROS — ${month}`}>
       {expenseRows.length === 0 ? <div className="py-12 text-center"><UserRound className="mx-auto mb-3 h-8 w-8 text-muted-foreground"/><p className="text-sm font-semibold">NENHUM GASTO DE TERCEIRO</p><p className="mt-1 text-xs text-muted-foreground">Registre quem gastou, quanto, onde saiu o dinheiro e se houve reembolso.</p></div> :
       <div className="space-y-3">{expenseRows.map((row) => { const party = parties.rows.find((p) => p.id === row.third_party_id); const payment = payments.rows.find((p) => p.id === row.payment_method_id); const card = cards.rows.find((c) => c.id === row.card_id); const account = accounts.rows.find((a) => a.id === row.account_id); return <div key={row.id} className="rounded-xl border p-4"><div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><UserRound className="h-4 w-4 text-primary"/><p className="text-sm font-semibold">{party?.name ?? "TERCEIRO"}</p><Tag>{row.category}</Tag><Tag tone={row.reimbursement_status === "REEMBOLSADO" ? "success" : row.reimbursement_status === "PARCIAL" ? "warning" : "danger"}>{row.reimbursement_status}</Tag></div><p className="mt-1 text-xs">{row.description}</p><div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground"><span>{row.date}</span>{payment && <span>• {payment.name}</span>}{card && <span>• {card.name}</span>}{account && <span>• {account.name}</span>}</div></div><div className="flex items-center gap-3"><div className="text-right"><p className="text-sm font-bold text-danger">-{formatCurrency(Number(row.amount))}</p><p className="text-[10px] text-muted-foreground">REEMBOLSADO {formatCurrency(Number(row.reimbursed_amount))}</p></div>{row.reimbursement_status !== "REEMBOLSADO" && <button type="button" onClick={() => void markReimbursed(row)} className="rounded-lg border px-3 py-2 text-[9px] font-bold text-success"><CheckCircle2 className="mr-1 inline h-3 w-3"/>REEMBOLSADO</button>}<button type="button" onClick={() => void removeExpense(row)} className="rounded-lg border px-3 py-2 text-[9px] font-bold text-danger"><X className="mr-1 inline h-3 w-3"/>EXCLUIR</button></div></div></div>})}</div>}
     </Panel>
-    {partyModal && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"><div className="w-full max-w-md rounded-3xl bg-background p-5 shadow-2xl"><div className="mb-4 flex items-center justify-between"><p className="text-sm font-bold">NOVO TERCEIRO</p><button type="button" onClick={() => setPartyModal(false)}><X className="h-5 w-5"/></button></div><input autoFocus value={partyName} onChange={(e) => setPartyName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void createParty(); }} placeholder="NOME" className="w-full rounded-xl border p-3"/><button type="button" onClick={() => void createParty()} className="gradient-primary mt-3 w-full rounded-xl p-3 text-[10px] font-bold text-primary-foreground">CADASTRAR</button></div></div>}
+    {partyModal && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"><div className="w-full max-w-md rounded-3xl bg-background p-5 shadow-2xl"><div className="mb-4 flex items-center justify-between"><div><p className="label-caps text-[9px] text-primary">CADASTRO</p><p className="text-sm font-bold">{editingParty ? "EDITAR TERCEIRO" : "NOVO TERCEIRO"}</p></div><button type="button" onClick={() => { setPartyModal(false); setEditingParty(null); }}><X className="h-5 w-5"/></button></div><label className="block"><span className="label-caps mb-1.5 block text-[9px] font-semibold text-muted-foreground">NOME *</span><input autoFocus value={partyName} onChange={(e) => setPartyName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void saveParty(); }} placeholder="EX.: JOÃO SILVA" className="w-full rounded-xl border bg-background p-3"/></label><label className="mt-3 block"><span className="label-caps mb-1.5 block text-[9px] font-semibold text-muted-foreground">OBSERVAÇÕES</span><textarea value={partyNotes} onChange={(e) => setPartyNotes(e.target.value)} placeholder="EX.: IRMÃO, AMIGO, COLEGA..." className="min-h-20 w-full rounded-xl border bg-background p-3 text-sm"/></label><label className="mt-3 flex items-center justify-between rounded-xl border p-3"><span><span className="label-caps block text-[9px] font-semibold">STATUS</span><span className="text-xs text-muted-foreground">{partyActive ? "Pode ser usado em novos lançamentos" : "Oculto dos novos lançamentos"}</span></span><input type="checkbox" checked={partyActive} onChange={(e) => setPartyActive(e.target.checked)} className="h-4 w-4"/></label><div className="mt-3 flex gap-2"><button type="button" onClick={() => { setPartyModal(false); setEditingParty(null); }} className="w-full rounded-xl border p-3 text-[10px] font-bold">CANCELAR</button><button type="button" onClick={() => void saveParty()} className="gradient-primary w-full rounded-xl p-3 text-[10px] font-bold text-primary-foreground">{editingParty ? "SALVAR ALTERAÇÕES" : "CADASTRAR TERCEIRO"}</button></div></div></div>}
   </div>;
 }
