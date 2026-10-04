@@ -20,7 +20,7 @@ export const navItems: NavItem[] = [
 {label:"AJUSTES",to:"/ajustes",icon:Settings}];
 export const personalNavItems = navItems;
 export const businessNavItems: NavItem[] = [
-{label:"INÍCIO",to:"/empresarial#DASHBOARD",icon:LayoutDashboard},
+{label:"DASHBOARD",to:"/empresarial#DASHBOARD",icon:LayoutDashboard},
 {label:"EMPRESA",to:"/empresarial#EMPRESA",icon:Factory},
 {label:"INSUMOS / NECESSIDADES",to:"/empresarial#INSUMOS",icon:Wallet},
 {label:"ESTOQUE DE INSUMOS",to:"/empresarial#ESTOQUE_INSUMOS",icon:Wallet},
