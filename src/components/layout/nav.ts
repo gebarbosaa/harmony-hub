@@ -31,6 +31,7 @@ export const businessNavItems: NavItem[] = [
 {label:"PRODUÇÃO / ESTOQUE",to:"/empresarial#PRODUÇÃO",icon:Factory},
 {label:"VENDAS",to:"/empresarial#VENDAS",icon:ShoppingCart},
 {label:"FINANCEIRO",to:"/empresarial#FINANCEIRO",icon:Wallet},
+{label:"LUCRO PRESUMIDO",to:"/empresarial#LUCRO_PRESUMIDO",icon:Calculator},
 ];
 export const personalQuickAddOptions=[{label:"NOVA DESPESA",icon:ArrowDownCircle,kind:"DESPESA"},{label:"NOVA RECEITA",icon:ArrowUpCircle,kind:"RECEITA"},{label:"NOVA CONTA A PAGAR",icon:Wallet,kind:"CONTA_A_PAGAR"},{label:"NOVA PARCELA",icon:CreditCard,kind:"PARCELA"},{label:"NOVA ASSINATURA",icon:Repeat,kind:"ASSINATURA"},{label:"NOVO INVESTIMENTO",icon:TrendingUp,kind:"INVESTIMENTO"},{label:"NOVO RESGATE",icon:Undo2,kind:"RESGATE"},{label:"NOVA META",icon:Target,kind:"META"},{label:"NOVO CUSTO FIXO",icon:Repeat,kind:"CUSTO_FIXO"}] as const;
 export const businessQuickAddOptions=[
