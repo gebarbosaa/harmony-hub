@@ -34,6 +34,7 @@ function ThirdPartiesPage() {
   const accounts = useHouseholdTable<Account>("household_accounts", "id,name,institution,household_id", "name");
   const categories = useHouseholdTable<Category>("categories", "id,name,kind,household_id", "name");
   const installments = useHouseholdTable<Installment>("installments", "id,name,total_amount,installments_count,paid_count,purchase_date,household_id", "purchase_date");
+  const householdId = expenses.householdId;
 
   const [open, setOpen] = useState(false);
   const [partyModal, setPartyModal] = useState(false);
@@ -177,6 +178,7 @@ function ThirdPartiesPage() {
     const selectedParty = parties.rows.find((p) => p.id === partyId);
     const selectedPayment = payments.rows.find((p) => p.id === paymentId);
     if (!selectedParty || !selectedPayment) return toast.error("DADOS DO TERCEIRO OU PAGAMENTO NÃO ENCONTRADOS");
+    if (!householdId) return toast.error("SEU GRUPO FAMILIAR NÃO ESTÁ CONFIGURADO");
 
     let transactionId: string | null = null;
     let installmentId: string | null = null;
@@ -209,6 +211,7 @@ function ThirdPartiesPage() {
         transactionId = firstTransaction.id;
       } else {
         const transaction = await (await import("@/integrations/supabase/client")).supabase.from("transactions").insert({
+          household_id: householdId,
           date,
           description: description.trim().toUpperCase(),
           amount: value,
