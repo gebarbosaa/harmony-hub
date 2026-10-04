@@ -67,21 +67,11 @@ function ThirdPartiesPage() {
     async function loadThirdPartyInstallments() {
       try {
         const client = (await import("@/integrations/supabase/client")).supabase;
-        const { data: linkedExpenses, error: expenseError } = await client
-          .from("third_party_expenses")
-          .select("id,third_party_id,transaction_id")
-          .not("transaction_id", "is", null);
-        if (expenseError) throw expenseError;
-        const transactionIds = (linkedExpenses ?? []).map((row) => row.transaction_id).filter((id): id is string => Boolean(id));
-        if (!transactionIds.length) {
-          if (!cancelled) { setThirdPartyInstallmentIds(new Set()); setThirdPartyInstallmentTxs([]); }
-          return;
-        }
         const { data: linkedTransactions, error: transactionError } = await client
           .from("transactions")
           .select("id,source_id,source_index,source_total,amount,paid,date,description,third_party_expense_id")
           .eq("source_type", "INSTALLMENT")
-          .in("id", transactionIds);
+          .not("third_party_expense_id", "is", null);
         if (transactionError) throw transactionError;
         const installmentIds = (linkedTransactions ?? []).map((row) => row.source_id).filter((id): id is string => Boolean(id));
         if (!installmentIds.length) {
