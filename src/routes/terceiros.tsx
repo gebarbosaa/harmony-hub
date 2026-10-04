@@ -17,7 +17,7 @@ type Payment = { id: string; name: string; kind: string | null; card_id: string 
 type Card = { id: string; name: string; brand: string | null; last4: string | null; account_id: string | null; household_id: string };
 type Account = { id: string; name: string; institution: string | null; household_id: string };
 type Category = { id: string; name: string; kind: string; household_id: string };
-type Installment = { id: string; name: string; total_amount: number; installments_count: number; household_id: string };
+type Installment = { id: string; name: string; total_amount: number; installments_count: number; paid_count: number; purchase_date: string; household_id: string };
 type Expense = {
   id: string; third_party_id: string; transaction_id: string | null; date: string; description: string;
   amount: number; category: string; payment_method_id: string | null; card_id: string | null;
@@ -33,7 +33,7 @@ function ThirdPartiesPage() {
   const cards = useHouseholdTable<Card>("cards", "id,name,brand,last4,account_id,household_id", "name");
   const accounts = useHouseholdTable<Account>("household_accounts", "id,name,institution,household_id", "name");
   const categories = useHouseholdTable<Category>("categories", "id,name,kind,household_id", "name");
-  const installments = useHouseholdTable<Installment>("installments", "id,name,total_amount,installments_count,household_id", "purchase_date");
+  const installments = useHouseholdTable<Installment>("installments", "id,name,total_amount,installments_count,paid_count,purchase_date,household_id", "purchase_date");
 
   const [open, setOpen] = useState(false);
   const [partyModal, setPartyModal] = useState(false);
@@ -54,14 +54,49 @@ function ThirdPartiesPage() {
   const [reimbursementStatus, setReimbursementStatus] = useState<Expense["reimbursement_status"]>("PENDENTE");
   const [reimbursedAmount, setReimbursedAmount] = useState("0");
   const [notes, setNotes] = useState("");
+  const [thirdPartyInstallmentIds, setThirdPartyInstallmentIds] = useState<Set<string>>(new Set());
 
   const expenseRows = useMemo(() => expenses.rows.filter((row) => row.date.startsWith(month)), [expenses.rows, month]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadThirdPartyInstallments() {
+      try {
+        const client = (await import("@/integrations/supabase/client")).supabase;
+        const { data: thirdPartyExpenses, error: expenseError } = await client
+          .from("third_party_expenses")
+          .select("transaction_id")
+          .not("transaction_id", "is", null);
+        if (expenseError) throw expenseError;
+        const transactionIds = (thirdPartyExpenses ?? [])
+          .map((row) => row.transaction_id)
+          .filter((id): id is string => Boolean(id));
+        if (!transactionIds.length) {
+          if (!cancelled) setThirdPartyInstallmentIds(new Set());
+          return;
+        }
+        const { data: linkedTransactions, error: transactionError } = await client
+          .from("transactions")
+          .select("source_id")
+          .eq("source_type", "INSTALLMENT")
+          .in("id", transactionIds);
+        if (transactionError) throw transactionError;
+        if (!cancelled) setThirdPartyInstallmentIds(new Set((linkedTransactions ?? []).map((row) => row.source_id).filter((id): id is string => Boolean(id))));
+      } catch {
+        if (!cancelled) setThirdPartyInstallmentIds(new Set());
+      }
+    }
+    void loadThirdPartyInstallments();
+    return () => { cancelled = true; };
+  }, [expenses.rows]);
+
   const thirdPartyInstallmentRows = useMemo(() => installments.rows.filter((installment) => {
     return thirdPartyInstallmentIds.has(installment.id) && Number(installment.paid_count) < Number(installment.installments_count);
   }).map((installment) => {
-    const expense = expenses.rows.find((item) => item.transaction_id);
+    const expense = expenses.rows.find((item) => item.transaction_id && thirdPartyInstallmentIds.has(installment.id));
     return expense ? { expense, installment } : null;
   }).filter(Boolean) as Array<{expense: Expense; installment: Installment}>);
+
   const total = useMemo(() => expenseRows.reduce((sum, row) => sum + Number(row.amount), 0), [expenseRows]);
   const pending = useMemo(() => expenseRows.reduce((sum, row) => sum + Math.max(Number(row.amount) - Number(row.reimbursed_amount), 0), 0), [expenseRows]);
   const reimbursed = useMemo(() => expenseRows.reduce((sum, row) => sum + Number(row.reimbursed_amount), 0), [expenseRows]);
@@ -290,7 +325,7 @@ function ThirdPartiesPage() {
       <label><span className="label-caps mb-1.5 block text-[9px] font-semibold text-muted-foreground">FORMA DE PAGAMENTO</span><select value={paymentId} onChange={(e) => { setPaymentId(e.target.value); setCardId(""); }} className="w-full rounded-xl border bg-background px-3 py-2.5 text-sm"><option value="">SELECIONE</option>{payments.rows.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
       <label><span className="label-caps mb-1.5 block text-[9px] font-semibold text-muted-foreground">CARTÃO (OPCIONAL)</span><select value={cardId || paymentCardId} onChange={(e) => setCardId(e.target.value)} className="w-full rounded-xl border bg-background px-3 py-2.5 text-sm"><option value="">SEM CARTÃO</option>{cards.rows.map((c) => <option key={c.id} value={c.id}>{c.name}{c.last4 ? ` •••• ${c.last4}` : ""}</option>)}</select></label>
       <label><span className="label-caps mb-1.5 block text-[9px] font-semibold text-muted-foreground">CONTA (OPCIONAL)</span><select value={accountId || selectedPayment?.account_id || ""} onChange={(e) => setAccountId(e.target.value)} className="w-full rounded-xl border bg-background px-3 py-2.5 text-sm"><option value="">SEM CONTA</option>{accounts.rows.map((a) => <option key={a.id} value={a.id}>{a.name}{a.institution ? ` — ${a.institution}` : ""}</option>)}</select></label>
-            <label><span className="label-caps mb-1.5 block text-[9px] font-semibold text-muted-foreground">REEMBOLSO</span><select value={reimbursementStatus} onChange={(e) => setReimbursementStatus(e.target.value as Expense["reimbursement_status"])} className="w-full rounded-xl border bg-background px-3 py-2.5 text-sm"><option value="PENDENTE">PENDENTE</option><option value="PARCIAL">PARCIAL</option><option value="REEMBOLSADO">REEMBOLSADO</option></select></label>
+      <label><span className="label-caps mb-1.5 block text-[9px] font-semibold text-muted-foreground">REEMBOLSO</span><select value={reimbursementStatus} onChange={(e) => setReimbursementStatus(e.target.value as Expense["reimbursement_status"])} className="w-full rounded-xl border bg-background px-3 py-2.5 text-sm"><option value="PENDENTE">PENDENTE</option><option value="PARCIAL">PARCIAL</option><option value="REEMBOLSADO">REEMBOLSADO</option></select></label>
       <label><span className="label-caps mb-1.5 block text-[9px] font-semibold text-muted-foreground">VALOR REEMBOLSADO</span><input inputMode="decimal" value={reimbursedAmount} onChange={(e) => setReimbursedAmount(e.target.value)} className="w-full rounded-xl border bg-background px-3 py-2.5 text-sm" placeholder="0,00"/></label>
       <label className="md:col-span-2"><span className="label-caps mb-1.5 block text-[9px] font-semibold text-muted-foreground">OBSERVAÇÕES</span><textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="min-h-20 w-full rounded-xl border bg-background px-3 py-2.5 text-sm"/></label>
       <div className="flex gap-2 md:col-span-2"><button type="button" onClick={() => setOpen(false)} className="rounded-xl border px-4 py-2 text-[10px] font-semibold">CANCELAR</button><button type="button" onClick={() => void saveExpense()} className="gradient-primary rounded-xl px-4 py-2 text-[10px] font-bold text-primary-foreground">SALVAR GASTO</button></div>
