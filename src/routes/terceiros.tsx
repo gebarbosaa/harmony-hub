@@ -53,7 +53,6 @@ function ThirdPartiesPage() {
   const [accountId, setAccountId] = useState("");
   const [reimbursementStatus, setReimbursementStatus] = useState<Expense["reimbursement_status"]>("PENDENTE");
   const [reimbursedAmount, setReimbursedAmount] = useState("0");
-  const [paid, setPaid] = useState(true);
   const [notes, setNotes] = useState("");
 
   const expenseRows = useMemo(() => expenses.rows.filter((row) => row.date.startsWith(month)), [expenses.rows, month]);
@@ -92,7 +91,6 @@ function ThirdPartiesPage() {
     setAccountId("");
     setReimbursementStatus("PENDENTE");
     setReimbursedAmount("0");
-    setPaid(true);
     setNotes("");
   }
 
@@ -188,7 +186,7 @@ function ThirdPartiesPage() {
           card_name: effectiveCardId ? (cards.rows.find((c) => c.id === effectiveCardId)?.name ?? selectedPayment.name) : null,
           account_id: accountId || selectedPayment.account_id || null,
           responsible: selectedParty.name,
-          paid,
+          paid: true,
           source_type: "THIRD_PARTY",
         }).select("id").single();
         if (transaction.error) throw transaction.error;
@@ -292,8 +290,7 @@ function ThirdPartiesPage() {
       <label><span className="label-caps mb-1.5 block text-[9px] font-semibold text-muted-foreground">FORMA DE PAGAMENTO</span><select value={paymentId} onChange={(e) => { setPaymentId(e.target.value); setCardId(""); }} className="w-full rounded-xl border bg-background px-3 py-2.5 text-sm"><option value="">SELECIONE</option>{payments.rows.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
       <label><span className="label-caps mb-1.5 block text-[9px] font-semibold text-muted-foreground">CARTÃO (OPCIONAL)</span><select value={cardId || paymentCardId} onChange={(e) => setCardId(e.target.value)} className="w-full rounded-xl border bg-background px-3 py-2.5 text-sm"><option value="">SEM CARTÃO</option>{cards.rows.map((c) => <option key={c.id} value={c.id}>{c.name}{c.last4 ? ` •••• ${c.last4}` : ""}</option>)}</select></label>
       <label><span className="label-caps mb-1.5 block text-[9px] font-semibold text-muted-foreground">CONTA (OPCIONAL)</span><select value={accountId || selectedPayment?.account_id || ""} onChange={(e) => setAccountId(e.target.value)} className="w-full rounded-xl border bg-background px-3 py-2.5 text-sm"><option value="">SEM CONTA</option>{accounts.rows.map((a) => <option key={a.id} value={a.id}>{a.name}{a.institution ? ` — ${a.institution}` : ""}</option>)}</select></label>
-      <label className="flex items-center justify-between rounded-xl border px-3 py-2.5"><span><span className="label-caps mb-1.5 block text-[9px] font-semibold text-muted-foreground">PAGAMENTO</span><span className="text-xs">{paid ? "PAGO" : "NÃO PAGO"}</span></span><input type="checkbox" checked={paid} onChange={(e) => setPaid(e.target.checked)} className="h-4 w-4"/></label>
-      <label><span className="label-caps mb-1.5 block text-[9px] font-semibold text-muted-foreground">REEMBOLSO</span><select value={reimbursementStatus} onChange={(e) => setReimbursementStatus(e.target.value as Expense["reimbursement_status"])} className="w-full rounded-xl border bg-background px-3 py-2.5 text-sm"><option value="PENDENTE">PENDENTE</option><option value="PARCIAL">PARCIAL</option><option value="REEMBOLSADO">REEMBOLSADO</option></select></label>
+            <label><span className="label-caps mb-1.5 block text-[9px] font-semibold text-muted-foreground">REEMBOLSO</span><select value={reimbursementStatus} onChange={(e) => setReimbursementStatus(e.target.value as Expense["reimbursement_status"])} className="w-full rounded-xl border bg-background px-3 py-2.5 text-sm"><option value="PENDENTE">PENDENTE</option><option value="PARCIAL">PARCIAL</option><option value="REEMBOLSADO">REEMBOLSADO</option></select></label>
       <label><span className="label-caps mb-1.5 block text-[9px] font-semibold text-muted-foreground">VALOR REEMBOLSADO</span><input inputMode="decimal" value={reimbursedAmount} onChange={(e) => setReimbursedAmount(e.target.value)} className="w-full rounded-xl border bg-background px-3 py-2.5 text-sm" placeholder="0,00"/></label>
       <label className="md:col-span-2"><span className="label-caps mb-1.5 block text-[9px] font-semibold text-muted-foreground">OBSERVAÇÕES</span><textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="min-h-20 w-full rounded-xl border bg-background px-3 py-2.5 text-sm"/></label>
       <div className="flex gap-2 md:col-span-2"><button type="button" onClick={() => setOpen(false)} className="rounded-xl border px-4 py-2 text-[10px] font-semibold">CANCELAR</button><button type="button" onClick={() => void saveExpense()} className="gradient-primary rounded-xl px-4 py-2 text-[10px] font-bold text-primary-foreground">SALVAR GASTO</button></div>
