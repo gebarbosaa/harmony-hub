@@ -188,7 +188,7 @@ function ThirdPartiesPage() {
         if (transaction.error) throw transaction.error;
         transactionId = transaction.data.id;
       }
-      await expenses.insert({
+      const createdExpense = await expenses.insert({
         third_party_id: selectedParty.id,
         transaction_id: transactionId,
         date,
@@ -204,6 +204,16 @@ function ThirdPartiesPage() {
         notes: notes.trim() || null,
         paid,
       });
+      if (createdExpense?.id && transactionId) {
+        const client = (await import("@/integrations/supabase/client")).supabase;
+        if (installmentId) {
+          const { error } = await client.from("transactions").update({ third_party_expense_id: createdExpense.id }).eq("source_type", "INSTALLMENT").eq("source_id", installmentId);
+          if (error) throw error;
+        } else {
+          const { error } = await client.from("transactions").update({ third_party_expense_id: createdExpense.id }).eq("id", transactionId);
+          if (error) throw error;
+        }
+      }
       toast.success("GASTO DE TERCEIRO REGISTRADO");
       setOpen(false);
       resetForm();
