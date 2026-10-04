@@ -13,7 +13,7 @@ export const Route = createFileRoute("/")({
   component: Dashboard,
 });
 const PIE_COLORS = ["var(--orange-primary)", "var(--orange-light)", "var(--graphite-light)", "var(--muted-foreground)", "var(--danger)"];
-type Tx = { id:string; date:string; description:string; category:string; amount:number; type:string; paid:boolean; household_id:string; responsible?:string; source_type?:string|null; card_name?:string|null };
+type Tx = { id:string; date:string; description:string; category:string; amount:number; type:string; paid:boolean; household_id:string; responsible?:string; source_type?:string|null; third_party_expense_id?:string|null; card_name?:string|null };
 type Fixed = { id:string; name:string; category:string; amount:number; due_day:number; months:boolean[]; responsible:string; household_id:string };
 type Installment = { id:string; name:string; category:string; total_amount:number; installments_count:number; paid_count:number; purchase_date:string; household_id:string };
 type Goal = { id:string; name:string; current_amount:number; target_amount:number; monthly:number; deadline:string|null; responsible:string; shared:boolean; household_id:string };
