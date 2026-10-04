@@ -12,7 +12,7 @@ function CreateButton({ title }: { title: string }) {
 }
 export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: ReactNode }) {
   const defaultAction = <CreateButton title={title} />;
-  return <header className="flex flex-wrap items-center justify-between gap-4"><div><div className="flex items-center gap-2"><span className="h-7 w-1 rounded-full bg-primary" /><h1 className="label-caps text-2xl font-bold tracking-tight text-foreground md:text-3xl">{title}</h1></div>{subtitle ? <p className="ml-3 mt-1 text-sm text-muted-foreground">{subtitle}</p> : null}</div><div className="page-header-action [&_button[aria-label^='ADICIONAR']]:hidden [&_button[aria-label^='NOVA']]:hidden [&_button[aria-label^='NOVO']]:hidden">{action ?? defaultAction}</div></header>;
+  return <header className="flex flex-wrap items-center justify-between gap-4"><div><div className="flex items-center gap-2"><span className="h-7 w-1 rounded-full bg-primary" /><h1 className="label-caps text-2xl font-bold tracking-tight text-foreground md:text-3xl">{title}</h1></div>{subtitle ? <p className="ml-3 mt-1 text-sm text-muted-foreground">{subtitle}</p> : null}</div><div className="page-header-action">{action ?? defaultAction}</div></header>;
 }
 function CreatePanel({ title, children, className, aside }: { title: string; children: ReactNode; className?: string; aside?: ReactNode }) {
   const [open, setOpen] = useState(false); const normalizedTitle = normalizeTitle(title);
