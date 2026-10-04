@@ -263,9 +263,10 @@ function ThirdPartiesPage() {
         reimbursed_amount: reimbursedValue,
         reimbursed_at: reimbursedValue > 0 ? date : null,
         notes: notes.trim() || null,
-        paid: true,
+        paid: !installmentId,
       });
-      if (createdExpense?.id && transactionId) {
+      createdExpenseId = createdExpense?.id ? String(createdExpense.id) : null;
+      if (createdExpenseId && transactionId) {
         const client = (await import("@/integrations/supabase/client")).supabase;
         if (installmentId) {
           const { error } = await client.from("transactions").update({ third_party_expense_id: createdExpense.id }).eq("source_type", "INSTALLMENT").eq("source_id", installmentId);
@@ -279,10 +280,14 @@ function ThirdPartiesPage() {
       setOpen(false);
       resetForm();
     } catch (error) {
+      const client = (await import("@/integrations/supabase/client")).supabase;
+      if (createdExpenseId) {
+        await client.from("third_party_expenses").delete().eq("id", createdExpenseId);
+      }
       if (installmentId) {
-        await (await import("@/integrations/supabase/client")).supabase.from("installments").delete().eq("id", installmentId);
+        await client.from("installments").delete().eq("id", installmentId);
       } else if (transactionId) {
-        await (await import("@/integrations/supabase/client")).supabase.from("transactions").delete().eq("id", transactionId);
+        await client.from("transactions").delete().eq("id", transactionId);
       }
       toast.error(error instanceof Error ? error.message : "ERRO AO REGISTRAR GASTO");
     }
