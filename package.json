@@ -86,7 +86,10 @@
     "prettier": "^3.7.3",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
-    "vite": "^8.2.0",
+    "vite": "8.1.5",
     "@tanstack/router-cli": "1.167.40"
+  },
+  "overrides": {
+    "rolldown": "1.1.5"
   }
 }
