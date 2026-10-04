@@ -26,6 +26,7 @@ type Tx = {
   installment_current?: number | null;
   installment_total?: number | null;
   source_type?: string | null;
+  third_party_expense_id?: string | null;
   household_id: string;
 };
 type Period = "HOJE" | "SEMANA" | "MES" | "ANO";
