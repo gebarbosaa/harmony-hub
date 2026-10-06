@@ -46,7 +46,11 @@ function InstallmentsPage(){const isDesktop = useIsDesktop();
 
  // Para cada parcelamento, descobre qual e a parcela "atual" agora (comparando com o mes de
  // hoje, nao um mes escolhido manualmente) e em qual fatura ela cai.
- const [currentInfo,setCurrentInfo]=useState<Record<string,{index:number;period:string}>>({});
+ const [currentInfo,setCurrentInfo]=useState<Record<string,{index:number;period:string}>>({}); type InstallmentTx={id:string;source_id:string;source_index:number;source_total:number;amount:number;paid:boolean;date:string;description:string;source_period:string|null};
+ const [installmentTxs,setInstallmentTxs]=useState<InstallmentTx[]>([]);
+ useEffect(()=>{let cancelled=false;async function load(){const ids=rows.map(i=>i.id).filter(Boolean);if(!ids.length){setInstallmentTxs([]);return;}const {data,error}=await supabase.from("transactions").select("id,source_id,source_index,source_total,amount,paid,date,description,source_period").eq("source_type","INSTALLMENT").in("source_id",ids).order("source_index",{ascending:true});if(!cancelled&&!error)setInstallmentTxs((data??[]) as InstallmentTx[])}void load();return()=>{cancelled=true}},[rows]);
+ async function toggleInstallmentPaid(tx:InstallmentTx,nextPaid:boolean){try{const {error}=await supabase.from("transactions").update({paid:nextPaid}).eq("id",tx.id);if(error)throw error;const related=installmentTxs.filter(x=>x.source_id===tx.source_id);const paidCount=related.filter(x=>x.id===tx.id?nextPaid:x.paid).length;const installment=rows.find(x=>x.id===tx.source_id);if(installment)await update(installment.id,{paid_count:paidCount});setInstallmentTxs(cur=>cur.map(x=>x.id===tx.id?{...x,paid:nextPaid}:x));toast.success(nextPaid?"PARCELA "+tx.source_index+" MARCADA COMO PAGA":"PARCELA "+tx.source_index+" MARCADA COMO NÃO PAGA")}catch(e){toast.error(e instanceof Error?e.message:"NÃO FOI POSSÍVEL ATUALIZAR A PARCELA")}}
+
  useEffect(()=>{let cancelled=false;async function resolve(){const map:Record<string,{index:number;period:string}>={};for(const i of rows){const count=Math.max(1,Number(i.installments_count));for(let idx=1;idx<=count;idx++){const {data,error}=await supabase.rpc("installment_invoice_period",{p_card_id:i.card_id??null,p_purchase_date:i.purchase_date,p_installment_index:idx});if(!error&&String(data)===month){map[i.id]={index:idx,period:month};break}}}if(!cancelled)setCurrentInfo(map)}resolve();return()=>{cancelled=true}},[rows,month]);
 
  async function save(){const value=Number(total.replace(/\./g,"").replace(",","."));const n=Number(count);if(!householdId){toast.error("SEU GRUPO FAMILIAR NÃO ESTÁ CONFIGURADO.");return}if(!name.trim()){toast.error("INFORME O NOME DA COMPRA");return}if(!Number.isFinite(value)||value<=0){toast.error("INFORME UM VALOR TOTAL VÁLIDO");return}if(!Number.isInteger(n)||n<1){toast.error("INFORME UMA QUANTIDADE DE PARCELAS VÁLIDA");return}if(!purchaseDate){toast.error("INFORME A DATA DA COMPRA");return}if(!category){toast.error("CADASTRE UMA CATEGORIA EM AJUSTES");return}if(!categoryOptions.includes(category)){toast.error("A CATEGORIA SELECIONADA NÃO ESTÁ CADASTRADA EM AJUSTES");return}if(!selectedPayment){toast.error("SELECIONE UMA FORMA DE PAGAMENTO");return}try{const values={name:name.trim().toUpperCase(),total_amount:value,installments_count:n,paid_count:editing?Math.min(Number(editing.paid_count),n):0,purchase_date:purchaseDate,category,responsible:responsible.trim()||profile?.name||"AMBAS",pay_method:selectedPayment.kind,payment_method_name:selectedPayment.name,payment_method_id:selectedPayment.id,card_id:selectedPayment.card_id,card_name:selectedPayment.card_id?selectedPayment.name:null};if(editing)await update(editing.id,values);else await insert(values);setFormOpen(false);reset();toast.success(editing?"PARCELAMENTO ATUALIZADO":"PARCELAMENTO SALVO")}catch(e){toast.error(e instanceof Error?e.message:"NÃO FOI POSSÍVEL SALVAR O PARCELAMENTO")}}
@@ -83,43 +87,17 @@ function InstallmentsPage(){const isDesktop = useIsDesktop();
   </div>
 
   <Panel>
-    {isLoading?<p className="py-8 text-center text-sm text-muted-foreground">Carregando...</p>:list.length===0?<p className="py-8 text-center text-sm text-muted-foreground">{tab==="MINHAS"?"Nenhum parcelamento seu em andamento.":tab==="TERCEIROS"?"Nenhum parcelamento de terceiros em andamento.":"Nenhum parcelamento finalizado ainda."}</p>:<div className="space-y-3">
-      {list.map(i=>{
-        const value=calculateInstallmentValue(Number(i.total_amount),Number(i.installments_count));
-        const done=Number(i.paid_count)>=Number(i.installments_count);
-        const info=currentInfo[i.id];
-        const current=info?.index??Math.min(Number(i.paid_count)+1,Number(i.installments_count));
-        const remainingCount=Number(i.installments_count)-current+1;
-        const percent=(current/Math.max(1,Number(i.installments_count)))*100;
-        const almostDone=!done&&remainingCount<=1;
-        const invoice=i.card_id&&info?invoices.rows.find(inv=>inv.card_id===i.card_id&&inv.period===info.period):null;
-        return <div key={i.id} className={cn("rounded-2xl border border-border bg-card p-4",done&&"opacity-60")}>
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-3">
-              <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-secondary"><CreditCard className="h-4 w-4 text-primary"/></span>
-              <div>
-                <p className="label-caps text-sm">{i.name}</p>
-                <p className="text-[11px] text-muted-foreground">{i.name} · Parcela {Math.min(current,Number(i.installments_count))}/{Number(i.installments_count)}</p>
-                <p className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground"><Landmark className="h-3 w-3"/>{i.card_name||i.payment_method_name||"SEM CARTÃO"}</p>
-              </div>
-            </div>
-            {almostDone?<Tag tone="warning">QUASE LÁ!</Tag>:done?<Tag tone="success">QUITADO</Tag>:null}
-          </div>
-          <div className="mt-4 space-y-2">
-            <div className="flex items-center gap-2"><div className="flex-1"><ProgressBar percent={percent}/></div><span className="label-caps mb-1.5 block text-[9px] font-semibold tracking-[0.12em] text-muted-foreground font-semibold tracking-[0.12em] text-muted-foreground text-muted-foreground">{Math.min(current,Number(i.installments_count))}/{Number(i.installments_count)}</span></div>
-          </div>
-          <div className="mt-3 flex items-center justify-between text-[11px]">
-            <div><p className="label-caps text-muted-foreground">TOTAL DA COMPRA</p><p className="font-semibold">{formatCurrency(Number(i.total_amount))}</p></div>
-            <div className="text-right"><p className="label-caps text-muted-foreground">RESTAM {remainingCount}X DE</p><p className="font-semibold text-primary">{formatCurrency(value)}</p></div>
-          </div>
-          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
-            <Tag>{i.category}</Tag><PersonDot name={i.responsible||"MINHA CONTA"}/>
-            {i.card_id?<><Tag tone={invoice?.status==="PAGA"?"success":"warning"}>{invoice?.status==="PAGA"?"PAGO NA FATURA":"AGUARDANDO PAGAR FATURA"}</Tag><a href="/faturas" className="label-caps rounded-lg border border-border px-3 py-1.5 text-[10px]">VER FATURA</a></>:!done&&<button onClick={()=>pay(i)} className="label-caps rounded-lg border border-primary/60 px-3 py-1.5 text-[10px] text-primary">MARCAR PARCELA PAGA</button>}
-            <button onClick={()=>openEdit(i)} className="label-caps rounded-lg border border-border px-3 py-1.5 text-[10px]">EDITAR</button>
-            <button onClick={()=>del(i)} className="label-caps rounded-lg border border-danger/50 px-3 py-1.5 text-[10px] text-danger">EXCLUIR</button>
-          </div>
-        </div>;
-      })}
+    {isLoading?<p className="py-8 text-center text-sm text-muted-foreground">Carregando...</p>:list.length===0?<p className="py-8 text-center text-sm text-muted-foreground">{tab==="MINHAS"?"Nenhum parcelamento seu em andamento.":tab==="TERCEIROS"?"Nenhum parcelamento de terceiros em andamento.":"Nenhum parcelamento finalizado ainda."}</p>:<div className="space-y-4">
+      {list.map(i=>{const transactions=installmentTxs.filter(tx=>tx.source_id===i.id);const totalCount=Math.max(Number(i.installments_count),transactions.length);const paidCount=transactions.length?transactions.filter(tx=>tx.paid).length:Number(i.paid_count);const installmentValue=transactions[0]?.amount?Number(transactions[0].amount):Number(i.total_amount)/Math.max(1,totalCount);const info=currentInfo[i.id];const done=paidCount>=totalCount;const invoice=i.card_id&&info?invoices.rows.find(inv=>inv.card_id===i.card_id&&inv.period===info.period):null;return <div key={i.id} className={cn("rounded-2xl border border-border bg-card p-4",done&&"opacity-60")}>
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div><p className="text-sm font-bold">{i.responsible||"MINHA CONTA"}</p><p className="text-xs text-muted-foreground">{i.name} · {paidCount}/{totalCount} PAGAS</p><p className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground"><Landmark className="h-3 w-3"/>{i.card_name||i.payment_method_name||"SEM CARTÃO"}{info&&" · FATURA "+info.period}</p></div>
+          <div className="text-right"><p className="text-sm font-bold text-primary">{formatCurrency(installmentValue)} / PARCELA</p><p className="text-[10px] text-muted-foreground">{formatCurrency(Number(i.total_amount))} TOTAL</p></div>
+        </div>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {transactions.map(tx=><label key={tx.id} className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border px-3 py-2.5 transition hover:border-primary/50"><span className="flex min-w-0 items-center gap-3"><input type="checkbox" checked={tx.paid} onChange={e=>void toggleInstallmentPaid(tx,e.target.checked)} className="h-4 w-4 accent-primary"/><span className="min-w-0"><span className="block text-xs font-semibold">PARCELA {tx.source_index}/{tx.source_total}</span><span className="block text-[10px] text-muted-foreground">{tx.date}{tx.source_period?" · FATURA "+tx.source_period:""}</span></span></span><span className={tx.paid?"text-[10px] font-bold text-success":"text-[10px] font-bold text-muted-foreground"}>{formatCurrency(Number(tx.amount))}</span></label>)}
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3"><Tag>{i.category}</Tag>{invoice&&<Tag tone={invoice.status==="PAGA"?"success":"warning"}>{invoice.status==="PAGA"?"PAGO NA FATURA":"AGUARDANDO PAGAR FATURA"}</Tag>}{i.card_id&&<a href="/faturas" className="label-caps rounded-lg border border-border px-3 py-1.5 text-[10px]">VER FATURA</a>}<button onClick={()=>openEdit(i)} className="label-caps rounded-lg border border-border px-3 py-1.5 text-[10px]">EDITAR</button><button onClick={()=>del(i)} className="label-caps rounded-lg border border-danger/50 px-3 py-1.5 text-[10px] text-danger">EXCLUIR</button></div>
+      </div>})}
     </div>}
   </Panel>
  </div>;
