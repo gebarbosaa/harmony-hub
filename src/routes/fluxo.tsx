@@ -94,27 +94,105 @@ function FluxoPage() {
     return Array.from(groups.entries()).sort((a, b) => b[0].localeCompare(a[0]));
   }, [visible]);
 
-  return <div className="space-y-5">
-    <PageHeader title="FLUXO" subtitle="TODAS AS MOVIMENTAÇÕES FINANCEIRAS ORGANIZADAS POR PERÍODO." />
-    <div className="flex flex-wrap gap-2">
-      {(["HOJE", "SEMANA", "MES", "ANO"] as Period[]).map(item => <button key={item} type="button" onClick={() => setPeriod(item)} className={cn("label-caps rounded-lg border px-3 py-2 text-[10px]", period === item ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>{item === "MES" ? "MÊS" : item}</button>)}
-    </div>
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      <StatCard label="RECEITAS" value={formatCurrency(income)} tone="success" />
-      <StatCard label="DESPESAS" value={formatCurrency(expenses)} tone="danger" />
-      <StatCard label="INVESTIMENTOS" value={formatCurrency(investments)} tone="info" />
-      <StatCard label="SALDO DO FLUXO" value={formatCurrency(net)} tone={net >= 0 ? "success" : "danger"} />
-    </div>
-    <Panel>
-      <div className="flex flex-col gap-3">
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="BUSCAR NO FLUXO..." className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-primary" />
-        <div className="flex flex-wrap gap-2">
-          {(["TODOS", "RECEITA", "DESPESA", "INVESTIMENTO", "TRANSFERENCIA"] as const).map(item => <button key={item} type="button" onClick={() => setTypeFilter(item === "TODOS" ? "TODOS" : item)} className={cn("label-caps rounded-lg border px-3 py-2 text-[10px]", typeFilter === item ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>{item === "TODOS" ? "TODOS" : typeLabel(item)}</button>)}
+  const renderTransaction = (t: Tx) => (
+    <div key={t.id} className="flex items-center gap-3 py-3">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+        {t.type === "RECEITA" ? <ArrowUpCircle className="h-4 w-4" /> : t.type === "DESPESA" || t.type === "INVESTIMENTO" ? <ArrowDownCircle className="h-4 w-4" /> : <ArrowLeftRight className="h-4 w-4" />}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold">{t.description}</p>
+        <div className="mt-1 flex flex-wrap items-center gap-2">
+          <Tag>{t.category}</Tag>
+          <PersonDot name={t.responsible} />
+          <span className="text-[10px] text-muted-foreground">{t.payment_method_name || t.pay_method}</span>
+          {t.card_name && <Tag tone="primary">{t.card_name}</Tag>}
+          {t.installment_current && t.installment_total && <Tag tone="warning">{t.installment_current}/{t.installment_total}</Tag>}
         </div>
       </div>
-    </Panel>
-    <Panel title={period === "ANO" ? `FLUXO — ${yearKey}` : period === "MES" ? `FLUXO — ${monthKey}` : period === "SEMANA" ? `FLUXO — ${weekStart} A ${weekEnd}` : "FLUXO DO DIA"}>
-      {tx.isLoading ? <p className="py-10 text-center text-sm text-muted-foreground">CARREGANDO FLUXO...</p> : visible.length === 0 ? <div className="py-12 text-center"><Wallet className="mx-auto mb-3 h-8 w-8 text-muted-foreground"/><p className="text-sm font-semibold">NENHUMA MOVIMENTAÇÃO</p><p className="mt-1 text-xs text-muted-foreground">Receitas, despesas, investimentos e transferências aparecerão aqui.</p></div> : sortFilter === "DATA" ? <div className="space-y-5">{grouped.map(([date, rows]) => { const dayTotal = rows.reduce((s, t) => s + (counts(t) ? Number(t.amount) * amountSign(t.type) : 0), 0); return <section key={date}><div className="mb-2 flex items-center justify-between border-b border-border pb-2"><span className="label-caps flex items-center gap-1 text-[11px] text-muted-foreground"><CalendarDays className="h-3.5 w-3.5" />{new Date(`${date}T12:00:00`).toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" })}</span><span className={cn("text-xs font-bold", dayTotal >= 0 ? "text-success" : "text-danger")}>{dayTotal >= 0 ? "+" : "-"}{formatCurrency(Math.abs(dayTotal))}</span></div><div className="divide-y divide-border">{rows.map(t => <div key={t.id} className="flex items-center gap-3 py-3"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">{t.type === "RECEITA" ? <ArrowUpCircle className="h-4 w-4" /> : t.type === "DESPESA" || t.type === "INVESTIMENTO" ? <ArrowDownCircle className="h-4 w-4" /> : <ArrowLeftRight className="h-4 w-4" />}</div><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{t.description}</p><div className="mt-1 flex flex-wrap items-center gap-2"><Tag>{t.category}</Tag><PersonDot name={t.responsible} /><span className="text-[10px] text-muted-foreground">{t.payment_method_name || t.pay_method}</span>{t.card_name&&<Tag tone="primary">{t.card_name}</Tag>}{t.installment_current&&t.installment_total&&<Tag tone="warning">{t.installment_current}/{t.installment_total}</Tag>}</div></div><div className="text-right"><p className={cn("text-sm font-bold", t.type === "RECEITA" ? "text-success" : t.type === "DESPESA" || t.type === "INVESTIMENTO" ? "text-danger" : "text-foreground")}>{amountSign(t.type) > 0 ? "+" : amountSign(t.type) < 0 ? "-" : ""}{formatCurrency(Math.abs(Number(t.amount)))}</p><Tag tone={t.paid ? "success" : "warning"}>{t.paid ? "PAGO" : "PENDENTE"}</Tag></div></div>)}</div></section> })}</div> : <div className="divide-y divide-border">{visible.map(t => <div key={t.id} className="flex items-center gap-3 py-3"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">{t.type === "RECEITA" ? <ArrowUpCircle className="h-4 w-4" /> : t.type === "DESPESA" || t.type === "INVESTIMENTO" ? <ArrowDownCircle className="h-4 w-4" /> : <ArrowLeftRight className="h-4 w-4" />}</div><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{t.description}</p><div className="mt-1 flex flex-wrap items-center gap-2"><Tag>{t.category}</Tag><PersonDot name={t.responsible} /><span className="text-[10px] text-muted-foreground">{t.payment_method_name || t.pay_method}</span>{t.card_name&&<Tag tone="primary">{t.card_name}</Tag>}{t.installment_current&&t.installment_total&&<Tag tone="warning">{t.installment_current}/{t.installment_total}</Tag>}</div></div><div className="text-right"><p className={cn("text-sm font-bold", t.type === "RECEITA" ? "text-success" : t.type === "DESPESA" || t.type === "INVESTIMENTO" ? "text-danger" : "text-foreground")}>{amountSign(t.type) > 0 ? "+" : amountSign(t.type) < 0 ? "-" : ""}{formatCurrency(Math.abs(Number(t.amount)))}</p><Tag tone={t.paid ? "success" : "warning"}>{t.paid ? "PAGO" : "PENDENTE"}</Tag></div></div>)}</div>
-    </Panel>
-  </div>;
+      <div className="text-right">
+        <p className={cn("text-sm font-bold", t.type === "RECEITA" ? "text-success" : t.type === "DESPESA" || t.type === "INVESTIMENTO" ? "text-danger" : "text-foreground")}>
+          {amountSign(t.type) > 0 ? "+" : amountSign(t.type) < 0 ? "-" : ""}{formatCurrency(Math.abs(Number(t.amount)))}
+        </p>
+        <Tag tone={t.paid ? "success" : "warning"}>{t.paid ? "PAGO" : "PENDENTE"}</Tag>
+      </div>
+    </div>
+  );
+
+  const content = tx.isLoading ? (
+    <p className="py-10 text-center text-sm text-muted-foreground">CARREGANDO FLUXO...</p>
+  ) : visible.length === 0 ? (
+    <div className="py-12 text-center">
+      <Wallet className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
+      <p className="text-sm font-semibold">NENHUMA MOVIMENTAÇÃO</p>
+      <p className="mt-1 text-xs text-muted-foreground">Receitas, despesas, investimentos e transferências aparecerão aqui.</p>
+    </div>
+  ) : sortFilter === "DATA" ? (
+    <div className="space-y-5">
+      {grouped.map(([date, rows]) => {
+        const dayTotal = rows.reduce((s, t) => s + (counts(t) ? Number(t.amount) * amountSign(t.type) : 0), 0);
+        return (
+          <section key={date}>
+            <div className="mb-2 flex items-center justify-between border-b border-border pb-2">
+              <span className="label-caps flex items-center gap-1 text-[11px] text-muted-foreground">
+                <CalendarDays className="h-3.5 w-3.5" />
+                {new Date(`${date}T12:00:00`).toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" })}
+              </span>
+              <span className={cn("text-xs font-bold", dayTotal >= 0 ? "text-success" : "text-danger")}>
+                {dayTotal >= 0 ? "+" : "-"}{formatCurrency(Math.abs(dayTotal))}
+              </span>
+            </div>
+            <div className="divide-y divide-border">{rows.map(renderTransaction)}</div>
+          </section>
+        );
+      })}
+    </div>
+  ) : (
+    <div className="divide-y divide-border">{visible.map(renderTransaction)}</div>
+  );
+
+  return (
+    <div className="space-y-5">
+      <PageHeader title="FLUXO" subtitle="TODAS AS MOVIMENTAÇÕES FINANCEIRAS ORGANIZADAS POR PERÍODO." />
+      <div className="flex flex-wrap gap-2">
+        {(["HOJE", "SEMANA", "MES", "ANO"] as Period[]).map(item => (
+          <button key={item} type="button" onClick={() => setPeriod(item)} className={cn("label-caps rounded-lg border px-3 py-2 text-[10px]", period === item ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
+            {item === "MES" ? "MÊS" : item}
+          </button>
+        ))}
+      </div>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard label="RECEITAS" value={formatCurrency(income)} tone="success" />
+        <StatCard label="DESPESAS" value={formatCurrency(expenses)} tone="danger" />
+        <StatCard label="INVESTIMENTOS" value={formatCurrency(investments)} tone="info" />
+        <StatCard label="SALDO DO FLUXO" value={formatCurrency(net)} tone={net >= 0 ? "success" : "danger"} />
+      </div>
+      <Panel>
+        <div className="flex flex-col gap-3">
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="BUSCAR NO FLUXO..." className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-primary" />
+          <div className="flex flex-wrap gap-2">
+            {(["TODOS", "RECEITA", "DESPESA", "INVESTIMENTO", "TRANSFERENCIA"] as const).map(item => (
+              <button key={item} type="button" onClick={() => setTypeFilter(item === "TODOS" ? "TODOS" : item)} className={cn("label-caps rounded-lg border px-3 py-2 text-[10px]", typeFilter === item ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
+                {item === "TODOS" ? "TODOS" : typeLabel(item)}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {(["TODOS", "MEUS", "TERCEIROS"] as const).map(item => (
+              <button key={item} type="button" onClick={() => setOriginFilter(item)} className={cn("label-caps rounded-lg border px-3 py-2 text-[10px]", originFilter === item ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
+                {item === "TODOS" ? "TODOS" : item === "MEUS" ? "MEUS LANÇAMENTOS" : "DE TERCEIROS"}
+              </button>
+            ))}
+            {([["DATA", "DATA"], ["AZ", "A–Z"], ["VALOR_MAIOR", "VALOR ↓"], ["VALOR_MENOR", "VALOR ↑"]] as const).map(([key, label]) => (
+              <button key={key} type="button" onClick={() => setSortFilter(key)} className={cn("label-caps rounded-lg border px-3 py-2 text-[10px]", sortFilter === key ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </Panel>
+      <Panel title={period === "ANO" ? `FLUXO — ${yearKey}` : period === "MES" ? `FLUXO — ${monthKey}` : period === "SEMANA" ? `FLUXO — ${weekStart} A ${weekEnd}` : "FLUXO DO DIA"}>
+        {content}
+      </Panel>
+    </div>
+  );
 }
