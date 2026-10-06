@@ -39,12 +39,14 @@ const counts = (t: Tx) => t.type !== "DESPESA" || !t.card_name || t.paid;
 function FluxoPage() {
   const tx = useHouseholdTable<Tx>(
     "transactions",
-    "id,date,description,category,pay_method,payment_method_name,responsible,amount,type,paid,card_name,installment_current,installment_total,source_type,household_id",
+    "id,date,description,category,pay_method,payment_method_name,responsible,amount,type,paid,card_name,installment_current,installment_total,source_type,third_party_expense_id,household_id",
     "date",
   );
   const [period, setPeriod] = useState<Period>("MES");
   const [typeFilter, setTypeFilter] = useState<"TODOS" | Tx["type"]>("TODOS");
   const [search, setSearch] = useState("");
+  const [originFilter, setOriginFilter] = useState<"TODOS" | "MEUS" | "TERCEIROS">("TODOS");
+  const [sortFilter, setSortFilter] = useState<"DATA" | "AZ" | "VALOR_MAIOR" | "VALOR_MENOR">("DATA");
 
   const today = new Date();
   const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
@@ -69,10 +71,17 @@ function FluxoPage() {
           ? row.date.startsWith(monthKey)
           : row.date.startsWith(yearKey);
     const inType = typeFilter === "TODOS" || row.type === typeFilter;
+    const isThirdParty = Boolean(row.third_party_expense_id) || row.source_type === "THIRD_PARTY";
+    const inOrigin = originFilter === "TODOS" || (originFilter === "TERCEIROS" ? isThirdParty : !isThirdParty);
     const needle = search.trim().toLowerCase();
     const inSearch = !needle || `${row.description} ${row.category} ${row.pay_method} ${row.payment_method_name ?? ""} ${row.responsible} ${row.card_name ?? ""}`.toLowerCase().includes(needle);
-    return inPeriod && inType && inSearch;
-  }).sort((a, b) => b.date.localeCompare(a.date)), [tx.rows, period, typeFilter, search, todayKey, monthKey, yearKey, weekStart, weekEnd]);
+    return inPeriod && inType && inOrigin && inSearch;
+  }).sort((a, b) => {
+    if (sortFilter === "AZ") return a.description.localeCompare(b.description, "pt-BR", { sensitivity: "base" });
+    if (sortFilter === "VALOR_MAIOR") return Number(b.amount) - Number(a.amount);
+    if (sortFilter === "VALOR_MENOR") return Number(a.amount) - Number(b.amount);
+    return b.date.localeCompare(a.date);
+  }), [tx.rows, period, typeFilter, originFilter, search, sortFilter, todayKey, monthKey, yearKey, weekStart, weekEnd]);
 
   const income = visible.filter(t => t.type === "RECEITA").reduce((s, t) => s + Number(t.amount), 0);
   const expenses = visible.filter(t => t.type === "DESPESA" && counts(t)).reduce((s, t) => s + Number(t.amount), 0);
