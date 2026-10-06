@@ -59,6 +59,12 @@ function InstallmentsPage(){const isDesktop = useIsDesktop();
 
  const [tab,setTab]=useState<"MINHAS"|"TERCEIROS"|"FINALIZADAS">("MINHAS");
  const [sortKey,setSortKey]=useState<SortKey>("valor");
+ const [filterCategory,setFilterCategory]=useState("TODAS");
+ const [filterPayment,setFilterPayment]=useState("TODOS");
+ const [filterResponsible,setFilterResponsible]=useState("TODOS");
+ const filterCategoryOptions=useMemo(()=>Array.from(new Set(rows.map(i=>String(i.category||"").trim().toUpperCase()).filter(Boolean))).sort(),[rows]);
+ const filterPaymentOptions=useMemo(()=>Array.from(new Set(rows.map(i=>String(i.card_name||i.payment_method_name||"").trim().toUpperCase()).filter(Boolean))).sort(),[rows]);
+ const filterResponsibleOptions=useMemo(()=>Array.from(new Set(rows.map(i=>String(i.responsible||"MINHA CONTA").trim().toUpperCase()).filter(Boolean))).sort(),[rows]);
  const base=rows.filter(i=>{const isThirdParty=thirdPartyInstallmentIds.has(i.id);if(tab==="FINALIZADAS")return Number(i.paid_count)>=Number(i.installments_count)&&(i.purchase_date.startsWith(month)||currentInfo[i.id]);const inMonth=Boolean(currentInfo[i.id]);if(tab==="MINHAS")return inMonth&&!isThirdParty&&Number(i.paid_count)<Number(i.installments_count);return inMonth&&isThirdParty&&Number(i.paid_count)<Number(i.installments_count);});
  const list=[...base].sort((a,b)=>{
    if(sortKey==="nome") return a.name.localeCompare(b.name);
@@ -68,6 +74,8 @@ function InstallmentsPage(){const isDesktop = useIsDesktop();
    return restA-restB;
  });
  const sortOptions:{key:SortKey;label:string}[]=[{key:"nome",label:"A-Z NOME"},{key:"valor",label:"$ VALOR"},{key:"restantes",label:"RESTANTES"},{key:"data",label:"DATA"}];
+ const filteredList=list.filter(i=>{const categoryOk=filterCategory==="TODAS"||String(i.category||"").toUpperCase()===filterCategory;const payment=String(i.card_name||i.payment_method_name||"").toUpperCase();const paymentOk=filterPayment==="TODOS"||payment===filterPayment;const responsible=String(i.responsible||"MINHA CONTA").toUpperCase();const responsibleOk=filterResponsible==="TODOS"||responsible===filterResponsible;return categoryOk&&paymentOk&&responsibleOk;});
+ const hasActiveFilters=filterCategory!=="TODAS"||filterPayment!=="TODOS"||filterResponsible!=="TODOS";
 
  return <div className="space-y-5">
   <div className="flex items-center justify-end"><MonthSelector month={month} setMonth={setMonth}/></div>
@@ -87,8 +95,8 @@ function InstallmentsPage(){const isDesktop = useIsDesktop();
   </div>
 
   <Panel>
-    {isLoading?<p className="py-8 text-center text-sm text-muted-foreground">Carregando...</p>:list.length===0?<p className="py-8 text-center text-sm text-muted-foreground">{tab==="MINHAS"?"Nenhum parcelamento seu em andamento.":tab==="TERCEIROS"?"Nenhum parcelamento de terceiros em andamento.":"Nenhum parcelamento finalizado ainda."}</p>:<div className="space-y-4">
-      {list.map(i=>{const transactions=installmentTxs.filter(tx=>tx.source_id===i.id);const totalCount=Math.max(Number(i.installments_count),transactions.length);const paidCount=transactions.length?transactions.filter(tx=>tx.paid).length:Number(i.paid_count);const installmentValue=transactions[0]?.amount?Number(transactions[0].amount):Number(i.total_amount)/Math.max(1,totalCount);const info=currentInfo[i.id];const done=paidCount>=totalCount;const invoice=i.card_id&&info?invoices.rows.find(inv=>inv.card_id===i.card_id&&inv.period===info.period):null;return <div key={i.id} className={cn("rounded-2xl border border-border bg-card p-4",done&&"opacity-60")}>
+    {isLoading?<p className="py-8 text-center text-sm text-muted-foreground">Carregando...</p>:list.length===0?<p className="py-8 text-center text-sm text-muted-foreground">{tab==="MINHAS"?"Nenhum parcelamento seu em andamento com os filtros atuais.":tab==="TERCEIROS"?"Nenhum parcelamento de terceiros em andamento com os filtros atuais.":"Nenhum parcelamento finalizado com os filtros atuais."}</p>:<div className="space-y-4">
+      {filteredList.map(i=>{const transactions=installmentTxs.filter(tx=>tx.source_id===i.id).sort((a,b)=>Number(a.source_index)-Number(b.source_index));const totalCount=Math.max(Number(i.installments_count),transactions.length);const paidCount=transactions.length?transactions.filter(tx=>tx.paid).length:Number(i.paid_count);const installmentValue=transactions[0]?.amount?Number(transactions[0].amount):Number(i.total_amount)/Math.max(1,totalCount);const info=currentInfo[i.id];const done=paidCount>=totalCount;const invoice=i.card_id&&info?invoices.rows.find(inv=>inv.card_id===i.card_id&&inv.period===info.period):null;return <div key={i.id} className={cn("rounded-2xl border border-border bg-card p-4",done&&"opacity-60")}>
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div><p className="text-sm font-bold">{i.responsible||"MINHA CONTA"}</p><p className="text-xs text-muted-foreground">{i.name} · {paidCount}/{totalCount} PAGAS</p><p className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground"><Landmark className="h-3 w-3"/>{i.card_name||i.payment_method_name||"SEM CARTÃO"}{info&&" · FATURA "+info.period}</p></div>
           <div className="text-right"><p className="text-sm font-bold text-primary">{formatCurrency(installmentValue)} / PARCELA</p><p className="text-[10px] text-muted-foreground">{formatCurrency(Number(i.total_amount))} TOTAL</p></div>
