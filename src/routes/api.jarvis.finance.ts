@@ -88,7 +88,7 @@ export const Route = createFileRoute("/api/jarvis/finance")({
           }
 
           const transactions = (transactionsResult.data ?? []) as TransactionRow[];
-          const counted = (row: TransactionRow) => row.type !== "DESPESA" || !row.card_id || row.paid;
+          const counted = (row: TransactionRow) => row.type !== "DESPESA" || !row.card_name || row.paid;
           const total = (type: string) => transactions
             .filter((row) => row.type === type && counted(row))
             .reduce((sum, row) => sum + Number(row.amount || 0), 0);
