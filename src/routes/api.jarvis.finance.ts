@@ -103,7 +103,7 @@ export const Route = createFileRoute("/api/jarvis/finance")({
               .select("id,card_id,period,total,status")
               .eq("household_id", householdId).eq("period", period),
             supabaseAdmin.from("installments")
-              .select("id,name,purchase_date,total_amount,installments_count,paid_count,category,responsible,card_name")
+              .select("id,name,purchase_date,total_amount,installments_count,paid_count,category,responsible,card_id,card_name")
               .eq("household_id", householdId).order("purchase_date", { ascending: false }).limit(100),
             supabaseAdmin.from("fixed_costs")
               .select("id,name,amount,due_day,category,responsible")
@@ -127,7 +127,7 @@ export const Route = createFileRoute("/api/jarvis/finance")({
           const investments = total("INVESTIMENTO");
           const invoices = invoicesResult.data ?? [];
           const cards = cardsResult.data ?? [];
-          const installments = (installmentsResult.data ?? []).map((item) => ({ ...item, card_id: null }));
+          const installments = installmentsResult.data ?? [];
           const fixedCosts = fixedCostsResult.data ?? [];
 
           return json({
