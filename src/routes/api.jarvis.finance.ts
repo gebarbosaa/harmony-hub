@@ -36,12 +36,42 @@ export const Route = createFileRoute("/api/jarvis/finance")({
           // This admin client is imported only inside the server handler; its service key
           // must never enter the browser bundle.
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-          const { data: integration, error: integrationError } = await supabaseAdmin
+          const { createHash } = await import("node:crypto");
+          const tokenHash = createHash("sha256").update(token, "utf8").digest("hex");
+          const lookup = await supabaseAdmin
             .from("jarvis_integrations")
-            .select("household_id,status")
-            .eq("jarvis_token", token)
+            .select("id,household_id,status")
+            .eq("jarvis_token", tokenHash)
             .eq("status", "connected")
             .maybeSingle();
+
+          let integration = lookup.data;
+          const integrationError = lookup.error;
+
+          // Backward compatibility: migrate older records that stored the token in plaintext.
+          if (!integration && !integrationError) {
+            const legacy = await supabaseAdmin
+              .from("jarvis_integrations")
+              .select("id,household_id,status")
+              .eq("jarvis_token", token)
+              .eq("status", "connected")
+              .maybeSingle();
+            if (legacy.error) {
+              console.error("[api/jarvis/finance] legacy token lookup failed", legacy.error.message);
+              return json({ error: "Não foi possível validar a integração." }, 500);
+            }
+            if (legacy.data?.id) {
+              integration = legacy.data;
+              const { error: migrationError } = await supabaseAdmin
+                .from("jarvis_integrations")
+                .update({ jarvis_token: tokenHash, updated_at: new Date().toISOString() })
+                .eq("id", legacy.data.id);
+              if (migrationError) {
+                // The request can continue, but the token should be migrated on a later request.
+                console.error("[api/jarvis/finance] token hash migration failed", migrationError.message);
+              }
+            }
+          }
 
           if (integrationError) {
             console.error("[api/jarvis/finance] integration lookup failed", integrationError.message);
