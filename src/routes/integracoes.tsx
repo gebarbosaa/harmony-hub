@@ -28,6 +28,11 @@ function vapidKeyToBytes(value: string) {
   return Uint8Array.from(raw, (char) => char.charCodeAt(0));
 }
 
+async function sha256Hex(value: string) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
 function errorMessage(error: unknown) {
   if (error instanceof Error) return error.message;
   if (typeof error === "object" && error !== null && "message" in error) {
@@ -130,7 +135,7 @@ function IntegracoesPage() {
       const response = await fetch(`${jarvisApiBase}/api/integrations/harmony/connect`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: jarvisCode, household_id: householdId, harmony_user_id: userData.user.id }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Não foi possível vincular.");
-      const { error: saveError } = await (supabase as any).from("jarvis_integrations").upsert({ household_id: householdId, jarvis_token: data.token, jarvis_user_id: null, status: "connected", connected_at: new Date().toISOString(), updated_at: new Date().toISOString() }, { onConflict: "household_id" });
+      const { error: saveError } = await (supabase as any).from("jarvis_integrations").upsert({ household_id: householdId, jarvis_token: await sha256Hex(data.token), jarvis_user_id: null, status: "connected", connected_at: new Date().toISOString(), updated_at: new Date().toISOString() }, { onConflict: "household_id" });
       if (saveError) throw saveError;
       setJarvisConnected(true); setJarvisCode(""); toast.success("JARVIS vinculado ao Harmony Hub.");
     } catch (error) { toast.error(error instanceof Error ? error.message : "Erro ao vincular o JARVIS."); } finally { setJarvisBusy(false); }
