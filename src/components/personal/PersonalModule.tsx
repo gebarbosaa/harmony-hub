@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, Sun, Moon, Plus, Trash2, Check, Play, Pause, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { PageHeader, Panel } from "@/components/ui-kit";
+import { Panel } from "@/components/ui-kit";
 
 export type PersonalModuleKey = "desenvolvimento-pessoal" | "casa" | "leitura" | "alimentacao" | "habitos-rotina";
 type Entry = { id: string; text: string; extra?: string; done?: boolean; createdAt: string };
