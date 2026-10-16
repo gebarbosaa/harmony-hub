@@ -50,6 +50,7 @@ export function PersonalModule({ module }: { module: PersonalModuleKey }) {
   useEffect(() => {
     let cancelled = false;
     loadingRef.current = true;
+    setUserId(null);
     setLoadedKey("");
     const localEntries = readLocal(module,tab);
     async function load() {
