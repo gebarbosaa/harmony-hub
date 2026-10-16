@@ -105,7 +105,7 @@ export function PersonalModule({ module }: { module: PersonalModuleKey }) {
         } else {
           setEntries(localEntries);
           if (localEntries.length) {
-            const { error: saveError } = await (supabase as any).from("personal_module_data").upsert({user_id:uid,module_key:module,tab_key:tab,entries:localEntries,updated_at:new Date().toISOString()},{onConflict:"user_id,module_key,tab_key"});
+            const { error: saveError } = await personalData().upsert({user_id:uid,module_key:module,tab_key:tab,entries:localEntries,updated_at:new Date().toISOString()},{onConflict:"user_id,module_key,tab_key"});
             if (saveError) console.error("[personal-module] migration local failed",saveError.message);
           }
         }
@@ -130,7 +130,7 @@ export function PersonalModule({ module }: { module: PersonalModuleKey }) {
     const timeout = window.setTimeout(async () => {
       setSyncStatus("syncing");
       try {
-        const { error } = await (supabase as any).from("personal_module_data").upsert({user_id:userId,module_key:module,tab_key:tab,entries,updated_at:new Date().toISOString()},{onConflict:"user_id,module_key,tab_key"});
+        const { error } = await personalData().upsert({user_id:userId,module_key:module,tab_key:tab,entries,updated_at:new Date().toISOString()},{onConflict:"user_id,module_key,tab_key"});
         if (error) { setSyncStatus("error"); console.error("[personal-module] save failed",error.message); }
         else setSyncStatus("synced");
       } catch (error) { setSyncStatus("error"); console.error("[personal-module] save failed",error); }
