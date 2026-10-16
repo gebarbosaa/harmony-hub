@@ -82,7 +82,7 @@ export function PersonalModule({ module }: { module: PersonalModuleKey }) {
         if (!cancelled) { loadingRef.current=false; setLoadedKey(activeKey); }
       } catch (error) {
         console.error("[personal-module] load failed",error);
-        if (!cancelled) { setUserId(null); setEntries(localEntries); loadingRef.current=false; setLoadedKey(activeKey); }
+        if (!cancelled) { setUserId(null); setSyncStatus("error"); setEntries(localEntries); loadingRef.current=false; setLoadedKey(activeKey); }
       }
     }
     void load();
