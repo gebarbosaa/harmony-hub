@@ -116,7 +116,7 @@ function ThirdPartiesPage() {
       const transactions = thirdPartyInstallmentTxs.filter((tx) => tx.source_id === installment.id);
       return expense ? { installment, expense, party, transactions } : null;
     })
-    .filter(Boolean) as ThirdPartyInstallmentRow[]);
+    .filter(Boolean) as ThirdPartyInstallmentRow[], [installments.rows, thirdPartyInstallmentIds, expenses.rows, thirdPartyInstallmentTxs, parties.rows]);
 
   const total = useMemo(() => expenseRows.reduce((sum, row) => sum + Number(row.amount), 0), [expenseRows]);
   const pending = useMemo(() => expenseRows.reduce((sum, row) => sum + Math.max(Number(row.amount) - Number(row.reimbursed_amount), 0), 0), [expenseRows]);
@@ -202,6 +202,7 @@ function ThirdPartiesPage() {
 
     let transactionId: string | null = null;
     let installmentId: string | null = null;
+    let createdExpenseId: string | null = null;
     const installmentTotal = Number(installmentCount);
     if (isInstallment && (!Number.isInteger(installmentTotal) || installmentTotal < 2 || installmentTotal > 120)) {
       return toast.error("INFORME UMA QUANTIDADE DE 2 A 120 PARCELAS");
