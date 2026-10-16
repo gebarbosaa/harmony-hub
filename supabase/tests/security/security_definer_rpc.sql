@@ -3,7 +3,6 @@
 DO $$
 DECLARE
   fn regprocedure;
-  fn_name text;
   functions regprocedure[] := ARRAY[
     'public.create_household(text,text)'::regprocedure,
     'public.current_household_id()'::regprocedure,
@@ -17,7 +16,6 @@ DECLARE
   ];
 BEGIN
   FOREACH fn IN ARRAY functions LOOP
-    SELECT p.proname INTO fn_name FROM pg_proc p WHERE p.oid = fn;
     IF has_function_privilege('anon', fn, 'EXECUTE') THEN
       RAISE EXCEPTION 'FAIL: anon can execute %', fn;
     END IF;
@@ -25,9 +23,12 @@ BEGIN
       RAISE EXCEPTION 'FAIL: authenticated cannot execute required RPC %', fn;
     END IF;
     IF NOT EXISTS (
-      SELECT 1 FROM pg_proc p
+      SELECT 1
+      FROM pg_proc p
+      CROSS JOIN LATERAL unnest(coalesce(p.proconfig, ARRAY[]::text[])) AS setting
       WHERE p.oid = fn
-        AND coalesce(p.proconfig, ARRAY[]::text[]) @> ARRAY['search_path=']
+        AND setting LIKE 'search_path=%'
+        AND regexp_replace(setting, '^search_path=', '') IN ('', '""')
     ) THEN
       RAISE EXCEPTION 'FAIL: % does not have an empty search_path', fn;
     END IF;
