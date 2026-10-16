@@ -26,6 +26,7 @@ export function PersonalModule({ module }: { module: PersonalModuleKey }) {
   const [entries,setEntries] = useState<Entry[]>([]);
   const [loadedKey,setLoadedKey] = useState("");
   const [userId,setUserId] = useState<string|null>(null);
+  const [syncStatus,setSyncStatus] = useState<"local"|"syncing"|"synced"|"error">("local");
   const loadingRef = useRef(true);
   const [input,setInput] = useState("");
   const [extra,setExtra] = useState("");
