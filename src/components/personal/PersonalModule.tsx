@@ -18,7 +18,27 @@ const MARKET_CATEGORIES = ["Hortifrúti","Açougue","Laticínios","Mercearia","P
 const MEALS = ["Café da manhã","Almoço","Lanche","Janta","Ceia","Pós-treino"];
 const MOODS = ["😞","😕","😐","🙂","😄"];
 const keyFor = (module: string, tab: string) => "harmony-personal-v1:" + module + ":" + tab;
-function readLocal(module: string, tab: string): Entry[] { try { const raw = localStorage.getItem(keyFor(module,tab)); const value = raw ? JSON.parse(raw) : []; return Array.isArray(value) ? value : []; } catch { return []; } }
+function readLocal(module: string, tab: string): Entry[] {
+  try {
+    const raw = localStorage.getItem(keyFor(module, tab));
+    const value: unknown = raw ? JSON.parse(raw) : [];
+    return Array.isArray(value) ? (value as Entry[]) : [];
+  } catch (error) {
+    console.warn("[personal-module] local cache could not be read", error);
+    return [];
+  }
+}
+
+type PersonalModuleRow = { entries: Entry[] };
+type PersonalModuleResult = { data: PersonalModuleRow | null; error: { message: string } | null };
+type PersonalModuleQuery = PromiseLike<PersonalModuleResult> & {
+  select: (columns: string) => PersonalModuleQuery;
+  eq: (column: string, value: string) => PersonalModuleQuery;
+  maybeSingle: () => Promise<PersonalModuleResult>;
+  upsert: (values: Record<string, unknown>, options: { onConflict: string }) => Promise<PersonalModuleResult>;
+};
+type PersonalModuleClient = { from: (table: string) => PersonalModuleQuery };
+const personalData = () => (supabase as unknown as PersonalModuleClient).from("personal_module_data");
 
 export function PersonalModule({ module }: { module: PersonalModuleKey }) {
   const config = CONFIG[module];
@@ -46,7 +66,13 @@ export function PersonalModule({ module }: { module: PersonalModuleKey }) {
   const month = now.toLocaleDateString("pt-BR",{month:"long",year:"numeric"});
   const quote = QUOTES[now.getDate() % QUOTES.length];
 
-  useEffect(() => { try { setTheme(localStorage.getItem("harmony-personal-theme")==="dark"?"dark":"light"); } catch {} }, []);
+  useEffect(() => {
+    try {
+      setTheme(localStorage.getItem("harmony-personal-theme") === "dark" ? "dark" : "light");
+    } catch (error) {
+      console.warn("[personal-module] theme preference could not be read", error);
+    }
+  }, []);
   useEffect(() => {
     let cancelled = false;
     loadingRef.current = true;
@@ -61,7 +87,7 @@ export function PersonalModule({ module }: { module: PersonalModuleKey }) {
           return;
         }
         const uid = auth.user.id;
-        const { data, error } = await (supabase as any).from("personal_module_data").select("entries").eq("user_id",uid).eq("module_key",module).eq("tab_key",tab).maybeSingle();
+        const { data, error } = await personalData().select("entries").eq("user_id",uid).eq("module_key",module).eq("tab_key",tab).maybeSingle();
         if (cancelled) return;
         if (error) {
           if (!cancelled) { setUserId(null); setSyncStatus("error"); setEntries(localEntries); loadingRef.current=false; setLoadedKey(activeKey); }
@@ -71,7 +97,11 @@ export function PersonalModule({ module }: { module: PersonalModuleKey }) {
         setSyncStatus("synced");
         if (data && Array.isArray(data.entries)) {
           setEntries(data.entries as Entry[]);
-          try { localStorage.setItem(keyFor(module,tab),JSON.stringify(data.entries)); } catch {}
+          try {
+            localStorage.setItem(keyFor(module, tab), JSON.stringify(data.entries));
+          } catch (error) {
+            console.warn("[personal-module] local cache could not be updated", error);
+          }
         } else {
           setEntries(localEntries);
           if (localEntries.length) {
@@ -91,7 +121,11 @@ export function PersonalModule({ module }: { module: PersonalModuleKey }) {
 
   useEffect(() => {
     if (!ready || loadingRef.current) return;
-    try { localStorage.setItem(keyFor(module,tab),JSON.stringify(entries)); } catch {}
+    try {
+      localStorage.setItem(keyFor(module, tab), JSON.stringify(entries));
+    } catch (error) {
+      console.warn("[personal-module] local cache could not be updated", error);
+    }
     if (!userId) return;
     const timeout = window.setTimeout(async () => {
       setSyncStatus("syncing");
@@ -125,7 +159,7 @@ export function PersonalModule({ module }: { module: PersonalModuleKey }) {
   const progress = module==="leitura" ? Math.min(100,Math.max(0,Number(page||0)/Math.max(1,Number(totalPages||1))*100)) : 0;
 
   return <div className={theme==="dark"?"space-y-5 rounded-3xl bg-slate-950 p-3 text-slate-100 sm:p-6":"space-y-5"}>
-    <div className="flex items-center justify-between gap-3"><Link to="/painel" className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm"><ArrowLeft className="h-4 w-4"/> Voltar ao Painel</Link><button type="button" onClick={()=>setTheme(t=>{const next=t==="dark"?"light":"dark";try{localStorage.setItem("harmony-personal-theme",next)}catch{};return next})} className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm">{theme==="dark"?<Sun className="h-4 w-4"/>:<Moon className="h-4 w-4"/>}{theme==="dark"?"Tema claro":"Tema escuro"}</button></div>
+    <div className="flex items-center justify-between gap-3"><Link to="/painel" className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm"><ArrowLeft className="h-4 w-4"/> Voltar ao Painel</Link><button type="button" onClick={()=>setTheme(t=>{const next=t==="dark"?"light":"dark";try { localStorage.setItem("harmony-personal-theme", next); } catch (error) { console.warn("[personal-module] theme preference could not be saved", error); } return next})} className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm">{theme==="dark"?<Sun className="h-4 w-4"/>:<Moon className="h-4 w-4"/>}{theme==="dark"?"Tema claro":"Tema escuro"}</button></div>
     <header className="rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-card to-transparent p-5 sm:p-7"><div className="flex items-start gap-3"><span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-2xl">{config.emoji}</span><div><p className="text-[10px] font-bold uppercase tracking-[.18em] text-primary">HARMONY HUB · ORGANIZAÇÃO PESSOAL</p><h1 className="mt-2 text-2xl font-extrabold sm:text-3xl">{config.title}</h1><p className="mt-2 text-sm text-muted-foreground">{config.description}</p></div></div><div className="mt-5 flex flex-wrap items-center justify-between gap-3"><p className="text-sm font-semibold capitalize text-muted-foreground">{month}</p>{module==="desenvolvimento-pessoal"&&<p className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-sm">✨ {quote}</p>}</div></header>
     <div className="flex gap-2 overflow-x-auto pb-2" role="tablist" aria-label={"Abas de "+config.title}>{config.tabs.map(t=><button key={t} role="tab" aria-selected={tab===t} className={pill(tab===t)} onClick={()=>{setTab(t);setInput("");setExtra("");}}>{t}</button>)}</div>
     <Panel title={titles[tab]||tab}>
