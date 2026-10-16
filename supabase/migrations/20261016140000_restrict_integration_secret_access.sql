@@ -54,6 +54,21 @@ create policy spreadsheet_connections_member_select on public.spreadsheet_connec
       and gm.status = 'ACTIVE'
   ));
 
+-- Remove unnecessary anonymous and client write privileges from the Open Finance
+-- tables. The authenticated application can read connection/account metadata;
+-- trusted Edge Functions perform provider synchronization and mutations.
+revoke all privileges on table public.open_finance_accounts from anon, authenticated;
+grant select on table public.open_finance_accounts to authenticated;
+
+revoke all privileges on table public.open_finance_connections from anon, authenticated;
+grant select, delete on table public.open_finance_connections to authenticated;
+
+revoke all privileges on table public.open_finance_transactions from anon, authenticated;
+grant select on table public.open_finance_transactions to authenticated;
+
+revoke all privileges on table public.spreadsheet_sync_events from anon, authenticated;
+grant select on table public.spreadsheet_sync_events to authenticated;
+
 -- Policies with role PUBLIC were already scoped to active group members via
 -- auth.uid(), but explicitly limit their execution to signed-in users.
 drop policy if exists open_finance_accounts_household_select on public.open_finance_accounts;
