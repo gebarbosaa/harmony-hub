@@ -1,8 +1,13 @@
-import { LayoutDashboard, ArrowLeftRight, Wallet, Repeat, CreditCard, Settings, ArrowDownCircle, ArrowUpCircle, TrendingUp, Target, Calculator, ReceiptText, Undo2, Table2, Users, UserRound, Building2, Upload, Factory, ShoppingCart } from "lucide-react";
+import { LayoutDashboard, ArrowLeftRight, Wallet, Repeat, CreditCard, Settings, ArrowDownCircle, ArrowUpCircle, TrendingUp, Target, Calculator, ReceiptText, Undo2, Table2, Users, UserRound, Building2, Upload, Factory, ShoppingCart, BookOpen, House, Utensils, Sparkles, CheckSquare } from "lucide-react";
 export type NavItem = { label: string; to: string; icon: typeof Wallet; children?: NavItem[] };
 export const navItems: NavItem[] = [
 {label:"INÍCIO",to:"/",icon:LayoutDashboard},
 {label:"FLUXO",to:"/fluxo",icon:ArrowLeftRight},
+{label:"DESENVOLVIMENTO PESSOAL",to:"/desenvolvimento-pessoal",icon:Sparkles},
+{label:"CASA",to:"/casa",icon:House},
+{label:"LEITURA",to:"/leitura",icon:BookOpen},
+{label:"ALIMENTAÇÃO",to:"/alimentacao",icon:Utensils},
+{label:"HÁBITOS / ROTINA",to:"/habitos-rotina",icon:CheckSquare},
 {label:"RECEITAS",to:"/receitas",icon:ArrowUpCircle},
 {label:"DESPESAS",to:"/despesas",icon:ArrowDownCircle},
 {label:"TERCEIROS",to:"/terceiros",icon:UserRound},
