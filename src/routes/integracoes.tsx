@@ -126,7 +126,7 @@ function IntegracoesPage() {
       if (profileError) throw profileError;
       const householdId = profileData?.household_id;
       if (!householdId) throw new Error("Nenhuma casa/grupo ativo encontrado.");
-      const response = await fetch("https://this-jarvis-5hlofueuv-gedograuuu.vercel.app/api/integrations/harmony/connect", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: jarvisCode, household_id: householdId, harmony_user_id: userData.user.id }) });
+      const response = await fetch("https://this-jarvis.vercel.app/api/integrations/harmony/connect", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: jarvisCode, household_id: householdId, harmony_user_id: userData.user.id }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Não foi possível vincular.");
       const { error: saveError } = await (supabase as any).from("jarvis_integrations").upsert({ household_id: householdId, jarvis_token: data.token, jarvis_user_id: null, status: "connected", connected_at: new Date().toISOString(), updated_at: new Date().toISOString() }, { onConflict: "household_id" });
