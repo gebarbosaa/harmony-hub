@@ -57,19 +57,24 @@ export function PersonalModule({ module }: { module: PersonalModuleKey }) {
       try {
         const { data: auth } = await supabase.auth.getUser();
         if (!auth.user) {
-          if (!cancelled) { setUserId(null); setEntries(localEntries); loadingRef.current=false; setLoadedKey(activeKey); }
+          if (!cancelled) { setUserId(null); setSyncStatus("local"); setEntries(localEntries); loadingRef.current=false; setLoadedKey(activeKey); }
           return;
         }
         const uid = auth.user.id;
         const { data, error } = await (supabase as any).from("personal_module_data").select("entries").eq("user_id",uid).eq("module_key",module).eq("tab_key",tab).maybeSingle();
         if (cancelled) return;
+        if (error) {
+          if (!cancelled) { setUserId(null); setSyncStatus("error"); setEntries(localEntries); loadingRef.current=false; setLoadedKey(activeKey); }
+          return;
+        }
         setUserId(uid);
-        if (!error && data && Array.isArray(data.entries)) {
+        setSyncStatus("synced");
+        if (data && Array.isArray(data.entries)) {
           setEntries(data.entries as Entry[]);
           try { localStorage.setItem(keyFor(module,tab),JSON.stringify(data.entries)); } catch {}
         } else {
           setEntries(localEntries);
-          if (!error && localEntries.length) {
+          if (localEntries.length) {
             const { error: saveError } = await (supabase as any).from("personal_module_data").upsert({user_id:uid,module_key:module,tab_key:tab,entries:localEntries,updated_at:new Date().toISOString()},{onConflict:"user_id,module_key,tab_key"});
             if (saveError) console.error("[personal-module] migration local failed",saveError.message);
           }
@@ -89,10 +94,12 @@ export function PersonalModule({ module }: { module: PersonalModuleKey }) {
     try { localStorage.setItem(keyFor(module,tab),JSON.stringify(entries)); } catch {}
     if (!userId) return;
     const timeout = window.setTimeout(async () => {
+      setSyncStatus("syncing");
       try {
         const { error } = await (supabase as any).from("personal_module_data").upsert({user_id:userId,module_key:module,tab_key:tab,entries,updated_at:new Date().toISOString()},{onConflict:"user_id,module_key,tab_key"});
-        if (error) console.error("[personal-module] save failed",error.message);
-      } catch (error) { console.error("[personal-module] save failed",error); }
+        if (error) { setSyncStatus("error"); console.error("[personal-module] save failed",error.message); }
+        else setSyncStatus("synced");
+      } catch (error) { setSyncStatus("error"); console.error("[personal-module] save failed",error); }
     },450);
     return () => window.clearTimeout(timeout);
   },[entries,ready,userId,module,tab]);
@@ -130,6 +137,6 @@ export function PersonalModule({ module }: { module: PersonalModuleKey }) {
       :module==="habitos-rotina"&&(tab==="Minha semana"||tab==="Meu mês")?<>{addForm("Ex.: beber água, treinar, ler 30 min…","Adicionar hábito")}{list("Adicione seus hábitos e marque cada conclusão.",true)}</>
       :<>{addForm(tab==="Sobre mim"?"Escreva sobre você…":tab==="Gratidão"?"Pelo que você é grata hoje?":tab==="Carta"?"Escreva sua carta…":tab==="Diário"?"Escreva seu registro…":"Adicionar registro…")}{list("Ainda não há registros nesta aba.")}</>}
     </Panel>
-    <p className="text-center text-xs text-muted-foreground">Seus registros são salvos no dispositivo e, quando o banco estiver disponível, sincronizados com sua conta.</p>
+    <p className="text-center text-xs text-muted-foreground">{syncStatus==="syncing"?"Sincronizando seus registros…":syncStatus==="synced"?"Dados sincronizados com sua conta.":syncStatus==="error"?"Falha na sincronização. Os dados locais foram preservados; tente recarregar quando a conexão voltar.":"Registros salvos neste dispositivo. Entre na sua conta para sincronizar entre dispositivos."}</p>
   </div>;
 }
