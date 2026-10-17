@@ -1,15 +1,13 @@
 #!/usr/bin/env node
-// Wrapper around `vite dev` that drops the `--allowed-hosts` CLI flag.
+// Wrapper around `vite dev` that:
+//   - drops the `--allowed-hosts` CLI flag (removed in Vite 8)
+//   - forces PORT=3000 because Blaxel exports PORT=80 / BL_SERVER_PORT=80
+//     into the sandbox, which Nitro's vite plugin reads first and which would
+//     otherwise make the dev server bind to 80 instead of the 3000 the
+//     platform's entrypoint watchdog waits for.
 //
-// Why this exists: Vite <=7 exposed `--allowed-hosts` as a dev-server CLI flag,
-// but Vite 8 removed it (the option now lives in `server.allowedHosts` config).
-// Our platform's restart command still appends `--allowed-hosts all`, which makes
-// Vite 8's `cac` CLI throw `Unknown option --allowed-hosts` before the server
-// ever starts, so the preview never comes up.
-//
-// We strip that flag (and its value) here, set `server.allowedHosts` via
-// vite.config.ts to `true` (allow any host) so the embedded preview works, and
-// forward everything else to vite unchanged.
+// The matching `server.allowedHosts: true` lives in vite.config.ts so the
+// embedded cross-origin preview iframe can hit the server with any Host header.
 
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -31,9 +29,16 @@ for (let i = 0; i < args.length; i += 1) {
   filtered.push(a);
 }
 
+const env = { ...process.env };
+// Blaxel sets PORT=80 / BL_SERVER_PORT=80 in the sandbox; the entrypoint
+// watchdog waits on port 3000, so force the dev server onto 3000.
+env.PORT = "3000";
+// Keep Blaxel's hint untouched for tooling that wants it; just shadow PORT.
+// (We don't strip BL_SERVER_PORT because nothing in this stack reads it.)
+
 const child = spawn(process.execPath, [viteBin, ...filtered], {
   stdio: "inherit",
-  env: process.env,
+  env,
 });
 
 child.on("exit", (code, signal) => {
