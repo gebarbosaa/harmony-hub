@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
-import { Wallet, CreditCard, Repeat, Coins, AlertTriangle, ArrowRight } from "lucide-react";
+import { Wallet, CreditCard, Repeat, Coins, AlertTriangle, ArrowRight, Clock3, House, CheckSquare, CalendarDays, CalendarClock } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { PageHeader, Panel, StatCard, ProgressBar, Tag, PersonDot } from "@/components/ui-kit";
 import { formatCurrency, calculateGoalProgress, calculateBudgetUsage } from "@/lib/finance";
@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useHouseholdTable } from "@/hooks/use-household-data";
 
 export const Route = createFileRoute("/")({
-  head: () => ({ meta: [{ title: "INÍCIO — HARMONY HUB" }, { name: "description", content: "Resumo financeiro do mês com dados reais do seu grupo." }] }),
+  head: () => ({ meta: [{ title: "INÍCIO — HARMONY HUB" }, { name: "description", content: "Organize sua rotina, casa, hábitos e finanças em um só lugar." }] }),
   component: Dashboard,
 });
 const PIE_COLORS = ["var(--orange-primary)", "var(--orange-light)", "var(--graphite-light)", "var(--muted-foreground)", "var(--danger)"];
@@ -41,7 +41,32 @@ function Dashboard() {
   const upcoming=useMemo(()=>{const today=new Date();today.setHours(0,0,0,0);const five=new Date(today);five.setDate(five.getDate()+5);return activeFixed.map(f=>({id:f.id,name:f.name,amount:Number(f.amount),date:new Date(now.getFullYear(),now.getMonth(),f.due_day),category:f.category})).filter(x=>x.date>=today&&x.date<=five).sort((a,b)=>a.date.getTime()-b.date.getTime()).slice(0,4)},[activeFixed]);
   const splitData=useMemo(()=>{const map=new Map<string,number>();currentTx.filter(t=>t.type==="DESPESA"&&counts(t)).forEach(t=>{const name=t.responsible?.trim()||"COMPARTILHADO";map.set(name,(map.get(name)||0)+Number(t.amount));});return Array.from(map,([name,value])=>({name,value})).sort((a,b)=>b.value-a.value).slice(0,4)},[currentTx]);
   const exportReport=()=>openFinancialReport({profile,transactions:currentTx,monthKey,monthName});
-  return <div className="space-y-5"><PageHeader title={`${greeting}, ${profile?.name?.split(" ")[0]?.toUpperCase()||""}`} subtitle={`Veja como estão as finanças de ${monthName.toLowerCase()}.`} action={<div className="flex items-center gap-2"><Tag tone="primary">{monthName}</Tag><button type="button" onClick={exportReport} className="label-caps inline-flex items-center rounded-xl border border-primary/60 bg-primary px-3 py-2 text-[10px] font-bold text-primary-foreground shadow-sm hover:opacity-90">BAIXAR RELATÓRIO</button></div>}/>
+  return <div className="space-y-5"><PageHeader title={`${greeting}, ${profile?.name?.split(" ")[0]?.toUpperCase()||""}`} subtitle="Sua vida em um só lugar: rotina, casa, hábitos e finanças." action={<div className="flex items-center gap-2"><Tag tone="primary">{monthName}</Tag><button type="button" onClick={exportReport} className="label-caps inline-flex items-center rounded-xl border border-primary/60 bg-primary px-3 py-2 text-[10px] font-bold text-primary-foreground shadow-sm hover:opacity-90">BAIXAR RELATÓRIO</button></div>}/>
+    <Panel title="ORGANIZAÇÃO PESSOAL" className="space-y-3">
+      <p className="text-sm text-muted-foreground">Acesse rapidamente o que você precisa organizar no dia a dia.</p>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
+        <Link to="/rotina" className="group flex min-h-28 flex-col justify-between rounded-2xl border border-border bg-card p-4 transition hover:border-primary/60 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+          <Clock3 className="h-5 w-5 text-primary" />
+          <span><span className="block text-sm font-semibold">Minha rotina</span><span className="mt-1 block text-xs text-muted-foreground">Organize seu dia e sua semana</span></span>
+        </Link>
+        <Link to="/casa" className="group flex min-h-28 flex-col justify-between rounded-2xl border border-border bg-card p-4 transition hover:border-primary/60 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+          <House className="h-5 w-5 text-primary" />
+          <span><span className="block text-sm font-semibold">Tarefas de casa</span><span className="mt-1 block text-xs text-muted-foreground">Cuide das tarefas domésticas</span></span>
+        </Link>
+        <Link to="/habitos" className="group flex min-h-28 flex-col justify-between rounded-2xl border border-border bg-card p-4 transition hover:border-primary/60 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+          <CheckSquare className="h-5 w-5 text-primary" />
+          <span><span className="block text-sm font-semibold">Hábitos</span><span className="mt-1 block text-xs text-muted-foreground">Acompanhe sua consistência</span></span>
+        </Link>
+        <Link to="/calendario" className="group flex min-h-28 flex-col justify-between rounded-2xl border border-border bg-card p-4 transition hover:border-primary/60 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+          <CalendarDays className="h-5 w-5 text-primary" />
+          <span><span className="block text-sm font-semibold">Calendário</span><span className="mt-1 block text-xs text-muted-foreground">Consulte sua visão financeira diária</span></span>
+        </Link>
+        <Link to="/plantoes" className="group flex min-h-28 flex-col justify-between rounded-2xl border border-border bg-card p-4 transition hover:border-primary/60 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+          <CalendarClock className="h-5 w-5 text-primary" />
+          <span><span className="block text-sm font-semibold">Plantões</span><span className="mt-1 block text-xs text-muted-foreground">Cadastre sua escala de trabalho</span></span>
+        </Link>
+      </div>
+    </Panel>
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4"><StatCard label="SALDO DO MÊS" value={formatCurrency(balance)} delta={`${income>0?"Receitas":"Sem receitas"}`} tone={balance>=0?"primary":"danger"} icon={<Wallet className="h-4 w-4"/>}/><StatCard label="DESPESAS DO MÊS" value={formatCurrency(expenses)} delta={`${currentTx.filter(t=>t.type==="DESPESA"&&counts(t)).length} lançamentos`} tone="danger" icon={<Coins className="h-4 w-4"/>}/><StatCard label="PARCELADOS" value={formatCurrency(installmentTotal)} delta={`${activeInstallments.length} compras ativas`} tone="info" icon={<CreditCard className="h-4 w-4"/>}/><StatCard label="CUSTOS FIXOS" value={formatCurrency(fixedTotal)} delta={`${activeFixed.length} ativos`} tone="success" icon={<Repeat className="h-4 w-4"/>}/></div>
     <Panel className="border-warning/50"><div className="flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning/15 text-warning"><AlertTriangle className="h-5 w-5"/></span><div><h2 className="label-caps text-sm">VENCENDO EM BREVE</h2><p className="text-xs text-muted-foreground">{upcoming.length} contas nos próximos 5 dias</p></div></div><Link to="/contas-a-pagar" className="label-caps rounded-xl border border-primary/60 px-3 py-2 text-[11px] text-primary">VER CONTAS</Link></div>{upcoming.length===0?<p className="mt-4 py-4 text-center text-sm text-muted-foreground">Nenhuma conta vencendo nos próximos 5 dias.</p>:<div className="mt-4 grid gap-2 md:grid-cols-2">{upcoming.map(b=><div key={b.id} className="flex items-center justify-between rounded-xl border border-border bg-secondary/40 px-3 py-2.5"><div><p className="label-caps text-[11px]">{b.name}</p><Tag tone="warning">DIA {b.date.getDate()}</Tag></div><div className="text-right"><p className="text-sm font-bold">{formatCurrency(b.amount)}</p><Link to="/contas-a-pagar" className="label-caps text-[10px] text-primary">VER CONTA</Link></div></div>)}</div>}</Panel>
     <div className="grid gap-4 lg:grid-cols-3"><Panel title="EVOLUÇÃO RECENTE" className="lg:col-span-2"><div className="h-64">{isMounted&&<ResponsiveContainer width="100%" height="100%"><AreaChart data={monthlyEvolution}><CartesianGrid stroke="var(--border)" vertical={false}/><XAxis dataKey="mes" stroke="var(--muted-foreground)" fontSize={11} tickLine={false}/><YAxis stroke="var(--muted-foreground)" fontSize={11} tickLine={false} width={48}/><Tooltip formatter={(v:number)=>formatCurrency(v)}/><Area type="monotone" dataKey="gastos" stroke="var(--orange-primary)" fill="var(--orange-primary)" fillOpacity={0.15}/><Area type="monotone" dataKey="receitas" stroke="var(--success)" fill="transparent"/></AreaChart></ResponsiveContainer>}</div></Panel><Panel title="DISTRIBUIÇÃO DE GASTOS"><div className="h-64">{isMounted&&(categoryDistribution.length?<ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={categoryDistribution} dataKey="value" nameKey="name" innerRadius={55} outerRadius={85} paddingAngle={3} stroke="none">{categoryDistribution.map((entry,index)=><Cell key={entry.name} fill={entry.value>entry.budget?"var(--danger)":PIE_COLORS[index%5]}/>)}</Pie><Legend wrapperStyle={{fontSize:10}}/><Tooltip formatter={(v:number)=>formatCurrency(v)}/></PieChart></ResponsiveContainer>:<div className="flex h-full items-center justify-center text-sm text-muted-foreground">Cadastre despesas para ver a distribuição.</div>)}</div></Panel></div>
