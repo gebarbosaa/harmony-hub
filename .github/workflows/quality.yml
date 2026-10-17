@@ -6,9 +6,6 @@ on:
   pull_request:
     branches: [main]
 
-permissions:
-  contents: write
-
 jobs:
   quality:
     runs-on: ubuntu-latest
@@ -21,20 +18,6 @@ jobs:
         with:
           node-version: 22
           cache: npm
-
-      - name: Regenerate and commit lockfile on the technical branch
-        if: github.event_name == 'pull_request' && github.head_ref == 'fix/base-quality-step-1'
-        run: |
-          git fetch origin "$GITHUB_HEAD_REF"
-          git checkout -B "$GITHUB_HEAD_REF" "origin/$GITHUB_HEAD_REF"
-          npm install --package-lock-only --ignore-scripts
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if ! git diff --quiet -- package-lock.json; then
-            git add package-lock.json
-            git commit -m "Regenera package-lock.json para sincronizar dependências"
-            git push origin "HEAD:$GITHUB_HEAD_REF"
-          fi
 
       - name: Install dependencies
         run: npm ci
