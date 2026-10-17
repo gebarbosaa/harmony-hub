@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
-import { Wallet, CreditCard, Repeat, Coins, AlertTriangle, ArrowRight, Clock3, House, CheckSquare, CalendarDays } from "lucide-react";
+import { Wallet, CreditCard, Repeat, Coins, AlertTriangle, ArrowRight, Clock3, House, CheckSquare, CalendarDays, CalendarClock } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { PageHeader, Panel, StatCard, ProgressBar, Tag, PersonDot } from "@/components/ui-kit";
 import { formatCurrency, calculateGoalProgress, calculateBudgetUsage } from "@/lib/finance";
@@ -44,7 +44,7 @@ function Dashboard() {
   return <div className="space-y-5"><PageHeader title={`${greeting}, ${profile?.name?.split(" ")[0]?.toUpperCase()||""}`} subtitle="Sua vida em um só lugar: rotina, casa, hábitos e finanças." action={<div className="flex items-center gap-2"><Tag tone="primary">{monthName}</Tag><button type="button" onClick={exportReport} className="label-caps inline-flex items-center rounded-xl border border-primary/60 bg-primary px-3 py-2 text-[10px] font-bold text-primary-foreground shadow-sm hover:opacity-90">BAIXAR RELATÓRIO</button></div>}/>
     <Panel title="ORGANIZAÇÃO PESSOAL" className="space-y-3">
       <p className="text-sm text-muted-foreground">Acesse rapidamente o que você precisa organizar no dia a dia.</p>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
         <Link to="/rotina" className="group flex min-h-28 flex-col justify-between rounded-2xl border border-border bg-card p-4 transition hover:border-primary/60 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
           <Clock3 className="h-5 w-5 text-primary" />
           <span><span className="block text-sm font-semibold">Minha rotina</span><span className="mt-1 block text-xs text-muted-foreground">Organize seu dia e sua semana</span></span>
@@ -60,6 +60,10 @@ function Dashboard() {
         <Link to="/calendario" className="group flex min-h-28 flex-col justify-between rounded-2xl border border-border bg-card p-4 transition hover:border-primary/60 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
           <CalendarDays className="h-5 w-5 text-primary" />
           <span><span className="block text-sm font-semibold">Calendário</span><span className="mt-1 block text-xs text-muted-foreground">Consulte sua visão financeira diária</span></span>
+        </Link>
+        <Link to="/plantoes" className="group flex min-h-28 flex-col justify-between rounded-2xl border border-border bg-card p-4 transition hover:border-primary/60 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+          <CalendarClock className="h-5 w-5 text-primary" />
+          <span><span className="block text-sm font-semibold">Plantões</span><span className="mt-1 block text-xs text-muted-foreground">Cadastre sua escala de trabalho</span></span>
         </Link>
       </div>
     </Panel>
