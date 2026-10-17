@@ -86,6 +86,21 @@ function localDateKey(date = new Date()): string {
   return String(date.getFullYear()) + "-" + String(date.getMonth() + 1).padStart(2, "0") + "-" + String(date.getDate()).padStart(2, "0");
 }
 const keyFor = (module: string, tab: string) => "harmony-personal-v1:" + module + ":" + tab;
+function sharedTabFor(module: PersonalModuleKey, tab: string): string {
+  if (module === "habitos-rotina" && (tab === "Minha semana" || tab === "Meu mês")) return "Hábitos";
+  if (module === "rotina" && (tab === "Hoje" || tab === "Semana" || tab === "Planejamento")) return "Atividades";
+  return tab;
+}
+function legacyTabsFor(module: PersonalModuleKey, tab: string): string[] {
+  if (module === "habitos-rotina" && (tab === "Minha semana" || tab === "Meu mês")) return ["Minha semana", "Meu mês"];
+  if (module === "rotina" && (tab === "Hoje" || tab === "Semana" || tab === "Planejamento")) return ["Hoje", "Semana", "Planejamento"];
+  return [];
+}
+function mergeEntries(...groups: Entry[][]): Entry[] {
+  const byId = new Map<string, Entry>();
+  for (const group of groups) for (const entry of group) byId.set(entry.id, { ...byId.get(entry.id), ...entry });
+  return [...byId.values()];
+}
 function readLocal(module: string, tab: string): Entry[] {
   try {
     const raw = localStorage.getItem(keyFor(module, tab));
@@ -131,6 +146,7 @@ export function PersonalModule({ module }: { module: PersonalModuleKey }) {
   const [page,setPage] = useState("0");
   const [totalPages,setTotalPages] = useState("240");
   const activeKey = module + ":" + tab;
+  const storageTab = sharedTabFor(module, tab);
   const ready = loadedKey === activeKey;
   const now = new Date();
   const month = now.toLocaleDateString("pt-BR",{month:"long",year:"numeric"});
@@ -148,51 +164,71 @@ export function PersonalModule({ module }: { module: PersonalModuleKey }) {
     loadingRef.current = true;
     setUserId(null);
     setLoadedKey("");
-    const localEntries = readLocal(module,tab);
+    const legacyTabs = legacyTabsFor(module, tab);
+    const localEntries = mergeEntries(readLocal(module, storageTab), ...legacyTabs.map(legacyTab => readLocal(module, legacyTab)));
+    const writeLocalCache = (records: Entry[]) => {
+      try {
+        localStorage.setItem(keyFor(module, storageTab), JSON.stringify(records));
+        for (const legacyTab of legacyTabs) localStorage.removeItem(keyFor(module, legacyTab));
+      } catch (error) {
+        console.warn("[personal-module] local cache migration could not be completed", error);
+      }
+    };
     async function load() {
       try {
         const { data: auth } = await supabase.auth.getUser();
         if (!auth.user) {
-          if (!cancelled) { setUserId(null); setSyncStatus("local"); setEntries(localEntries); loadingRef.current=false; setLoadedKey(activeKey); }
+          if (!cancelled) {
+            setUserId(null); setSyncStatus("local"); setEntries(localEntries);
+            writeLocalCache(localEntries); loadingRef.current = false; setLoadedKey(activeKey);
+          }
           return;
         }
         const uid = auth.user.id;
-        const { data, error } = await personalData().select("entries").eq("user_id",uid).eq("module_key",module).eq("tab_key",tab).maybeSingle();
+        const primary = await personalData().select("entries").eq("user_id", uid).eq("module_key", module).eq("tab_key", storageTab).maybeSingle();
         if (cancelled) return;
-        if (error) {
-          if (!cancelled) { setUserId(null); setSyncStatus("error"); setEntries(localEntries); loadingRef.current=false; setLoadedKey(activeKey); }
+        if (primary.error) {
+          setUserId(null); setSyncStatus("error"); setEntries(localEntries);
+          writeLocalCache(localEntries); loadingRef.current = false; setLoadedKey(activeKey);
           return;
         }
+        const legacyResults = await Promise.all(legacyTabs.map(legacyTab =>
+          personalData().select("entries").eq("user_id", uid).eq("module_key", module).eq("tab_key", legacyTab).maybeSingle()
+        ));
+        if (cancelled) return;
+        const remoteLegacy = legacyResults.flatMap(result => !result.error && Array.isArray(result.data?.entries) ? result.data.entries : []);
+        const remotePrimary = Array.isArray(primary.data?.entries) ? primary.data.entries : [];
+        const combined = mergeEntries(remotePrimary, remoteLegacy, localEntries);
         setUserId(uid);
         setSyncStatus("synced");
-        if (data && Array.isArray(data.entries)) {
-          setEntries(data.entries as Entry[]);
-          try {
-            localStorage.setItem(keyFor(module, tab), JSON.stringify(data.entries));
-          } catch (error) {
-            console.warn("[personal-module] local cache could not be updated", error);
-          }
-        } else {
-          setEntries(localEntries);
-          if (localEntries.length) {
-            const { error: saveError } = await personalData().upsert({user_id:uid,module_key:module,tab_key:module==="treinos"&&tab==="Plano semanal"?(localEntries as WorkoutEntry[]).map((e)=>workoutBlockToEntry(entryToWorkoutBlock(e))):module==="treinos"&&tab==="Histórico"?(localEntries as WorkoutEntry[]).map((e)=>workoutBlockToEntry(entryToWorkoutBlock(e))):localEntries,updated_at:new Date().toISOString()},{onConflict:"user_id,module_key,tab_key"});
-            if (saveError) console.error("[personal-module] migration local failed",saveError.message);
-          }
+        setEntries(combined);
+        writeLocalCache(combined);
+        const needsMigration = !primary.data || combined.length !== remotePrimary.length;
+        if (needsMigration) {
+          const { error: saveError } = await personalData().upsert({
+            user_id: uid, module_key: module, tab_key: storageTab,
+            entries: module === "treinos" ? (combined as WorkoutEntry[]).map(e => workoutBlockToEntry(entryToWorkoutBlock(e))) : combined,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: "user_id,module_key,tab_key" });
+          if (saveError) setSyncStatus("error");
         }
-        if (!cancelled) { loadingRef.current=false; setLoadedKey(activeKey); }
+        if (!cancelled) { loadingRef.current = false; setLoadedKey(activeKey); }
       } catch (error) {
-        console.error("[personal-module] load failed",error);
-        if (!cancelled) { setUserId(null); setSyncStatus("error"); setEntries(localEntries); loadingRef.current=false; setLoadedKey(activeKey); }
+        console.error("[personal-module] load failed", error);
+        if (!cancelled) {
+          setUserId(null); setSyncStatus("error"); setEntries(localEntries);
+          writeLocalCache(localEntries); loadingRef.current = false; setLoadedKey(activeKey);
+        }
       }
     }
     void load();
-    return () => { cancelled=true; };
-  },[module,tab,activeKey]);
+    return () => { cancelled = true; };
+  }, [module, tab, activeKey, storageTab]);
 
   useEffect(() => {
     if (!ready || loadingRef.current) return;
     try {
-      localStorage.setItem(keyFor(module, tab), JSON.stringify(entries));
+      localStorage.setItem(keyFor(module, storageTab), JSON.stringify(entries));
     } catch (error) {
       console.warn("[personal-module] local cache could not be updated", error);
     }
@@ -203,13 +239,13 @@ export function PersonalModule({ module }: { module: PersonalModuleKey }) {
         const payload: Entry[] = module === "treinos"
           ? (entries as WorkoutEntry[]).map((e) => workoutBlockToEntry(entryToWorkoutBlock(e)))
           : entries;
-        const { error } = await personalData().upsert({user_id:userId,module_key:module,tab_key:tab,entries:payload,updated_at:new Date().toISOString()},{onConflict:"user_id,module_key,tab_key"});
-        if (error) { setSyncStatus("error"); console.error("[personal-module] save failed",error.message); }
+        const { error } = await personalData().upsert({ user_id: userId, module_key: module, tab_key: storageTab, entries: payload, updated_at: new Date().toISOString() }, { onConflict: "user_id,module_key,tab_key" });
+        if (error) { setSyncStatus("error"); console.error("[personal-module] save failed", error.message); }
         else setSyncStatus("synced");
-      } catch (error) { setSyncStatus("error"); console.error("[personal-module] save failed",error); }
-    },450);
+      } catch (error) { setSyncStatus("error"); console.error("[personal-module] save failed", error); }
+    }, 450);
     return () => window.clearTimeout(timeout);
-  },[entries,ready,userId,module,tab]);
+  }, [entries, ready, userId, module, tab, storageTab]);
 
   useEffect(() => {
     if (!running) return;
