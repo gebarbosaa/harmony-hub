@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, Sun, Moon, Plus, Trash2, Check, Play, Pause, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,6 +19,69 @@ const QUOTES = ["Pequenos passos também levam longe.","Você não precisa fazer
 const MARKET_CATEGORIES = ["Hortifrúti","Açougue","Laticínios","Mercearia","Padaria","Congelados","Limpeza","Higiene","Bebidas"];
 const MEALS = ["Café da manhã","Almoço","Lanche","Janta","Ceia","Pós-treino"];
 const MOODS = ["😞","😕","😐","🙂","😄"];
+const WORKOUT_DAYS = ["Segunda","Terça","Quarta","Quinta","Sexta","Sábado","Domingo"] as const;
+type WorkoutDay = (typeof WORKOUT_DAYS)[number];
+
+/* ---------- Treinos: block-based rich data model (scoped to this module) ---------- */
+type WorkoutExercise = { id: string; name: string; sets: number; reps: string; load: string; done: boolean };
+type WorkoutBlock = { id: string; name: string; day: string; exercises: WorkoutExercise[]; done: boolean; createdAt: string };
+type WorkoutEntry = Entry & { exercises?: string };
+
+function parseWorkoutExercises(json: string | undefined): WorkoutExercise[] {
+  if (!json) return [];
+  try {
+    const parsed = JSON.parse(json) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item): item is WorkoutExercise => {
+      return !!item && typeof item === "object" && typeof item.id === "string" && typeof item.name === "string" && typeof item.sets === "number" && typeof item.reps === "string" && typeof item.load === "string" && typeof item.done === "boolean";
+    });
+  } catch {
+    return [];
+  }
+}
+function entryToWorkoutBlock(entry: WorkoutEntry): WorkoutBlock {
+  return {
+    id: entry.id,
+    name: entry.text || "Treino",
+    day: entry.extra && (WORKOUT_DAYS as readonly string[]).includes(entry.extra) ? entry.extra : "Segunda",
+    exercises: parseWorkoutExercises(entry.exercises),
+    done: !!entry.done,
+    createdAt: entry.createdAt,
+  };
+}
+function workoutBlockToEntry(block: WorkoutBlock): WorkoutEntry {
+  return {
+    id: block.id,
+    text: block.name,
+    extra: block.day,
+    exercises: JSON.stringify(block.exercises),
+    done: block.done,
+    createdAt: block.createdAt,
+  };
+}
+function makeWorkoutExercise(partial: Partial<WorkoutExercise> = {}): WorkoutExercise {
+  return {
+    id: typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : Math.random().toString(36).slice(2),
+    name: "",
+    sets: 3,
+    reps: "10–12",
+    load: "",
+    done: false,
+    ...partial,
+  };
+}
+function makeWorkoutBlock(partial: Partial<WorkoutBlock> = {}): WorkoutBlock {
+  return {
+    id: typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : Math.random().toString(36).slice(2),
+    name: "Novo treino",
+    day: "Segunda",
+    exercises: [],
+    done: false,
+    createdAt: new Date().toISOString(),
+    ...partial,
+  };
+}
+
 const keyFor = (module: string, tab: string) => "harmony-personal-v1:" + module + ":" + tab;
 function readLocal(module: string, tab: string): Entry[] {
   try {
@@ -107,7 +170,7 @@ export function PersonalModule({ module }: { module: PersonalModuleKey }) {
         } else {
           setEntries(localEntries);
           if (localEntries.length) {
-            const { error: saveError } = await personalData().upsert({user_id:uid,module_key:module,tab_key:tab,entries:localEntries,updated_at:new Date().toISOString()},{onConflict:"user_id,module_key,tab_key"});
+            const { error: saveError } = await personalData().upsert({user_id:uid,module_key:module,tab_key:module==="treinos"&&tab==="Plano semanal"?(localEntries as WorkoutEntry[]).map((e)=>workoutBlockToEntry(entryToWorkoutBlock(e))):module==="treinos"&&tab==="Histórico"?(localEntries as WorkoutEntry[]).map((e)=>workoutBlockToEntry(entryToWorkoutBlock(e))):localEntries,updated_at:new Date().toISOString()},{onConflict:"user_id,module_key,tab_key"});
             if (saveError) console.error("[personal-module] migration local failed",saveError.message);
           }
         }
@@ -132,7 +195,10 @@ export function PersonalModule({ module }: { module: PersonalModuleKey }) {
     const timeout = window.setTimeout(async () => {
       setSyncStatus("syncing");
       try {
-        const { error } = await personalData().upsert({user_id:userId,module_key:module,tab_key:tab,entries,updated_at:new Date().toISOString()},{onConflict:"user_id,module_key,tab_key"});
+        const payload: Entry[] = module === "treinos"
+          ? (entries as WorkoutEntry[]).map((e) => workoutBlockToEntry(entryToWorkoutBlock(e)))
+          : entries;
+        const { error } = await personalData().upsert({user_id:userId,module_key:module,tab_key:tab,entries:payload,updated_at:new Date().toISOString()},{onConflict:"user_id,module_key,tab_key"});
         if (error) { setSyncStatus("error"); console.error("[personal-module] save failed",error.message); }
         else setSyncStatus("synced");
       } catch (error) { setSyncStatus("error"); console.error("[personal-module] save failed",error); }
@@ -174,10 +240,346 @@ export function PersonalModule({ module }: { module: PersonalModuleKey }) {
       :module==="rotina"&&tab==="Hoje"?<>{addForm("Ex.: caminhada às 18h, organizar quarto…","Adicionar atividade")}{list("Sua rotina de hoje está vazia. Adicione a primeira atividade.",true)}</>
       :module==="rotina"&&tab==="Semana"?<>{addForm("Ex.: estudar segunda e quarta às 19h…","Planejar atividade")}{list("Sua semana ainda não tem atividades planejadas.",true)}</>
       :module==="rotina"&&tab==="Planejamento"?<>{addForm("Ex.: acordar às 7h, pausa para almoço…","Adicionar ao planejamento")}{list("Seu planejamento de rotina está vazio.")}</>
-      :module==="treinos"&&tab==="Plano semanal"?<><p className="mb-3 text-sm text-muted-foreground">Registre o exercício e detalhe séries, repetições e carga. Marque o treino quando terminar.</p>{addForm("Ex.: agachamento — 3 séries × 10 reps — 30 kg","Adicionar exercício")}{list("Seu plano semanal está vazio. Adicione o primeiro exercício.",true)}</>
-      :module==="treinos"&&tab==="Histórico"?<>{addForm("Ex.: treino de pernas — 45 minutos…","Registrar treino realizado")}{list("Seu histórico de treinos está vazio.")}</>
+      :module==="treinos"&&tab==="Plano semanal"?<TreinosPlano entries={entries} setEntries={setEntries} empty={!ready}/>
+      :module==="treinos"&&tab==="Histórico"?<TreinosHistorico entries={entries} setEntries={setEntries} empty={!ready}/>
       :<>{addForm(tab==="Sobre mim"?"Escreva sobre você…":tab==="Gratidão"?"Pelo que você é grata hoje?":tab==="Carta"?"Escreva sua carta…":tab==="Diário"?"Escreva seu registro…":"Adicionar registro…")}{list("Ainda não há registros nesta aba.")}</>}
     </Panel>
     <p className="text-center text-xs text-muted-foreground">{syncStatus==="syncing"?"Sincronizando seus registros…":syncStatus==="synced"?"Dados sincronizados com sua conta.":syncStatus==="error"?"Falha na sincronização. Os dados locais foram preservados; tente recarregar quando a conexão voltar.":"Registros salvos neste dispositivo. Entre na sua conta para sincronizar entre dispositivos."}</p>
   </div>;
+}
+
+/* ---------- Treinos: Plano semanal (block-based) ---------- */
+function TreinosPlano({ entries, setEntries, empty }: { entries: Entry[]; setEntries: (updater: (prev: Entry[]) => Entry[]) => void; empty: boolean }) {
+  const blocks: WorkoutBlock[] = useMemo(() => (entries as WorkoutEntry[]).map(entryToWorkoutBlock), [entries]);
+  const ordered = useMemo(() => {
+    const dayRank = new Map<string, number>(WORKOUT_DAYS.map((d, i) => [d, i] as const));
+    return [...blocks].sort((a, b) => {
+      const ra = dayRank.get(a.day) ?? 99;
+      const rb = dayRank.get(b.day) ?? 99;
+      if (ra !== rb) return ra - rb;
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    });
+  }, [blocks]);
+
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [pendingFocusId, setPendingFocusId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!pendingFocusId) return;
+    const el = cardRefs.current[pendingFocusId];
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      const input = el.querySelector<HTMLInputElement>("input.block-name-input");
+      input?.focus();
+      input?.select();
+      setPendingFocusId(null);
+    }
+  }, [pendingFocusId, ordered]);
+
+  const writeBlocks = (next: WorkoutBlock[]) => {
+    setEntries(() => next.map(workoutBlockToEntry));
+  };
+  const addBlock = () => {
+    const created = makeWorkoutBlock({ name: "Novo treino", day: "Segunda" });
+    writeBlocks([...blocks, created]);
+    setPendingFocusId(created.id);
+  };
+  const updateBlock = (id: string, patch: Partial<WorkoutBlock>) => {
+    writeBlocks(blocks.map((b) => (b.id === id ? { ...b, ...patch } : b)));
+  };
+  const deleteBlock = (id: string) => writeBlocks(blocks.filter((b) => b.id !== id));
+  const addExercise = (blockId: string) => {
+    writeBlocks(blocks.map((b) => b.id === blockId ? { ...b, exercises: [...b.exercises, makeWorkoutExercise()] } : b));
+  };
+  const updateExercise = (blockId: string, exerciseId: string, patch: Partial<WorkoutExercise>) => {
+    writeBlocks(blocks.map((b) => b.id === blockId ? { ...b, exercises: b.exercises.map((ex) => (ex.id === exerciseId ? { ...ex, ...patch } : ex)) } : b));
+  };
+  const deleteExercise = (blockId: string, exerciseId: string) => {
+    writeBlocks(blocks.map((b) => b.id === blockId ? { ...b, exercises: b.exercises.filter((ex) => ex.id !== exerciseId) } : b));
+  };
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">Planeje cada sessão da semana, marque séries concluídas e acompanhe a evolução.</p>
+      {empty ? (
+        <p className="rounded-xl border border-dashed border-border px-4 py-7 text-center text-sm text-muted-foreground">Carregando registros…</p>
+      ) : ordered.length === 0 ? (
+        <p className="rounded-xl border border-dashed border-border px-4 py-7 text-center text-sm text-muted-foreground">Seu plano semanal está vazio. Adicione o primeiro bloco para começar.</p>
+      ) : (
+        <div className="space-y-4">
+          {ordered.map((block) => (
+            <div
+              key={block.id}
+              ref={(el) => { cardRefs.current[block.id] = el; }}
+              className="rounded-2xl border border-border bg-card p-4 sm:p-5 shadow-[0_12px_40px_-30px_rgba(0,0,0,0.8)]"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border/50 pb-3">
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  <button
+                    type="button"
+                    aria-label={block.done ? "Desmarcar bloco" : "Concluir bloco"}
+                    onClick={() => updateBlock(block.id, { done: !block.done })}
+                    className={"flex h-5 w-5 shrink-0 items-center justify-center rounded border " + (block.done ? "border-primary bg-primary text-primary-foreground" : "border-border")}
+                  >
+                    {block.done ? <Check className="h-3 w-3" /> : null}
+                  </button>
+                  <input
+                    className="block-name-input min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm font-semibold"
+                    value={block.name}
+                    onChange={(e) => updateBlock(block.id, { name: e.target.value })}
+                    placeholder="Nome do treino"
+                    aria-label="Nome do treino"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => deleteBlock(block.id)}
+                  aria-label={"Excluir bloco " + block.name}
+                  className="rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-2" role="radiogroup" aria-label="Dia da semana">
+                {WORKOUT_DAYS.map((d) => {
+                  const active = block.day === d;
+                  return (
+                    <button
+                      key={d}
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      onClick={() => updateBlock(block.id, { day: d })}
+                      className={"shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition " + (active ? "border-foreground bg-foreground text-background" : "border-border bg-background text-muted-foreground hover:text-foreground")}
+                    >
+                      {d}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="mt-4 space-y-2">
+                {block.exercises.length === 0 ? (
+                  <p className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-xs text-muted-foreground">Sem exercícios ainda — adicione o primeiro abaixo.</p>
+                ) : (
+                  block.exercises.map((ex) => (
+                    <div key={ex.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-background p-2">
+                      <button
+                        type="button"
+                        aria-label={ex.done ? "Desmarcar exercício" : "Concluir exercício"}
+                        onClick={() => updateExercise(block.id, ex.id, { done: !ex.done })}
+                        className={"flex h-5 w-5 shrink-0 items-center justify-center rounded border " + (ex.done ? "border-primary bg-primary text-primary-foreground" : "border-border")}
+                      >
+                        {ex.done ? <Check className="h-3 w-3" /> : null}
+                      </button>
+                      <input
+                        className="min-w-0 flex-1 rounded-lg border border-border bg-card px-2 py-1.5 text-sm"
+                        value={ex.name}
+                        onChange={(e) => updateExercise(block.id, ex.id, { name: e.target.value })}
+                        placeholder="Exercício"
+                        aria-label="Nome do exercício"
+                      />
+                      <label className="flex items-center gap-1 text-xs text-muted-foreground">
+                        Séries
+                        <input
+                          className="w-14 rounded-lg border border-border bg-card px-2 py-1.5 text-sm"
+                          type="number"
+                          min="0"
+                          value={ex.sets}
+                          onChange={(e) => updateExercise(block.id, ex.id, { sets: Number(e.target.value) })}
+                          aria-label="Séries"
+                        />
+                      </label>
+                      <input
+                        className="w-20 rounded-lg border border-border bg-card px-2 py-1.5 text-sm"
+                        value={ex.reps}
+                        onChange={(e) => updateExercise(block.id, ex.id, { reps: e.target.value })}
+                        placeholder="10–12"
+                        aria-label="Repetições"
+                      />
+                      <input
+                        className="w-20 rounded-lg border border-border bg-card px-2 py-1.5 text-sm"
+                        value={ex.load}
+                        onChange={(e) => updateExercise(block.id, ex.id, { load: e.target.value })}
+                        placeholder="30 kg"
+                        aria-label="Carga"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => deleteExercise(block.id, ex.id)}
+                        aria-label={"Excluir exercício " + (ex.name || "sem nome")}
+                        className="rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <form
+                className="mt-3 flex flex-wrap items-center gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  addExercise(block.id);
+                }}
+              >
+                <span className="text-xs font-semibold text-muted-foreground">Adicionar exercício</span>
+                <input
+                  className="min-w-0 flex-1 rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
+                  name="name"
+                  placeholder="Nome do exercício"
+                  aria-label="Nome do novo exercício"
+                />
+                <input
+                  className="w-16 rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
+                  name="sets"
+                  type="number"
+                  min="0"
+                  defaultValue={3}
+                  aria-label="Séries"
+                />
+                <input
+                  className="w-20 rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
+                  name="reps"
+                  defaultValue="10–12"
+                  placeholder="Reps"
+                  aria-label="Repetições"
+                />
+                <input
+                  className="w-20 rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
+                  name="load"
+                  placeholder="Carga"
+                  aria-label="Carga"
+                />
+                <button
+                  type="submit"
+                  className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Adicionar
+                </button>
+              </form>
+            </div>
+          ))}
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={addBlock}
+        className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground"
+      >
+        <Plus className="h-4 w-4" /> Adicionar bloco de treino
+      </button>
+    </div>
+  );
+}
+
+/* ---------- Treinos: Histórico (block-based, date-stamped, DESC) ---------- */
+function TreinosHistorico({ entries, setEntries, empty }: { entries: Entry[]; setEntries: (updater: (prev: Entry[]) => Entry[]) => void; empty: boolean }) {
+  const blocks: WorkoutBlock[] = useMemo(() => (entries as WorkoutEntry[]).map(entryToWorkoutBlock), [entries]);
+  const ordered = useMemo(
+    () => [...blocks].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    [blocks]
+  );
+  const writeBlocks = (next: WorkoutBlock[]) => setEntries(() => next.map(workoutBlockToEntry));
+  const updateBlock = (id: string, patch: Partial<WorkoutBlock>) => writeBlocks(blocks.map((b) => (b.id === id ? { ...b, ...patch } : b)));
+  const deleteBlock = (id: string) => writeBlocks(blocks.filter((b) => b.id !== id));
+  const updateExercise = (blockId: string, exerciseId: string, patch: Partial<WorkoutExercise>) =>
+    writeBlocks(blocks.map((b) => b.id === blockId ? { ...b, exercises: b.exercises.map((ex) => (ex.id === exerciseId ? { ...ex, ...patch } : ex)) } : b));
+  const deleteExercise = (blockId: string, exerciseId: string) =>
+    writeBlocks(blocks.map((b) => b.id === blockId ? { ...b, exercises: b.exercises.filter((ex) => ex.id !== exerciseId) } : b));
+  const addBlock = () => {
+    const today = new Date().toLocaleDateString("pt-BR");
+    writeBlocks([...blocks, makeWorkoutBlock({ name: "Treino realizado", day: today, done: true })]);
+  };
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">Registre cada sessão realizada e reveja o que foi treinado.</p>
+      {empty ? (
+        <p className="rounded-xl border border-dashed border-border px-4 py-7 text-center text-sm text-muted-foreground">Carregando registros…</p>
+      ) : ordered.length === 0 ? (
+        <p className="rounded-xl border border-dashed border-border px-4 py-7 text-center text-sm text-muted-foreground">Seu histórico de treinos está vazio.</p>
+      ) : (
+        <div className="space-y-4">
+          {ordered.map((block) => {
+            const sessionDate = new Date(block.createdAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+            return (
+              <div
+                key={block.id}
+                className="rounded-2xl border border-border bg-card p-4 sm:p-5 shadow-[0_12px_40px_-30px_rgba(0,0,0,0.8)]"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border/50 pb-3">
+                  <div className="flex min-w-0 flex-1 items-center gap-2">
+                    <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border border-primary bg-primary text-primary-foreground" aria-label="Sessão concluída">
+                      <Check className="h-3 w-3" />
+                    </span>
+                    <input
+                      className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm font-semibold"
+                      value={block.name}
+                      onChange={(e) => updateBlock(block.id, { name: e.target.value })}
+                      placeholder="Nome da sessão"
+                      aria-label="Nome da sessão"
+                    />
+                    <span className="shrink-0 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold text-muted-foreground" aria-label="Data da sessão">
+                      {block.day && (WORKOUT_DAYS as readonly string[]).includes(block.day) ? block.day : sessionDate}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => deleteBlock(block.id)}
+                    aria-label={"Excluir sessão " + block.name}
+                    className="rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <p className="mt-2 text-[10px] text-muted-foreground">Sessão de {sessionDate}</p>
+
+                <div className="mt-4 space-y-2">
+                  {block.exercises.length === 0 ? (
+                    <p className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-xs text-muted-foreground">Sem exercícios registrados para esta sessão.</p>
+                  ) : (
+                    block.exercises.map((ex) => (
+                      <div key={ex.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-background p-2">
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded border border-primary bg-primary text-primary-foreground" aria-label="Exercício concluído">
+                          <Check className="h-3 w-3" />
+                        </span>
+                        <input
+                          className="min-w-0 flex-1 rounded-lg border border-border bg-card px-2 py-1.5 text-sm"
+                          value={ex.name}
+                          onChange={(e) => updateExercise(block.id, ex.id, { name: e.target.value })}
+                          placeholder="Exercício"
+                          aria-label="Nome do exercício"
+                        />
+                        <span className="text-xs text-muted-foreground">Séries: {ex.sets}</span>
+                        <span className="text-xs text-muted-foreground">Reps: {ex.reps || "—"}</span>
+                        <span className="text-xs text-muted-foreground">Carga: {ex.load || "—"}</span>
+                        <button
+                          type="button"
+                          onClick={() => deleteExercise(block.id, ex.id)}
+                          aria-label={"Excluir exercício " + (ex.name || "sem nome")}
+                          className="rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={addBlock}
+        className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground"
+      >
+        <Plus className="h-4 w-4" /> Adicionar bloco de treino
+      </button>
+    </div>
+  );
 }
