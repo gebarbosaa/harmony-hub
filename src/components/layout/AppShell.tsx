@@ -1,7 +1,7 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Plus, LayoutDashboard, ArrowLeftRight, Settings, LogOut, Bell, AlertCircle, MoreHorizontal, Search, ChevronDown, Sun, Moon } from "lucide-react";
-import { navItems, primaryNavItems, personalNavItems, businessNavItems, personalQuickAddOptions, businessQuickAddOptions } from "./nav";
+import { primaryNavItems, personalNavItems, businessNavItems, personalQuickAddOptions, businessQuickAddOptions } from "./nav";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useHouseholdTable } from "@/hooks/use-household-data";
