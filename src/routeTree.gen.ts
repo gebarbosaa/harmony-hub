@@ -34,7 +34,6 @@ import { Route as IntegracoesRouteImport } from './routes/integracoes'
 import { Route as InvestimentosRouteImport } from './routes/investimentos'
 import { Route as LeituraRouteImport } from './routes/leitura'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as MaisRouteImport } from './routes/mais'
 import { Route as MetasRouteImport } from './routes/metas'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as OrcamentoRouteImport } from './routes/orcamento'
@@ -174,11 +173,6 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MaisRoute = MaisRouteImport.update({
-  id: '/mais',
-  path: '/mais',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const MetasRoute = MetasRouteImport.update({
   id: '/metas',
   path: '/metas',
@@ -271,7 +265,6 @@ export interface FileRoutesByFullPath {
   '/investimentos': typeof InvestimentosRoute
   '/leitura': typeof LeituraRoute
   '/login': typeof LoginRoute
-  '/mais': typeof MaisRoute
   '/metas': typeof MetasRoute
   '/onboarding': typeof OnboardingRoute
   '/orcamento': typeof OrcamentoRoute
@@ -312,7 +305,6 @@ export interface FileRoutesByTo {
   '/investimentos': typeof InvestimentosRoute
   '/leitura': typeof LeituraRoute
   '/login': typeof LoginRoute
-  '/mais': typeof MaisRoute
   '/metas': typeof MetasRoute
   '/onboarding': typeof OnboardingRoute
   '/orcamento': typeof OrcamentoRoute
@@ -354,7 +346,6 @@ export interface FileRoutesById {
   '/investimentos': typeof InvestimentosRoute
   '/leitura': typeof LeituraRoute
   '/login': typeof LoginRoute
-  '/mais': typeof MaisRoute
   '/metas': typeof MetasRoute
   '/onboarding': typeof OnboardingRoute
   '/orcamento': typeof OrcamentoRoute
@@ -397,7 +388,6 @@ export interface FileRouteTypes {
     | '/investimentos'
     | '/leitura'
     | '/login'
-    | '/mais'
     | '/metas'
     | '/onboarding'
     | '/orcamento'
@@ -438,7 +428,6 @@ export interface FileRouteTypes {
     | '/investimentos'
     | '/leitura'
     | '/login'
-    | '/mais'
     | '/metas'
     | '/onboarding'
     | '/orcamento'
@@ -479,7 +468,6 @@ export interface FileRouteTypes {
     | '/investimentos'
     | '/leitura'
     | '/login'
-    | '/mais'
     | '/metas'
     | '/onboarding'
     | '/orcamento'
@@ -521,7 +509,6 @@ export interface RootRouteChildren {
   InvestimentosRoute: typeof InvestimentosRoute
   LeituraRoute: typeof LeituraRoute
   LoginRoute: typeof LoginRoute
-  MaisRoute: typeof MaisRoute
   MetasRoute: typeof MetasRoute
   OnboardingRoute: typeof OnboardingRoute
   OrcamentoRoute: typeof OrcamentoRoute
@@ -714,13 +701,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/mais': {
-      id: '/mais'
-      path: '/mais'
-      fullPath: '/mais'
-      preLoaderRoute: typeof MaisRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/metas': {
       id: '/metas'
       path: '/metas'
@@ -841,7 +821,6 @@ const rootRouteChildren: RootRouteChildren = {
   InvestimentosRoute: InvestimentosRoute,
   LeituraRoute: LeituraRoute,
   LoginRoute: LoginRoute,
-  MaisRoute: MaisRoute,
   MetasRoute: MetasRoute,
   OnboardingRoute: OnboardingRoute,
   OrcamentoRoute: OrcamentoRoute,

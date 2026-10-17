@@ -1,9 +1,18 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 
 export type HouseholdRow = Record<string, unknown> & { id: string; household_id: string };
+
+type SharedRealtimeEntry = {
+  channel: ReturnType<typeof supabase.channel>;
+  refs: number;
+  queryClient: QueryClient;
+};
+
+// Keep one Supabase Realtime channel per household, even when many modules are mounted.
+const householdRealtimeChannels = new Map<string, SharedRealtimeEntry>();
 
 function emitSyncEvent(type: "syncing" | "synced" | "error") {
   if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent(`harmony:sync:${type}`));
@@ -49,23 +58,35 @@ export function useHouseholdTable<T extends HouseholdRow = HouseholdRow>(
 
   useEffect(() => {
     if (!householdId) return;
-    const channel = supabase
-      .channel(`household-sync:${table}:${householdId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table, filter: `household_id=eq.${householdId}` },
-        () => {
-          void queryClient.invalidateQueries({ queryKey });
-          if (table === "accounts_payable") {
-            void queryClient.invalidateQueries({ queryKey: ["contas-a-pagar", householdId] });
-          }
-        },
-      )
-      .subscribe();
+    const existing = householdRealtimeChannels.get(householdId);
+    if (existing) {
+      existing.refs += 1;
+    } else {
+      const channel = supabase
+        .channel(`household-sync:${householdId}`)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", filter: `household_id=eq.${householdId}` },
+          (payload) => {
+            void queryClient.invalidateQueries({ queryKey: ["household", householdId] });
+            if (payload.table === "accounts_payable") {
+              void queryClient.invalidateQueries({ queryKey: ["contas-a-pagar", householdId] });
+            }
+          },
+        )
+        .subscribe();
+      householdRealtimeChannels.set(householdId, { channel, refs: 1, queryClient });
+    }
     return () => {
-      void supabase.removeChannel(channel);
+      const entry = householdRealtimeChannels.get(householdId);
+      if (!entry) return;
+      entry.refs -= 1;
+      if (entry.refs <= 0) {
+        householdRealtimeChannels.delete(householdId);
+        void supabase.removeChannel(entry.channel);
+      }
     };
-  }, [householdId, table, queryClient, queryKey]);
+  }, [householdId, queryClient]);
 
   const insert = useCallback(
     async (values: Record<string, unknown>) => {
@@ -78,7 +99,7 @@ export function useHouseholdTable<T extends HouseholdRow = HouseholdRow>(
           .select()
           .single();
         if (error) throw error;
-        await queryClient.invalidateQueries({ queryKey });
+        await queryClient.invalidateQueries({ queryKey: ["household", householdId] });
         if (table === "accounts_payable") {
           await queryClient.invalidateQueries({ queryKey: ["contas-a-pagar", householdId] });
         }
@@ -105,7 +126,7 @@ export function useHouseholdTable<T extends HouseholdRow = HouseholdRow>(
           .select()
           .single();
         if (error) throw error;
-        await queryClient.invalidateQueries({ queryKey });
+        await queryClient.invalidateQueries({ queryKey: ["household", householdId] });
         if (table === "accounts_payable") {
           await queryClient.invalidateQueries({ queryKey: ["contas-a-pagar", householdId] });
         }
@@ -130,7 +151,7 @@ export function useHouseholdTable<T extends HouseholdRow = HouseholdRow>(
           .eq("id", id)
           .eq("household_id", householdId);
         if (error) throw error;
-        await queryClient.invalidateQueries({ queryKey });
+        await queryClient.invalidateQueries({ queryKey: ["household", householdId] });
         if (table === "accounts_payable") {
           await queryClient.invalidateQueries({ queryKey: ["contas-a-pagar", householdId] });
         }
