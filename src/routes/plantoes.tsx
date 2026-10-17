@@ -123,6 +123,11 @@ function ShiftPlanner() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Falha na sincronização de plantões.");
       const message = `Google Agenda: ${result.created} criado(s), ${result.updated} atualizado(s), ${result.imported} importado(s), ${result.conflicts} conflito(s), ${result.deleteConfirmationRequired} exclusão(ões) aguardando confirmação, ${result.failed} falha(s).`;
+      const { data: auth } = await supabase.auth.getUser();
+      if (auth.user) {
+        const { data: latest } = await shiftsTable().select("entries").eq("user_id", auth.user.id).eq("module_key", "plantoes").eq("tab_key", "Escala").maybeSingle();
+        if (Array.isArray(latest?.entries)) { setShifts(latest.entries); try { localStorage.setItem(cacheKey, JSON.stringify(latest.entries)); window.dispatchEvent(new Event("harmony-shifts-updated")); } catch { /* optional cache */ } }
+      }
       setGoogleSyncMessage(message);
       if (result.deleteConfirmationRequired > 0) window.alert(`${message} Nenhum evento foi excluído do Google automaticamente.`);
       else if (result.conflicts > 0 || result.failed > 0) window.alert(message);
