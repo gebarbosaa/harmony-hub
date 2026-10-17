@@ -143,6 +143,10 @@ function ShiftPlanner() {
     try {
       const { data } = await supabase.auth.getSession();
       if (!data.session) throw new Error("Entre na sua conta para sincronizar com o Google Agenda.");
+      // Persist the exact current UI state before the server reads the canonical scale.
+      // This avoids a race with the debounced autosave when the user clicks sync quickly.
+      const { error: saveBeforeSyncError } = await shiftsTable().upsert({ user_id: data.session.user.id, module_key: "plantoes", tab_key: "Escala", entries: shifts, updated_at: new Date().toISOString() }, { onConflict: "user_id,module_key,tab_key" });
+      if (saveBeforeSyncError) throw new Error("Não foi possível salvar sua escala antes da sincronização. Seus dados continuam neste dispositivo.");
       const base = import.meta.env["VITE_SUPABASE_URL"];
       if (!base) throw new Error("A URL do Supabase não está configurada.");
       const response = await fetch(`${base}/functions/v1/google-calendar-shifts-sync`, { method: "POST", headers: { Authorization: `Bearer ${data.session.access_token}`, "Content-Type": "application/json" }, body: "{}" });
