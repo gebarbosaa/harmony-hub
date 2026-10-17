@@ -81,7 +81,7 @@ function ShiftPlanner() {
 
   useEffect(() => {
     if (!loaded || loading.current) return;
-    try { localStorage.setItem(cacheKey, JSON.stringify(shifts)); } catch { /* local cache is optional */ }
+    try { localStorage.setItem(cacheKey, JSON.stringify(shifts)); window.dispatchEvent(new Event("harmony-shifts-updated")); } catch { /* local cache is optional */ }
     if (!userId) return;
     const timer = window.setTimeout(async () => {
       setSync("syncing");
@@ -109,7 +109,7 @@ function ShiftPlanner() {
     setEditingId(shift.id); setDate(shift.date); setStartTime(shift.startTime); setEndTime(shift.endTime); setNotes(shift.notes);
   };
   const cancelEdit = () => { setEditingId(null); setNotes(""); };
-  const removeShift = (id: string) => setShifts(current => current.filter(shift => shift.id !== id));
+  const removeShift = (id: string) => { const linked = shifts.find(shift => shift.id === id); if (!linked) return; const confirmed = window.confirm("Excluir este plantão da sua escala? Se estiver vinculado ao Google Agenda, a exclusão do evento será tratada na sincronização e não será feita sem confirmação."); if (confirmed) setShifts(current => current.filter(shift => shift.id !== id)); };
   const todayDate = new Date();
   const today = todayDate.getFullYear() + "-" + String(todayDate.getMonth() + 1).padStart(2, "0") + "-" + String(todayDate.getDate()).padStart(2, "0");
   const upcoming = shifts.filter(shift => shift.date >= today);
