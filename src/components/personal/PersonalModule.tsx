@@ -165,7 +165,7 @@ export function PersonalModule({ module }: { module: PersonalModuleKey }) {
     setUserId(null);
     setLoadedKey("");
     const legacyTabs = legacyTabsFor(module, tab);
-    const localEntries = mergeEntries(readLocal(module, storageTab), ...legacyTabs.map(legacyTab => readLocal(module, legacyTab)));
+    const localEntries = mergeEntries(...legacyTabs.map(legacyTab => readLocal(module, legacyTab)), readLocal(module, storageTab));
     const writeLocalCache = (records: Entry[]) => {
       try {
         localStorage.setItem(keyFor(module, storageTab), JSON.stringify(records));
@@ -198,12 +198,13 @@ export function PersonalModule({ module }: { module: PersonalModuleKey }) {
         if (cancelled) return;
         const remoteLegacy = legacyResults.flatMap(result => !result.error && Array.isArray(result.data?.entries) ? result.data.entries : []);
         const remotePrimary = Array.isArray(primary.data?.entries) ? primary.data.entries : [];
-        const combined = mergeEntries(remotePrimary, remoteLegacy, localEntries);
+        const combined = mergeEntries(localEntries, remoteLegacy, remotePrimary);
         setUserId(uid);
         setSyncStatus("synced");
         setEntries(combined);
         writeLocalCache(combined);
-        const needsMigration = !primary.data || combined.length !== remotePrimary.length;
+        const primaryIds = new Set(remotePrimary.map(entry => entry.id));
+        const needsMigration = !primary.data || combined.some(entry => !primaryIds.has(entry.id)) || remoteLegacy.length > 0;
         if (needsMigration) {
           const { error: saveError } = await personalData().upsert({
             user_id: uid, module_key: module, tab_key: storageTab,
