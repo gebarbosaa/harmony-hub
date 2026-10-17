@@ -53,6 +53,7 @@ function ReceitasPage() {const isDesktop = useIsDesktop();
       } : current);
     }
   }, [editing, categoryOptions, payments.rows]);
+  const reset = useCallback(() => { setDescription(""); setAmount(""); setCategory(categoryOptions[0] ?? ""); setPaymentId(payments.rows[0]?.id ?? ""); setAccountId(""); setResponsible("AMBAS"); setDate(`${month}-01`); setEditing(null); }, [categoryOptions, payments.rows, month]);
   useEffect(() => {
     const handler = (event: Event) => {
       const detail = (event as CustomEvent<{ option?: string }>).detail;
@@ -65,7 +66,7 @@ function ReceitasPage() {const isDesktop = useIsDesktop();
   const visible = useMemo(() => tx.rows.filter((t) => t.type === "RECEITA" && t.date.startsWith(month) && t.description.toLowerCase().includes(search.toLowerCase())), [tx.rows, month, search]);
   const total = useMemo(() => visible.reduce((sum, t) => sum + Number(t.amount), 0), [visible]);
 
-  const reset = useCallback(() => { setDescription(""); setAmount(""); setCategory(categoryOptions[0] ?? ""); setPaymentId(payments.rows[0]?.id ?? ""); setAccountId(""); setResponsible("AMBAS"); setDate(`${month}-01`); setEditing(null); }, [categoryOptions, payments.rows, month]);
+  
   function openNew() { reset(); setOpen(true); }
   function openEdit(row: Row) { setEditing(row); setDescription(row.description); setAmount(String(row.amount).replace(".", ",")); setCategory(row.category); setPaymentId(row.payment_method_id ?? ""); setAccountId(row.account_id ?? ""); setResponsible(row.responsible || "AMBAS"); setDate(row.date); setOpen(true); }
   async function save() {
