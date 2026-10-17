@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Bell, CalendarDays, CheckCircle2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader, Panel, Tag } from "@/components/ui-kit";
@@ -88,8 +88,10 @@ function IntegracoesPage() {
     }
   }
 
+    const loadRef = useRef(load);
+    loadRef.current = load;
     useEffect(() => {
-    void load();
+    void loadRef.current();
 
     const onMessage = (event: MessageEvent) => {
       const type = event.data?.type;
@@ -98,7 +100,7 @@ function IntegracoesPage() {
         type === "multicap-google-calendar-connected"
       ) {
         toast.success("Google Calendar conectado");
-        void load();
+        void loadRef.current();
       }
     };
 

@@ -24,7 +24,7 @@ function InvoicesPage(){
  const cardRows=(card:Card)=>tx.rows.filter(t=>t.card_id===card.id&&t.type==="DESPESA"&&invoicePeriod(card,t.date)===month);
  const cardTotal=(card:Card)=>cardRows(card).reduce((s,t)=>s+Number(t.amount),0);
  const usedLimit=(card:Card)=>cardRows(card).reduce((s,t)=>s+Math.max(Number(t.amount),0),0);
- const calculatedInvoiceTotal=useMemo(()=>cards.rows.reduce((s,c)=>s+cardTotal(c),0),[cards.rows,tx.rows,month]);
+ const calculatedInvoiceTotal=useMemo(()=>cards.rows.reduce((sum,card)=>sum+tx.rows.filter(t=>t.card_id===card.id&&t.type==="DESPESA"&&invoicePeriod(card,t.date)===month).reduce((subtotal,t)=>subtotal+Number(t.amount),0),0),[cards.rows,tx.rows,month]);
  function clearForm(){setName("");setLimit("");setDue("5");setClose("28");setBrand("");setLast4("");setEditing(null);setOpen(false)}
  function openEdit(c:Card){setEditing(c);setName(c.name);setLimit(String(c.credit_limit));setDue(String(c.due_day));setClose(String(c.close_day));setBrand(c.brand??"");setLast4(c.last4??"");setOpen(true)}
  async function saveCard(){const value=Number(limit.replace(",","."));const closeDay=Number(close);const dueDay=Number(due);if(!name.trim()||value<=0)return toast.error("PREENCHA NOME E LIMITE");if(closeDay<1||closeDay>31||dueDay<1||dueDay>31)return toast.error("INFORME DIAS VÁLIDOS DE FECHAMENTO E VENCIMENTO");try{const payload={name:name.trim().toUpperCase(),credit_limit:value,due_day:dueDay,close_day:closeDay,brand:brand.trim().toUpperCase()||null,last4:last4.trim()||null};if(editing){await cards.update(editing.id,payload);toast.success("CARTÃO ATUALIZADO")}else{await cards.insert(payload);toast.success("CARTÃO CADASTRADO E SINCRONIZADO")}clearForm()}catch(e){toast.error(e instanceof Error?e.message:"ERRO AO SALVAR CARTÃO")}}

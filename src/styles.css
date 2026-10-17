@@ -140,3 +140,186 @@
 @media (max-width: 380px) {
   .label-caps { letter-spacing: 0.055em; }
 }
+
+/* CORE-inspired personal workspace: calmer surfaces, clearer hierarchy, fewer dashboard boxes. */
+:root {
+  --background: oklch(0.975 0.008 82);
+  --card: oklch(0.998 0.002 82);
+  --border: oklch(0.91 0.012 78);
+  --radius: 1rem;
+}
+.dark {
+  --background: oklch(0.155 0.012 270);
+  --card: oklch(0.205 0.014 270);
+  --border: oklch(0.31 0.015 270);
+}
+.harmony-sidebar { box-shadow: 8px 0 28px rgb(40 30 20 / 0.035) !important; }
+.harmony-topbar { background: color-mix(in oklab, var(--background) 90%, transparent) !important; }
+.core-home { max-width: 1320px; margin-inline: auto; }
+.core-welcome { position: relative; display: flex; min-height: 230px; align-items: center; justify-content: space-between; overflow: hidden; border: 1px solid color-mix(in oklab, var(--primary) 14%, var(--border)); border-radius: 28px; background: linear-gradient(112deg, color-mix(in oklab, var(--primary) 10%, var(--card)) 0%, var(--card) 58%, color-mix(in oklab, #b9b5f5 20%, var(--card)) 100%); padding: clamp(24px, 4vw, 44px); box-shadow: 0 14px 40px rgb(55 43 25 / 0.035); }
+.core-welcome-copy { position: relative; z-index: 2; max-width: 670px; }
+.core-eyebrow { margin: 0 0 8px; color: var(--primary); font-size: 11px; font-weight: 750; letter-spacing: .09em; text-transform: uppercase; }
+.core-welcome h1 { margin: 0; font-size: clamp(28px, 3vw, 40px); font-weight: 750; line-height: 1.15; letter-spacing: -.045em; }
+.core-welcome h1 span { color: var(--primary); font-size: .75em; }
+.core-welcome-copy > p:not(.core-eyebrow) { margin-top: 12px; color: var(--muted-foreground); font-size: 14px; }
+.core-welcome-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin-top: 24px; }
+.core-primary-action { display: inline-flex; min-height: 44px; align-items: center; gap: 9px; border-radius: 14px; background: var(--primary); padding: 0 16px; color: var(--primary-foreground); font-size: 13px; font-weight: 650; box-shadow: 0 6px 18px color-mix(in oklab, var(--primary) 18%, transparent); transition: transform .2s, box-shadow .2s; }
+.core-primary-action:hover { transform: translateY(-1px); box-shadow: 0 9px 22px color-mix(in oklab, var(--primary) 24%, transparent); }
+.core-day-progress { color: var(--muted-foreground); font-size: 12px; }
+.core-welcome-art { position: absolute; top: -72px; right: 4%; width: 300px; height: 300px; opacity: .85; }
+.core-orbit { position: absolute; inset: 18px; border: 1px solid color-mix(in oklab, var(--primary) 18%, transparent); border-radius: 50%; transform: rotate(-28deg) scaleY(.65); }
+.core-orbit-two { inset: 46px 2px; transform: rotate(28deg) scaleY(.65); border-color: color-mix(in oklab, #9d9be8 24%, transparent); }
+.core-sun { position: absolute; top: 82px; right: 72px; width: 120px; height: 120px; border-radius: 38% 62% 60% 40% / 45% 42% 58% 55%; background: linear-gradient(140deg, color-mix(in oklab, var(--primary) 55%, #f8cda5), color-mix(in oklab, #b9b5f5 80%, white)); filter: drop-shadow(0 15px 22px rgb(105 89 150 / .12)); transform: rotate(20deg); }
+.core-spark { position: absolute; color: var(--primary); font-size: 30px; }
+.core-spark-one { top: 68px; right: 42px; }
+.core-spark-two { top: 196px; right: 212px; font-size: 22px; }
+.core-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 16px; }
+.core-section-heading h2 { margin: 0; font-size: clamp(21px, 2vw, 26px); font-weight: 720; letter-spacing: -.035em; }
+.core-section-heading > div > p:last-child { margin-top: 5px; color: var(--muted-foreground); font-size: 13px; }
+.core-count-pill { flex-shrink: 0; border-radius: 999px; background: color-mix(in oklab, var(--primary) 10%, var(--card)); padding: 8px 12px; color: var(--primary); font-size: 11px; font-weight: 650; }
+.core-day-card { display: flex; min-height: 188px; flex-direction: column; border: 1px solid var(--border); border-radius: 22px; padding: 18px; transition: transform .18s, box-shadow .18s, border-color .18s; }
+.core-day-card:hover { transform: translateY(-3px); border-color: color-mix(in oklab, var(--primary) 35%, var(--border)); box-shadow: 0 12px 26px rgb(30 25 20 / .055); }
+.core-day-card-top { display: flex; align-items: center; justify-content: space-between; }
+.core-day-icon { display: flex; width: 42px; height: 42px; align-items: center; justify-content: center; border-radius: 15px; }
+.core-card-arrow { display: flex; width: 30px; height: 30px; align-items: center; justify-content: center; border-radius: 50%; background: rgb(255 255 255 / .5); color: var(--muted-foreground); }
+.core-day-card h3 { margin-top: 19px; font-size: 15px; font-weight: 700; letter-spacing: -.02em; }
+.core-day-metric { margin-top: 5px; font-size: 12px; font-weight: 700; }
+.core-day-detail { display: -webkit-box; overflow: hidden; margin-top: 5px; color: var(--muted-foreground); font-size: 12px; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.core-tone-lilac { background: color-mix(in oklab, #e9e6ff 58%, var(--card)); }
+.core-tone-lilac .core-day-icon { background: #e0dcff; color: #6658bd; }
+.core-tone-mint { background: color-mix(in oklab, #e0f5e9 62%, var(--card)); }
+.core-tone-mint .core-day-icon { background: #c9edda; color: #287d55; }
+.core-tone-peach { background: color-mix(in oklab, #ffeadc 62%, var(--card)); }
+.core-tone-peach .core-day-icon { background: #ffddc5; color: #b86135; }
+.core-tone-blue { background: color-mix(in oklab, #e1efff 62%, var(--card)); }
+.core-tone-blue .core-day-icon { background: #cfe5ff; color: #346aa4; }
+.dark .core-tone-lilac { background: color-mix(in oklab, #6253a2 18%, var(--card)); }
+.dark .core-tone-lilac .core-day-icon { background: #40386d; color: #c4baff; }
+.dark .core-tone-mint { background: color-mix(in oklab, #287d55 15%, var(--card)); }
+.dark .core-tone-mint .core-day-icon { background: #234d3b; color: #9ce2bc; }
+.dark .core-tone-peach { background: color-mix(in oklab, #b86135 15%, var(--card)); }
+.dark .core-tone-peach .core-day-icon { background: #603a2b; color: #ffc09b; }
+.dark .core-tone-blue { background: color-mix(in oklab, #346aa4 16%, var(--card)); }
+.dark .core-tone-blue .core-day-icon { background: #263f5c; color: #a5d0ff; }
+.core-shortcuts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-top: 2px; }
+.core-shortcuts > span { margin-right: 4px; color: var(--muted-foreground); font-size: 12px; }
+.core-shortcuts a { display: inline-flex; min-height: 36px; align-items: center; gap: 7px; border: 1px solid var(--border); border-radius: 999px; background: var(--card); padding: 0 12px; font-size: 12px; font-weight: 600; transition: border-color .18s, color .18s; }
+.core-shortcuts a:hover { border-color: var(--primary); color: var(--primary); }
+.core-secondary-action { min-height: 40px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); padding: 0 14px; font-size: 12px; font-weight: 650; }
+.core-secondary-action:hover { border-color: var(--primary); color: var(--primary); }
+.core-text-link { display: inline-flex; align-items: center; gap: 6px; color: var(--primary); font-size: 12px; font-weight: 650; }
+.core-home [data-slot="card"], .core-home .rounded-2xl.border.border-border.bg-card { box-shadow: 0 4px 16px rgb(35 30 20 / .025); }
+@media (max-width: 720px) { .core-welcome { min-height: 205px; border-radius: 23px; padding: 25px 21px; } .core-welcome-art { top: -88px; right: -170px; opacity: .4; } .core-welcome h1 { max-width: 280px; font-size: 30px; } .core-welcome-copy > p:not(.core-eyebrow) { max-width: 260px; } .core-welcome-actions { align-items: flex-start; flex-direction: column; gap: 10px; margin-top: 19px; } .core-section-heading { align-items: flex-start; flex-direction: column; } .core-finance-heading { align-items: flex-start; } .core-day-card { min-height: 172px; padding: 15px; } .core-shortcuts { gap: 7px; } .core-shortcuts > span { width: 100%; } }
+
+/* Shared app-wide polish, not only the home dashboard. */
+.core-page-header { padding-bottom: 3px; }
+.core-page-header h1 { letter-spacing: -.04em; }
+main .rounded-2xl.border.border-border\/70.bg-card, main .rounded-2xl.border.border-border.bg-card { border-radius: 20px; }
+main section.rounded-2xl.border.border-border\/70.bg-card { box-shadow: 0 5px 24px rgb(38 32 22 / .035); }
+main .label-caps { letter-spacing: .025em; }
+main input:not([type="checkbox"]), main select, main textarea { border-radius: 12px; }
+main button { transition-duration: 180ms; }
+
+/* CORE-inspired module hub: make the main navigation feel like a personal organizer. */
+.core-module-hub { max-width: 1320px; margin-inline: auto; }
+.core-hub-hero { position: relative; display: flex; min-height: 230px; align-items: center; overflow: hidden; isolation: isolate; border: 1px solid color-mix(in oklab, var(--primary) 18%, var(--border)); border-radius: 28px; background: linear-gradient(112deg, color-mix(in oklab, var(--primary) 13%, var(--card)) 0%, var(--card) 58%, color-mix(in oklab, #b9b5f5 23%, var(--card)) 100%); padding: clamp(24px, 4vw, 42px); box-shadow: 0 14px 40px rgb(55 43 25 / .045); }
+.core-hub-hero-copy { position: relative; z-index: 2; max-width: 690px; }
+.core-hub-kicker { display: inline-flex; align-items: center; gap: 7px; border: 1px solid color-mix(in oklab, var(--primary) 20%, transparent); border-radius: 999px; background: color-mix(in oklab, var(--card) 78%, transparent); padding: 7px 11px; color: var(--primary); font-size: 10px; font-weight: 750; letter-spacing: .11em; }
+.core-hub-hero h1 { max-width: 650px; margin: 17px 0 0; font-size: clamp(29px, 3.2vw, 43px); font-weight: 780; line-height: 1.08; letter-spacing: -.05em; }
+.core-hub-hero-copy > p { max-width: 540px; margin-top: 12px; color: var(--muted-foreground); font-size: 14px; line-height: 1.7; }
+.core-hub-hero-meta { display: flex; flex-wrap: wrap; gap: 9px 18px; margin-top: 20px; }
+.core-hub-hero-meta span { display: inline-flex; align-items: center; gap: 7px; color: var(--muted-foreground); font-size: 12px; font-weight: 600; }
+.core-hub-hero-art { position: absolute; z-index: 1; top: 50%; right: 4%; width: 255px; height: 255px; transform: translateY(-50%); }
+.core-hub-blob { position: absolute; inset: 35px; border: 1px solid color-mix(in oklab, var(--primary) 18%, transparent); border-radius: 42% 58% 58% 42% / 42% 42% 58% 58%; background: linear-gradient(135deg, color-mix(in oklab, var(--primary) 22%, transparent), color-mix(in oklab, #b9b5f5 35%, transparent)); transform: rotate(-15deg); }
+.core-hub-orbit { position: absolute; inset: 7px; border: 1px solid color-mix(in oklab, var(--primary) 19%, transparent); border-radius: 50%; transform: rotate(27deg) scaleX(.74); }
+.core-hub-hero-art span { position: absolute; top: 23px; right: 34px; color: var(--primary); font-size: 32px; }
+.core-hub-group { border-radius: 23px !important; box-shadow: 0 5px 20px rgb(35 30 20 / .035); transition: border-color .2s, transform .2s; }
+.core-hub-group:hover { border-color: color-mix(in oklab, var(--primary) 28%, var(--border)); }
+.core-hub-group-icon-0 { background: #e9e5ff; color: #6757b7; }
+.core-hub-group-icon-1 { background: #dff4e9; color: #347c5a; }
+.core-hub-group-icon-2 { background: #ffeadf; color: #b96c49; }
+.core-hub-group-icon-3 { background: #e0edff; color: #426fb0; }
+.core-hub-group-icon-4 { background: #f7e3f2; color: #a34b88; }
+.dark .core-hub-group-icon-0 { background: #37304f; color: #c4baff; }
+.dark .core-hub-group-icon-1 { background: #203d31; color: #8cddb4; }
+.dark .core-hub-group-icon-2 { background: #4a3027; color: #ffc0a2; }
+.dark .core-hub-group-icon-3 { background: #25364f; color: #a9caff; }
+.dark .core-hub-group-icon-4 { background: #472c42; color: #f0b3df; }
+.core-hub-module { box-shadow: 0 2px 8px rgb(35 30 20 / .018); }
+.core-hub-module:hover { transform: translateY(-1px); box-shadow: 0 7px 17px rgb(35 30 20 / .045); }
+@media (max-width: 720px) { .core-hub-hero { min-height: 250px; border-radius: 23px; padding: 24px 21px; } .core-hub-hero h1 { max-width: 290px; font-size: 31px; } .core-hub-hero-copy > p { max-width: 280px; } .core-hub-hero-art { top: auto; right: -145px; bottom: -105px; width: 240px; height: 240px; transform: none; opacity: .5; } .core-hub-hero-meta { max-width: 255px; gap: 9px 14px; } }
+.dark .core-hub-hero { background: linear-gradient(112deg, color-mix(in oklab, var(--primary) 15%, var(--card)) 0%, var(--card) 58%, color-mix(in oklab, #6f65a8 22%, var(--card)) 100%); }
+
+
+/* Routine planner: CORE-inspired weekly agenda with clearer hierarchy and soft, practical surfaces. */
+.routine-planner { max-width: 1440px; margin-inline: auto; }
+.routine-planner-hero { position: relative; display: flex; min-height: 220px; align-items: center; overflow: hidden; isolation: isolate; border: 1px solid color-mix(in oklab, var(--primary) 16%, var(--border)); border-radius: 26px; background: linear-gradient(112deg, color-mix(in oklab, var(--primary) 12%, var(--card)), var(--card) 58%, color-mix(in oklab, #d8d3ff 28%, var(--card))); padding: clamp(22px, 3.5vw, 36px); }
+.routine-planner-eyebrow { display: inline-flex; align-items: center; gap: 7px; color: var(--primary); font-size: 10px; font-weight: 800; letter-spacing: .12em; }
+.routine-planner-hero h2 { max-width: 540px; margin-top: 13px; font-size: clamp(27px, 3vw, 38px); font-weight: 780; letter-spacing: -.045em; line-height: 1.1; }
+.routine-planner-hero p { max-width: 500px; margin-top: 10px; color: var(--muted-foreground); font-size: 14px; line-height: 1.65; }
+.routine-planner-hero-mark { position: absolute; right: 7%; top: 50%; display: grid; width: 190px; height: 190px; place-items: center; border: 1px solid color-mix(in oklab, var(--primary) 18%, transparent); border-radius: 50%; color: color-mix(in oklab, var(--primary) 62%, transparent); transform: translateY(-50%) rotate(-10deg); }
+.routine-planner-hero-mark::before { position: absolute; inset: 17px; border: 1px solid color-mix(in oklab, var(--primary) 17%, transparent); border-radius: 45% 55% 52% 48%; content: ""; transform: rotate(28deg); }
+.routine-planner-hero-mark svg { width: 68px; height: 68px; stroke-width: 1; }
+.routine-planner-stat { display: flex; min-width: 0; align-items: flex-start; gap: 12px; border: 1px solid var(--border); border-radius: 18px; background: var(--card); padding: 16px; }
+.routine-planner-stat-icon { display: grid; width: 36px; height: 36px; flex: 0 0 auto; place-items: center; border-radius: 12px; background: color-mix(in oklab, var(--primary) 11%, var(--card)); color: var(--primary); }
+.routine-planner-stat-icon-1 { background: #e1f4e9; color: #347c5a; }
+.routine-planner-stat-icon-2 { background: #fff0d9; color: #9a6924; }
+.dark .routine-planner-stat-icon-1 { background: #203d31; color: #8cddb4; }
+.dark .routine-planner-stat-icon-2 { background: #473821; color: #f2c77e; }
+.routine-planner-stat p { color: var(--muted-foreground); font-size: 11px; font-weight: 600; }
+.routine-planner-stat strong { display: block; margin-top: 3px; font-size: 25px; font-weight: 780; letter-spacing: -.04em; line-height: 1.2; }
+.routine-planner-stat span:last-child { display: block; margin-top: 3px; color: var(--muted-foreground); font-size: 11px; }
+.routine-planner-calendar { box-shadow: 0 4px 22px rgb(35 30 20 / .025); }
+.routine-planner-day.is-today { box-shadow: inset 0 -3px 0 var(--primary); }
+.routine-planner-hour { background: color-mix(in oklab, var(--secondary) 42%, var(--card)); }
+.routine-planner-slot { transition: background .15s ease; }
+.routine-planner-slot:hover { background: color-mix(in oklab, var(--primary) 4%, var(--card)); }
+.routine-planner-event { min-height: 42px; border-radius: 8px; }
+.routine-planner-event.is-done { opacity: .72; }
+.dark .routine-planner-hero { background: linear-gradient(112deg, color-mix(in oklab, var(--primary) 16%, var(--card)), var(--card) 58%, color-mix(in oklab, #6f65a8 20%, var(--card))); }
+@media (max-width: 720px) { .routine-planner-hero { min-height: 230px; border-radius: 22px; padding: 22px; } .routine-planner-hero h2 { max-width: 290px; font-size: 29px; } .routine-planner-hero p { max-width: 280px; font-size: 13px; } .routine-planner-hero-mark { right: -105px; width: 190px; height: 190px; opacity: .55; } }
+
+
+/* Food planner — calm CORE-inspired meal planning surfaces, compatible with both themes. */
+.food-planner { max-width: 1440px; margin-inline: auto; }
+.food-hero { position:relative; display:flex; min-height:215px; align-items:center; overflow:hidden; isolation:isolate; border:1px solid color-mix(in oklab,var(--primary) 17%,var(--border)); border-radius:25px; background:linear-gradient(112deg,color-mix(in oklab,#dce8d4 78%,var(--card)),var(--card) 67%); padding:clamp(22px,3.5vw,36px); }
+.food-eyebrow { display:inline-flex; align-items:center; gap:7px; color:var(--primary); font-size:10px; font-weight:800; letter-spacing:.13em; }
+.food-hero h2 { max-width:560px; margin-top:12px; font-size:clamp(28px,3vw,38px); font-weight:800; letter-spacing:-.045em; line-height:1.12; }
+.food-hero p { max-width:500px; margin-top:10px; color:var(--muted-foreground); font-size:14px; line-height:1.65; }
+.food-hero-art { position:absolute; right:8%; top:50%; color:color-mix(in oklab,var(--primary) 22%,transparent); font-size:170px; line-height:1; transform:translateY(-50%) rotate(-12deg); }
+.food-stat { display:flex; min-width:0; flex-direction:column; gap:4px; border:1px solid var(--border); border-radius:17px; background:var(--card); padding:15px; }
+.food-stat span,.food-stat small { color:var(--muted-foreground); font-size:11px; }
+.food-stat strong { overflow-wrap:anywhere; font-size:clamp(20px,2vw,27px); font-weight:800; letter-spacing:-.04em; }
+.food-day { display:flex; min-width:0; flex-direction:column; align-items:center; gap:4px; border:1px solid var(--border); border-radius:13px; background:var(--background); padding:12px 5px; transition:background .15s,border-color .15s; }
+.food-day span,.food-day small { color:var(--muted-foreground); font-size:10px; }
+.food-day strong { font-size:20px; }
+.food-day.is-active { border-color:var(--primary); background:color-mix(in oklab,var(--primary) 9%,var(--card)); color:var(--primary); box-shadow:inset 0 -2px 0 var(--primary); }
+.food-meal-row { display:flex; align-items:flex-start; gap:12px; border-top:1px solid var(--border); padding:14px 0; }
+.food-meal-icon { display:grid; width:42px; height:42px; flex:0 0 auto; place-items:center; border-radius:13px; background:color-mix(in oklab,var(--primary) 9%,var(--card)); font-size:19px; }
+.dark .food-hero { background:linear-gradient(112deg,color-mix(in oklab,#456044 35%,var(--card)),var(--card) 68%); }
+.dark .food-hero-art { color:color-mix(in oklab,#b5d6a9 26%,transparent); }
+@media(max-width:640px){.food-hero{min-height:220px;border-radius:21px;padding:21px}.food-hero h2{max-width:270px;font-size:29px}.food-hero p{max-width:270px;font-size:13px}.food-hero-art{right:-35px;font-size:115px;opacity:.65}.food-stat{padding:12px}}
+
+/* Weekly meal planner: seven day columns with meal rows, horizontally scrollable on small screens. */
+.food-week-scroll { width:100%; overflow-x:auto; padding-bottom:6px; }
+.food-week-grid { display:grid; grid-template-columns: minmax(108px, .85fr) repeat(7,minmax(138px,1fr)); min-width:1080px; border:1px solid var(--border); border-radius:16px; overflow:hidden; background:var(--card); }
+.food-week-corner,.food-week-dayhead,.food-week-meallabel,.food-week-cell { min-width:0; border-right:1px solid var(--border); border-bottom:1px solid var(--border); }
+.food-week-corner { display:flex; flex-direction:column; justify-content:center; gap:5px; padding:12px; background:var(--secondary); }
+.food-week-corner span,.food-week-dayhead span { font-size:10px; font-weight:800; letter-spacing:.08em; }
+.food-week-corner small,.food-week-dayhead small,.food-week-meallabel small { font-size:10px; color:var(--muted-foreground); }
+.food-week-dayhead { display:flex; align-items:center; justify-content:center; flex-direction:column; gap:4px; padding:12px 5px; background:color-mix(in oklab,var(--primary) 5%,var(--card)); text-align:center; }
+.food-week-dayhead strong { font-size:18px; line-height:1.1; }
+.food-week-meallabel { display:flex; flex-direction:column; justify-content:center; gap:6px; padding:12px 10px; background:var(--background); }
+.food-week-meallabel span { font-size:18px; }
+.food-week-meallabel strong { font-size:12px; }
+.food-week-cell { display:flex; min-height:116px; flex-direction:column; align-items:stretch; gap:7px; padding:7px; background:var(--card); }
+.food-week-entry { position:relative; padding:9px 28px 9px 9px; border:1px solid color-mix(in oklab,var(--primary) 22%,var(--border)); border-radius:10px; background:color-mix(in oklab,var(--primary) 6%,var(--card)); }
+.food-week-entry p { overflow-wrap:anywhere; font-size:12px; font-weight:650; line-height:1.4; }
+.food-week-entry small { display:block; margin-top:4px; color:var(--muted-foreground); font-size:10px; overflow-wrap:anywhere; }
+.food-week-entry .food-week-ingredients { line-height:1.4; }
+.food-week-done { position:absolute; top:7px; right:6px; display:grid; width:22px; height:22px; place-items:center; border:1px solid var(--border); border-radius:7px; background:var(--card); }
+.food-week-done.is-done { border-color:#16a34a; background:#16a34a1a; color:#16a34a; }
+.food-week-add { display:flex; min-height:30px; align-items:center; justify-content:center; gap:4px; margin-top:auto; border:1px dashed var(--border); border-radius:9px; color:var(--muted-foreground); font-size:10px; transition:background .15s,color .15s; }
+.food-week-add:hover { background:var(--secondary); color:var(--foreground); }
+.dark .food-week-dayhead { background:color-mix(in oklab,var(--primary) 12%,var(--card)); }
+.dark .food-week-entry { background:color-mix(in oklab,var(--primary) 11%,var(--card)); }

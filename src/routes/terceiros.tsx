@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ArrowDownCircle, CheckCircle2, CircleDollarSign, Plus, UserRound, Wallet, X } from "lucide-react";
 import { PageHeader, Panel, StatCard, Tag } from "@/components/ui-kit";
-import { formatCurrency } from "@/lib/finance";
+import { fromCents, toCents, formatCurrency } from "@/lib/finance";
 import { useHouseholdTable } from "@/hooks/use-household-data";
 import { useGlobalMonth, MonthSelector } from "@/hooks/use-global-month";
 
@@ -189,8 +189,10 @@ function ThirdPartiesPage() {
   }
 
   async function saveExpense() {
-    const value = Number(String(amount).replace(",", "."));
-    const reimbursedValue = Number(String(reimbursedAmount || "0").replace(",", "."));
+    const parsedValue = Number(String(amount).replace(",", "."));
+    const value = Number.isFinite(parsedValue) ? fromCents(toCents(parsedValue)) : Number.NaN;
+    const parsedReimbursedValue = Number(String(reimbursedAmount || "0").replace(",", "."));
+    const reimbursedValue = Number.isFinite(parsedReimbursedValue) ? fromCents(toCents(parsedReimbursedValue)) : Number.NaN;
     if (!partyId || !description.trim() || !Number.isFinite(value) || value <= 0) return toast.error("PREENCHA TERCEIRO, DESCRIÇÃO E VALOR");
     if (!paymentId) return toast.error("SELECIONE A FORMA DE PAGAMENTO");
     if (reimbursedValue < 0 || reimbursedValue > value) return toast.error("VALOR REEMBOLSADO INVÁLIDO");

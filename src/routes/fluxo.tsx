@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import { PageHeader, Panel, StatCard, Tag, PersonDot } from "@/components/ui-kit";
 import { formatCurrency } from "@/lib/finance";
 import { cn } from "@/lib/utils";
-import { useHouseholdTable } from "@/hooks/use-household-data";
+import { useHouseholdPagedTable } from "@/hooks/use-household-data";
+import { MonthSelector, useGlobalMonth } from "@/hooks/use-global-month";
 
 export const Route = createFileRoute("/fluxo")({
   head: () => ({ meta: [{ title: "FLUXO — HARMONY HUB" }, { name: "description", content: "Fluxo financeiro consolidado por período." }] }),
@@ -37,11 +38,7 @@ const typeLabel = (type: Tx["type"]) => type === "RECEITA" ? "RECEITA" : type ==
 const counts = (t: Tx) => t.type !== "DESPESA" || !t.card_name || t.paid;
 
 function FluxoPage() {
-  const tx = useHouseholdTable<Tx>(
-    "transactions",
-    "id,date,description,category,pay_method,payment_method_name,responsible,amount,type,paid,card_name,installment_current,installment_total,source_type,third_party_expense_id,household_id",
-    "date",
-  );
+  const { month: selectedMonth, setMonth } = useGlobalMonth("fluxo");
   const [period, setPeriod] = useState<Period>("MES");
   const [typeFilter, setTypeFilter] = useState<"TODOS" | Tx["type"]>("TODOS");
   const [search, setSearch] = useState("");
@@ -50,8 +47,8 @@ function FluxoPage() {
 
   const today = new Date();
   const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-  const monthKey = todayKey.slice(0, 7);
-  const yearKey = todayKey.slice(0, 4);
+  const monthKey = selectedMonth;
+  const yearKey = selectedMonth.slice(0, 4);
   const startOfWeek = new Date(today);
   const day = startOfWeek.getDay();
   startOfWeek.setDate(startOfWeek.getDate() - (day === 0 ? 6 : day - 1));
@@ -60,16 +57,26 @@ function FluxoPage() {
   endOfWeek.setDate(endOfWeek.getDate() + 6);
   const weekStart = `${startOfWeek.getFullYear()}-${String(startOfWeek.getMonth() + 1).padStart(2, "0")}-${String(startOfWeek.getDate()).padStart(2, "0")}`;
   const weekEnd = `${endOfWeek.getFullYear()}-${String(endOfWeek.getMonth() + 1).padStart(2, "0")}-${String(endOfWeek.getDate()).padStart(2, "0")}`;
+  const dateRange = useMemo(() => {
+    if (period === "HOJE") return { from: todayKey, to: todayKey };
+    if (period === "SEMANA") return { from: weekStart, to: weekEnd };
+    if (period === "ANO") return { from: `${yearKey}-01-01`, to: `${yearKey}-12-31` };
+    const [year, month] = monthKey.split("-").map(Number);
+    const lastDay = new Date(year, month, 0).getDate();
+    return { from: `${monthKey}-01`, to: `${monthKey}-${String(lastDay).padStart(2, "0")}` };
+  }, [period, todayKey, weekStart, weekEnd, yearKey, monthKey]);
+  const tx = useHouseholdPagedTable<Tx>(
+    "transactions",
+    "id,date,description,category,pay_method,payment_method_name,responsible,amount,type,paid,card_name,installment_current,installment_total,source_type,third_party_expense_id,household_id",
+    "date",
+    dateRange.from,
+    dateRange.to,
+    100,
+  );
 
   const visible = useMemo(() => tx.rows.filter(row => {
     if (!row.date) return false;
-    const inPeriod = period === "HOJE"
-      ? row.date === todayKey
-      : period === "SEMANA"
-        ? row.date >= weekStart && row.date <= weekEnd
-        : period === "MES"
-          ? row.date.startsWith(monthKey)
-          : row.date.startsWith(yearKey);
+    const inPeriod = row.date >= dateRange.from && row.date <= dateRange.to;
     const inType = typeFilter === "TODOS" || row.type === typeFilter;
     const isThirdParty = Boolean(row.third_party_expense_id) || row.source_type === "THIRD_PARTY";
     const inOrigin = originFilter === "TODOS" || (originFilter === "TERCEIROS" ? isThirdParty : !isThirdParty);
@@ -81,7 +88,7 @@ function FluxoPage() {
     if (sortFilter === "VALOR_MAIOR") return Number(b.amount) - Number(a.amount);
     if (sortFilter === "VALOR_MENOR") return Number(a.amount) - Number(b.amount);
     return b.date.localeCompare(a.date);
-  }), [tx.rows, period, typeFilter, originFilter, search, sortFilter, todayKey, monthKey, yearKey, weekStart, weekEnd]);
+  }), [tx.rows, typeFilter, originFilter, search, sortFilter, dateRange.from, dateRange.to]);
 
   const income = visible.filter(t => t.type === "RECEITA").reduce((s, t) => s + Number(t.amount), 0);
   const expenses = visible.filter(t => t.type === "DESPESA" && counts(t)).reduce((s, t) => s + Number(t.amount), 0);
@@ -152,7 +159,7 @@ function FluxoPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="FLUXO" subtitle="TODAS AS MOVIMENTAÇÕES FINANCEIRAS ORGANIZADAS POR PERÍODO." />
+      <PageHeader title="FLUXO" subtitle="TODAS AS MOVIMENTAÇÕES FINANCEIRAS ORGANIZADAS POR PERÍODO." action={<MonthSelector month={selectedMonth} setMonth={setMonth} />} />
       <div className="flex flex-wrap gap-2">
         {(["HOJE", "SEMANA", "MES", "ANO"] as Period[]).map(item => (
           <button key={item} type="button" onClick={() => setPeriod(item)} className={cn("label-caps rounded-lg border px-3 py-2 text-[10px]", period === item ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
@@ -192,6 +199,10 @@ function FluxoPage() {
       </Panel>
       <Panel title={period === "ANO" ? `FLUXO — ${yearKey}` : period === "MES" ? `FLUXO — ${monthKey}` : period === "SEMANA" ? `FLUXO — ${weekStart} A ${weekEnd}` : "FLUXO DO DIA"}>
         {content}
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+          <p className="text-xs text-muted-foreground">{tx.rows.length} de {tx.totalCount} movimentações carregadas</p>
+          {tx.hasNextPage && <button type="button" disabled={tx.isFetchingNextPage} onClick={() => void tx.fetchNextPage()} className="label-caps rounded-xl border border-border px-4 py-2.5 text-[10px] font-semibold transition-colors hover:border-primary hover:text-primary disabled:opacity-50">{tx.isFetchingNextPage ? "CARREGANDO..." : "CARREGAR MAIS"}</button>}
+        </div>
       </Panel>
     </div>
   );
