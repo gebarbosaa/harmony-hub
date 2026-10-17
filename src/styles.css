@@ -278,3 +278,24 @@ main button { transition-duration: 180ms; }
 .routine-planner-event.is-done { opacity: .72; }
 .dark .routine-planner-hero { background: linear-gradient(112deg, color-mix(in oklab, var(--primary) 16%, var(--card)), var(--card) 58%, color-mix(in oklab, #6f65a8 20%, var(--card))); }
 @media (max-width: 720px) { .routine-planner-hero { min-height: 230px; border-radius: 22px; padding: 22px; } .routine-planner-hero h2 { max-width: 290px; font-size: 29px; } .routine-planner-hero p { max-width: 280px; font-size: 13px; } .routine-planner-hero-mark { right: -105px; width: 190px; height: 190px; opacity: .55; } }
+
+
+/* Food planner — calm CORE-inspired meal planning surfaces, compatible with both themes. */
+.food-planner { max-width: 1440px; margin-inline: auto; }
+.food-hero { position:relative; display:flex; min-height:215px; align-items:center; overflow:hidden; isolation:isolate; border:1px solid color-mix(in oklab,var(--primary) 17%,var(--border)); border-radius:25px; background:linear-gradient(112deg,color-mix(in oklab,#dce8d4 78%,var(--card)),var(--card) 67%); padding:clamp(22px,3.5vw,36px); }
+.food-eyebrow { display:inline-flex; align-items:center; gap:7px; color:var(--primary); font-size:10px; font-weight:800; letter-spacing:.13em; }
+.food-hero h2 { max-width:560px; margin-top:12px; font-size:clamp(28px,3vw,38px); font-weight:800; letter-spacing:-.045em; line-height:1.12; }
+.food-hero p { max-width:500px; margin-top:10px; color:var(--muted-foreground); font-size:14px; line-height:1.65; }
+.food-hero-art { position:absolute; right:8%; top:50%; color:color-mix(in oklab,var(--primary) 22%,transparent); font-size:170px; line-height:1; transform:translateY(-50%) rotate(-12deg); }
+.food-stat { display:flex; min-width:0; flex-direction:column; gap:4px; border:1px solid var(--border); border-radius:17px; background:var(--card); padding:15px; }
+.food-stat span,.food-stat small { color:var(--muted-foreground); font-size:11px; }
+.food-stat strong { overflow-wrap:anywhere; font-size:clamp(20px,2vw,27px); font-weight:800; letter-spacing:-.04em; }
+.food-day { display:flex; min-width:0; flex-direction:column; align-items:center; gap:4px; border:1px solid var(--border); border-radius:13px; background:var(--background); padding:12px 5px; transition:background .15s,border-color .15s; }
+.food-day span,.food-day small { color:var(--muted-foreground); font-size:10px; }
+.food-day strong { font-size:20px; }
+.food-day.is-active { border-color:var(--primary); background:color-mix(in oklab,var(--primary) 9%,var(--card)); color:var(--primary); box-shadow:inset 0 -2px 0 var(--primary); }
+.food-meal-row { display:flex; align-items:flex-start; gap:12px; border-top:1px solid var(--border); padding:14px 0; }
+.food-meal-icon { display:grid; width:42px; height:42px; flex:0 0 auto; place-items:center; border-radius:13px; background:color-mix(in oklab,var(--primary) 9%,var(--card)); font-size:19px; }
+.dark .food-hero { background:linear-gradient(112deg,color-mix(in oklab,#456044 35%,var(--card)),var(--card) 68%); }
+.dark .food-hero-art { color:color-mix(in oklab,#b5d6a9 26%,transparent); }
+@media(max-width:640px){.food-hero{min-height:220px;border-radius:21px;padding:21px}.food-hero h2{max-width:270px;font-size:29px}.food-hero p{max-width:270px;font-size:13px}.food-hero-art{right:-35px;font-size:115px;opacity:.65}.food-stat{padding:12px}}
