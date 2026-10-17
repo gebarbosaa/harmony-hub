@@ -77,14 +77,16 @@ Deno.serve(async (req: Request) => {
     do { const query = new URLSearchParams({showDeleted:"true",singleEvents:"true",maxResults:"2500",timeMin,timeMax}); if(pageToken)query.set("pageToken",pageToken); const response=await googleRequest(`${base}?${query}`,access); const payload=await response.json(); if(!response.ok)throw new Error("O Google recusou a leitura da agenda. Reconecte a integração se necessário."); events.push(...(payload.items||[])); pageToken=payload.nextPageToken; } while(pageToken);
     for(const link of links){
       const event=events.find(e=>e.id===link.google_event_id); const local=shifts.find(s=>s.id===link.source_id);
-      if(!event || event.status==="cancelled") { if(local) { shifts=shifts.filter(s=>s.id!==local.id); removed++; } await db.from("google_calendar_event_links").delete().eq("id",link.id); continue; }
+      if(event?.status==="cancelled") { if(local) { shifts=shifts.filter(s=>s.id!==local.id); removed++; } await db.from("google_calendar_event_links").delete().eq("id",link.id); continue; }
+      // An event absent from this bounded listing may have moved outside the window; do not infer deletion.
+      if(!event) continue;
       if(!local) { deleteConfirmationRequired++; continue; }
       const googleShift=fromGoogleEvent(event,local); if(!googleShift) { failed++; continue; }
       const googleChanged=!!event.etag && event.etag!==link.google_etag;
       if(googleChanged) { shifts=shifts.map(s=>s.id===local.id?googleShift:s); await db.from("google_calendar_event_links").update({google_etag:event.etag||null,due_date:googleShift.date,last_local_updated_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq("id",link.id); updated++; }
     }
     // Import explicitly tagged Harmony events from Google, preserving their stable IDs.
-    for(const event of events){ if(!event.id || event.status==="cancelled" || linkedByEvent.has(event.id) || event.extendedProperties?.private?.harmonyHubType!=="shift")continue; const shift=fromGoogleEvent(event); if(!shift)continue; if(shifts.some(s=>s.id===shift.id)){ conflicts++; continue; } shifts.push(shift); const {error}=await db.from("google_calendar_event_links").insert({connection_id:c.id,household_id:c.household_id,source_type:"shift",source_id:shift.id,source_period:"shift",google_event_id:event.id,google_etag:event.etag||null,due_date:shift.date,last_local_updated_at:new Date().toISOString()}); if(error){failed++;shifts=shifts.filter(s=>s.id!==shift.id)}else imported++; }
+    for(const event of events){ if(!event.id || event.status==="cancelled" || linkedByEvent.has(event.id) || (event.extendedProperties?.private?.harmonyHubType!=="shift" && event.summary?.trim().toLocaleLowerCase("pt-BR")!=="plantão"))continue; const shift=fromGoogleEvent(event); if(!shift)continue; if(shifts.some(s=>s.id===shift.id)){ conflicts++; continue; } shifts.push(shift); const {error}=await db.from("google_calendar_event_links").insert({connection_id:c.id,household_id:c.household_id,source_type:"shift",source_id:shift.id,source_period:"shift",google_event_id:event.id,google_etag:event.etag||null,due_date:shift.date,last_local_updated_at:new Date().toISOString()}); if(error){failed++;shifts=shifts.filter(s=>s.id!==shift.id)}else imported++; }
     // Push local additions and changes. Include mappings imported earlier in this same pass.
     const {data:refreshedLinks} = await db.from("google_calendar_event_links").select("id,source_id,google_event_id,google_etag").eq("connection_id",c.id).eq("source_type","shift");
     const currentLinks = (refreshedLinks || []) as Link[];
