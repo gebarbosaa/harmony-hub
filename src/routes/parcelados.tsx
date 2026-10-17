@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { CreditCard, Landmark, Plus, ArrowUpDown } from "lucide-react";
 import { PageHeader, Panel, ProgressBar, Tag, PersonDot } from "@/components/ui-kit";
@@ -39,9 +39,9 @@ function InstallmentsPage(){const isDesktop = useIsDesktop();
  const selectedPayment=useMemo(()=>payments.find(p=>p.id===paymentId)??null,[payments,paymentId]);
  useEffect(()=>{if(!paymentId&&payments[0])setPaymentId(payments[0].id);if(paymentId&&payments.length&&!payments.some(p=>p.id===paymentId))setPaymentId(payments[0]?.id||"")},[paymentId,payments]);
  useEffect(()=>{if(!categoryOptions.includes(category))setCategory(categoryOptions[0]||"")},[categoryOptions,category]);
- useEffect(()=>{let handled=false;const openFromQuickAdd=()=>{if(handled)return;const pending=sessionStorage.getItem("multicap:pending-create");if(pending==="NOVA PARCELA"){handled=true;sessionStorage.removeItem("multicap:pending-create");openNew()}};openFromQuickAdd();window.addEventListener("multicap:open-create",openFromQuickAdd);const timer=window.setInterval(openFromQuickAdd,100);const stop=window.setTimeout(()=>window.clearInterval(timer),5000);return()=>{window.removeEventListener("multicap:open-create",openFromQuickAdd);window.clearInterval(timer);window.clearTimeout(stop)}},[]);
- function reset(){setEditing(null);setName("");setTotal("");setCount("2");setCategory(categoryOptions[0]||"");setPurchaseDate(new Date().toISOString().slice(0,10));setPaymentId(payments[0]?.id||"");setResponsible("");}
- function openNew(){reset();setFormOpen(true)}
+ useEffect(()=>{let handled=false;const openFromQuickAdd=()=>{if(handled)return;const pending=sessionStorage.getItem("multicap:pending-create");if(pending==="NOVA PARCELA"){handled=true;sessionStorage.removeItem("multicap:pending-create");openNew()}};openFromQuickAdd();window.addEventListener("multicap:open-create",openFromQuickAdd);const timer=window.setInterval(openFromQuickAdd,100);const stop=window.setTimeout(()=>window.clearInterval(timer),5000);return()=>{window.removeEventListener("multicap:open-create",openFromQuickAdd);window.clearInterval(timer);window.clearTimeout(stop)}},[openNew]);
+ const reset = useCallback(() => { setEditing(null); setName(""); setTotal(""); setCount("2"); setCategory(categoryOptions[0] || ""); setPurchaseDate(new Date().toISOString().slice(0, 10)); setPaymentId(payments[0]?.id || ""); setResponsible(""); }, [categoryOptions, payments]);
+ const openNew = useCallback(() => { reset(); setFormOpen(true); }, [reset]);
  function openEdit(i:Row){setEditing(i);setName(i.name);setTotal(String(i.total_amount).replace(".",","));setCount(String(i.installments_count));setCategory(i.category||"");setPurchaseDate(i.purchase_date);setPaymentId(i.payment_method_id||payments.find(p=>p.card_id===i.card_id&&p.kind===i.pay_method)?.id||payments.find(p=>p.kind===i.pay_method)?.id||"");setResponsible(i.responsible||"");setFormOpen(true)}
 
  // Para cada parcelamento, descobre qual e a parcela "atual" agora (comparando com o mes de

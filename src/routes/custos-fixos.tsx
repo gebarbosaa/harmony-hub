@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { PageHeader, Panel, StatCard, Tag, PersonDot } from "@/components/ui-kit";
 import { ResponsibleField } from "@/components/responsible-field";
@@ -122,9 +122,9 @@ function FixedCostsPage() {const isDesktop = useIsDesktop();
     if (tab === "CUSTOS" && !categoryOptions.includes(form.category)) setForm((v) => ({ ...v, category: categoryOptions[0] ?? "" }));
   }, [categoryOptions, form.category, tab]);
 
-  function openNew(target: "CUSTOS" | "ASSINATURAS" = tab) {
+  const openNew = useCallback((target: "CUSTOS" | "ASSINATURAS" = tab) => {
     setTab(target); setEditing(null); setSelected(null); setForm(emptyForm(target === "ASSINATURAS")); setOpen(true);
-  }
+  }, [tab]);
 
   function openEdit(row: Row) {
     const payment = paymentOptions.find((p) => p.id === row.payment_method_id)
@@ -189,7 +189,7 @@ function FixedCostsPage() {const isDesktop = useIsDesktop();
     const pending = sessionStorage.getItem("multicap:pending-create");
     if (pending === "NOVA ASSINATURA" || pending === "NOVO CUSTO FIXO") { sessionStorage.removeItem("multicap:pending-create"); openNew(pending === "NOVA ASSINATURA" ? "ASSINATURAS" : "CUSTOS"); }
     return () => window.removeEventListener("multicap:open-create", handler);
-  }, []);
+  }, [openNew]);
 
   function renderRow(row: Row) {
     const isSub = row.category.toUpperCase() === "ASSINATURAS";

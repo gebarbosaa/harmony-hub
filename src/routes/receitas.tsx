@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { PageHeader, Panel, StatCard, Tag, PersonDot } from "@/components/ui-kit";
 import { ResponsibleField } from "@/components/responsible-field";
@@ -60,12 +60,12 @@ function ReceitasPage() {const isDesktop = useIsDesktop();
     };
     window.addEventListener("multicap:open-create", handler);
     return () => window.removeEventListener("multicap:open-create", handler);
-  }, [month]);
+  }, [month, reset]);
 
   const visible = useMemo(() => tx.rows.filter((t) => t.type === "RECEITA" && t.date.startsWith(month) && t.description.toLowerCase().includes(search.toLowerCase())), [tx.rows, month, search]);
   const total = useMemo(() => visible.reduce((sum, t) => sum + Number(t.amount), 0), [visible]);
 
-  function reset() { setDescription(""); setAmount(""); setCategory(categoryOptions[0] ?? ""); setPaymentId(payments.rows[0]?.id ?? ""); setAccountId(""); setResponsible("AMBAS"); setDate(`${month}-01`); setEditing(null); }
+  const reset = useCallback(() => { setDescription(""); setAmount(""); setCategory(categoryOptions[0] ?? ""); setPaymentId(payments.rows[0]?.id ?? ""); setAccountId(""); setResponsible("AMBAS"); setDate(`${month}-01`); setEditing(null); }, [categoryOptions, payments.rows, month]);
   function openNew() { reset(); setOpen(true); }
   function openEdit(row: Row) { setEditing(row); setDescription(row.description); setAmount(String(row.amount).replace(".", ",")); setCategory(row.category); setPaymentId(row.payment_method_id ?? ""); setAccountId(row.account_id ?? ""); setResponsible(row.responsible || "AMBAS"); setDate(row.date); setOpen(true); }
   async function save() {

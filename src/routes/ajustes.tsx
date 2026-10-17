@@ -51,7 +51,7 @@ function SettingsPage() {
     if (profile?.name) { setName(profile.name); return; }
     const metadataName = String(user?.user_metadata?.["full_name"] ?? user?.user_metadata?.["name"] ?? "");
     if (metadataName) setName(metadataName);
-  }, [profile?.name, user?.id]);
+  }, [profile?.name, user?.id, user?.user_metadata]);
 
   async function saveProfile() {
     const normalized = name.trim().toUpperCase();
