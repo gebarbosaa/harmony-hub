@@ -54,6 +54,54 @@
   --sidebar-border: oklch(0.91 0.006 75);
   --sidebar-ring: oklch(0.67 0.12 45);
 }
+
+.dark {
+  color-scheme: dark;
+  --background: oklch(0.17 0.008 65);
+  --foreground: oklch(0.93 0.006 75);
+  --card: oklch(0.21 0.008 65);
+  --card-foreground: oklch(0.93 0.006 75);
+  --popover: oklch(0.22 0.008 65);
+  --popover-foreground: oklch(0.93 0.006 75);
+  --primary: oklch(0.72 0.14 48);
+  --primary-foreground: oklch(0.16 0.01 45);
+  --secondary: oklch(0.27 0.008 65);
+  --secondary-foreground: oklch(0.9 0.006 75);
+  --muted: oklch(0.27 0.008 65);
+  --muted-foreground: oklch(0.68 0.01 70);
+  --accent: oklch(0.29 0.025 50);
+  --accent-foreground: oklch(0.91 0.025 55);
+  --destructive: oklch(0.65 0.19 27);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.32 0.008 65);
+  --input: oklch(0.34 0.008 65);
+  --ring: oklch(0.72 0.14 48);
+  --orange-primary: oklch(0.72 0.14 48);
+  --orange-secondary: oklch(0.72 0.14 48);
+  --orange-light: oklch(0.3 0.035 52);
+  --graphite: oklch(0.23 0.008 65);
+  --graphite-light: oklch(0.27 0.008 65);
+  --success: oklch(0.72 0.13 155);
+  --danger: oklch(0.68 0.18 27);
+  --warning: oklch(0.78 0.13 75);
+  --info: oklch(0.7 0.12 245);
+  --chart-1: oklch(0.72 0.14 48);
+  --chart-2: oklch(0.72 0.13 155);
+  --chart-3: oklch(0.7 0.12 245);
+  --chart-4: oklch(0.78 0.13 75);
+  --chart-5: oklch(0.68 0.18 27);
+  --gradient-primary: linear-gradient(135deg, var(--orange-primary) 0%, var(--orange-primary) 100%);
+  --gradient-soft: linear-gradient(135deg, oklch(0.72 0.14 48 / 0.12) 0%, oklch(0.22 0.008 65 / 0.3) 100%);
+  --shadow-elegant: 0 8px 24px -18px oklch(0 0 0 / 0.55);
+  --sidebar: oklch(0.19 0.008 65);
+  --sidebar-foreground: oklch(0.9 0.006 75);
+  --sidebar-primary: oklch(0.72 0.14 48);
+  --sidebar-primary-foreground: oklch(0.16 0.01 45);
+  --sidebar-accent: oklch(0.26 0.008 65);
+  --sidebar-accent-foreground: oklch(0.93 0.006 75);
+  --sidebar-border: oklch(0.3 0.008 65);
+  --sidebar-ring: oklch(0.72 0.14 48);
+}
 @utility gradient-primary { background-image: var(--gradient-primary); }
 @utility gradient-soft { background-image: var(--gradient-soft); }
 @utility glass { background-color: color-mix(in oklab, var(--card) 68%, transparent); backdrop-filter: blur(18px); border: 1px solid color-mix(in oklab, var(--border) 80%, transparent); }
@@ -67,6 +115,7 @@
   ::-webkit-scrollbar { width: 8px; height: 8px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--secondary); border-radius: 999px; }
+  .dark ::-webkit-scrollbar-thumb { background: var(--muted); }
   ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
   input, textarea, select, button { text-transform: none; }
   input, textarea, select { transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease; }
