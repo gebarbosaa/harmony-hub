@@ -110,7 +110,7 @@ export function useHouseholdTable<T extends HouseholdRow = HouseholdRow>(
         throw error;
       }
     },
-    [householdId, table, queryClient, queryKey],
+    [householdId, table, queryClient],
   );
 
   const update = useCallback(
@@ -137,7 +137,7 @@ export function useHouseholdTable<T extends HouseholdRow = HouseholdRow>(
         throw error;
       }
     },
-    [householdId, table, queryClient, queryKey],
+    [householdId, table, queryClient],
   );
 
   const remove = useCallback(
@@ -161,7 +161,7 @@ export function useHouseholdTable<T extends HouseholdRow = HouseholdRow>(
         throw error;
       }
     },
-    [householdId, table, queryClient, queryKey],
+    [householdId, table, queryClient],
   );
 
   return { ...query, rows: query.data ?? [], insert, update, remove, householdId };

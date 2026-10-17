@@ -55,7 +55,6 @@ export const evaluateAmount = (input: string): number | null => {
   const clean = input.replace(/,/g, ".").replace(/[^0-9+\-*/.() ]/g, "");
   if (!clean.trim()) return null;
   try {
-    // eslint-disable-next-line no-new-func
     const result = Function(`"use strict";return (${clean})`)() as unknown;
     return typeof result === "number" && Number.isFinite(result) ? result : null;
   } catch {

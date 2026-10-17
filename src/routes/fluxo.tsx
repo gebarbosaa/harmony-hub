@@ -88,7 +88,7 @@ function FluxoPage() {
     if (sortFilter === "VALOR_MAIOR") return Number(b.amount) - Number(a.amount);
     if (sortFilter === "VALOR_MENOR") return Number(a.amount) - Number(b.amount);
     return b.date.localeCompare(a.date);
-  }), [tx.rows, period, typeFilter, originFilter, search, sortFilter, dateRange.from, dateRange.to]);
+  }), [tx.rows, typeFilter, originFilter, search, sortFilter, dateRange.from, dateRange.to]);
 
   const income = visible.filter(t => t.type === "RECEITA").reduce((s, t) => s + Number(t.amount), 0);
   const expenses = visible.filter(t => t.type === "DESPESA" && counts(t)).reduce((s, t) => s + Number(t.amount), 0);
