@@ -1,3 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { PersonalModule } from "@/components/personal/PersonalModule";
-export const Route = createFileRoute("/habitos-rotina")({ component: () => <PersonalModule module="habitos-rotina" />, head: () => ({ meta: [{ title: "HÁBITOS / ROTINA — HARMONY HUB" }] }) });
+import { createFileRoute, redirect } from "@tanstack/react-router";
+
+export const Route = createFileRoute("/habitos-rotina")({
+  beforeLoad: () => { throw redirect({ to: "/habitos", replace: true }); },
+  head: () => ({ meta: [{ title: "HÁBITOS — HARMONY HUB" }] }),
+});
