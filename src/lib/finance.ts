@@ -12,6 +12,35 @@ export const calculateGoalProgress = (current: number, target: number): number =
 export const calculateInstallmentValue = (total: number, count: number): number =>
   count <= 0 ? 0 : total / count;
 
+/** Splits an amount expressed in integer cents without losing residual cents.
+ * All installments except the last use the base amount; the last receives the remainder.
+ * Example: 10000 cents over 3 installments -> [3333, 3333, 3334].
+ */
+export const splitAmountIntoInstallmentCents = (totalCents: number, count: number): number[] => {
+  if (!Number.isSafeInteger(totalCents) || totalCents < 0) {
+    throw new RangeError("totalCents must be a non-negative safe integer");
+  }
+  if (!Number.isSafeInteger(count) || count < 1) {
+    throw new RangeError("count must be a positive safe integer");
+  }
+  const base = Math.floor(totalCents / count);
+  const installments = Array<number>(count).fill(base);
+  installments[count - 1] = totalCents - base * (count - 1);
+  return installments;
+};
+
+/** Converts a user-entered BRL amount to integer cents, avoiding binary float residue. */
+export const toCents = (amount: number): number => {
+  if (!Number.isFinite(amount)) throw new RangeError("amount must be finite");
+  return Math.round((amount + Number.EPSILON) * 100);
+};
+
+/** Converts integer cents to a BRL amount for existing database/display interfaces. */
+export const fromCents = (cents: number): number => {
+  if (!Number.isSafeInteger(cents)) throw new RangeError("cents must be a safe integer");
+  return cents / 100;
+};
+
 export const calculateInvoiceTotal = (
   purchases: number,
   installments: number,

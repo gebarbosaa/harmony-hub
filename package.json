@@ -14,7 +14,9 @@
     "format": "prettier --write .",
     "verify:env": "node scripts/verify-env.mjs",
     "check": "npm run verify:env && npm run typecheck && npm run lint && npm run build",
-    "generate-routes": "tsr generate"
+    "generate-routes": "tsr generate",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
