@@ -1,12 +1,10 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import { PageHeader, Panel } from "@/components/ui-kit";
 import { moduleGroups, type ModuleGroup } from "@/components/layout/nav";
 
 export const Route = createFileRoute("/mais")({
-  beforeLoad: () => import("@tanstack/react-router").then(({ redirect }) => {
-    throw redirect({ to: "/painel", replace: true });
-  }),
+  beforeLoad: () => { throw redirect({ to: "/painel", replace: true }); },
 });
 
 function readMode(): "PESSOAL" | "EMPRESARIAL" {
