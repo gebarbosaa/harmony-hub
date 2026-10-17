@@ -47,9 +47,26 @@ Deno.serve(async (req: Request) => {
     if (connectionError) throw new Error("Não foi possível consultar a conexão do Google.");
     if (!connection) return json({error:"Google Agenda não conectado. Abra Ajustes → Integrações e conecte sua conta Google."},400);
     const c = connection as Connection; const access = await getAccessToken(c,db); const base = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(c.calendar_id)}/events`;
+    let requestBody: { action?: string; shiftId?: string } = {};
+    try { requestBody = await req.json(); } catch { /* empty request is a normal sync */ }
     const {data:row,error:rowError} = await db.from("personal_module_data").select("entries").eq("user_id",user.id).eq("module_key","plantoes").eq("tab_key","Escala").maybeSingle();
     if (rowError) throw new Error("Não foi possível carregar sua escala do Harmony Hub.");
     let shifts: Shift[] = Array.isArray(row?.entries) ? row.entries.filter((x: unknown): x is Shift => !!x && typeof x === "object" && typeof (x as Shift).id === "string" && validDate((x as Shift).date) && validTime((x as Shift).startTime) && validTime((x as Shift).endTime)) : [];
+    if (requestBody.action === "delete-shift") {
+      if (typeof requestBody.shiftId !== "string" || !shifts.some(s => s.id === requestBody.shiftId)) return json({error:"Plantão não encontrado."},404);
+      const {data:linked,error:linkedError} = await db.from("google_calendar_event_links").select("id,google_event_id").eq("connection_id",c.id).eq("source_type","shift").eq("source_id",requestBody.shiftId).maybeSingle();
+      if (linkedError) throw new Error("Não foi possível verificar o vínculo com o Google Agenda.");
+      if (linked) {
+        const deleted = await googleRequest(`${base}/${encodeURIComponent(linked.google_event_id)}`,access,{method:"DELETE"});
+        if (!deleted.ok && deleted.status !== 404) return json({error:"O Google não confirmou a exclusão. O plantão foi mantido no Harmony Hub."},502);
+        const {error:unlinkError} = await db.from("google_calendar_event_links").delete().eq("id",linked.id);
+        if (unlinkError) throw new Error("O evento foi excluído do Google, mas não foi possível remover o vínculo. Execute a sincronização novamente.");
+      }
+      const remaining = shifts.filter(s=>s.id!==requestBody.shiftId);
+      const {error:deleteSaveError} = await db.from("personal_module_data").upsert({user_id:user.id,module_key:"plantoes",tab_key:"Escala",entries:remaining,updated_at:new Date().toISOString()},{onConflict:"user_id,module_key,tab_key"});
+      if (deleteSaveError) throw new Error("Não foi possível salvar a exclusão da escala.");
+      return json({ok:true,deleted:true,googleEventDeleted:!!linked});
+    }
     const {data:existingLinks,error:linkError} = await db.from("google_calendar_event_links").select("id,source_id,google_event_id,google_etag").eq("connection_id",c.id).eq("source_type","shift");
     if (linkError) throw new Error("Não foi possível consultar os vínculos de eventos.");
     const links = (existingLinks || []) as Link[]; const linkedByShift = new Map(links.map(l=>[l.source_id,l])); const linkedByEvent = new Map(links.map(l=>[l.google_event_id,l]));
@@ -58,21 +75,21 @@ Deno.serve(async (req: Request) => {
     const timeMin = new Date(Date.now()-370*86400000).toISOString(), timeMax = new Date(Date.now()+730*86400000).toISOString();
     let pageToken: string | undefined; const events: GoogleEvent[] = [];
     do { const query = new URLSearchParams({showDeleted:"true",singleEvents:"true",maxResults:"2500",timeMin,timeMax}); if(pageToken)query.set("pageToken",pageToken); const response=await googleRequest(`${base}?${query}`,access); const payload=await response.json(); if(!response.ok)throw new Error("O Google recusou a leitura da agenda. Reconecte a integração se necessário."); events.push(...(payload.items||[])); pageToken=payload.nextPageToken; } while(pageToken);
-    const seenEventIds = new Set(events.map(e=>e.id));
     for(const link of links){
       const event=events.find(e=>e.id===link.google_event_id); const local=shifts.find(s=>s.id===link.source_id);
       if(!event || event.status==="cancelled") { if(local) { shifts=shifts.filter(s=>s.id!==local.id); removed++; } await db.from("google_calendar_event_links").delete().eq("id",link.id); continue; }
       if(!local) { deleteConfirmationRequired++; continue; }
       const googleShift=fromGoogleEvent(event,local); if(!googleShift) { failed++; continue; }
       const googleChanged=!!event.etag && event.etag!==link.google_etag;
-      const localChanged=!!link.google_etag && local.createdAt && new Date(local.createdAt).getTime()>0 && false;
-      if(googleChanged && localChanged) { conflicts++; continue; }
       if(googleChanged) { shifts=shifts.map(s=>s.id===local.id?googleShift:s); await db.from("google_calendar_event_links").update({google_etag:event.etag||null,due_date:googleShift.date,last_local_updated_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq("id",link.id); updated++; }
     }
     // Import explicitly tagged Harmony events from Google, preserving their stable IDs.
     for(const event of events){ if(!event.id || event.status==="cancelled" || linkedByEvent.has(event.id) || event.extendedProperties?.private?.harmonyHubType!=="shift")continue; const shift=fromGoogleEvent(event); if(!shift)continue; if(shifts.some(s=>s.id===shift.id)){ conflicts++; continue; } shifts.push(shift); const {error}=await db.from("google_calendar_event_links").insert({connection_id:c.id,household_id:c.household_id,source_type:"shift",source_id:shift.id,source_period:"shift",google_event_id:event.id,google_etag:event.etag||null,due_date:shift.date,last_local_updated_at:new Date().toISOString()}); if(error){failed++;shifts=shifts.filter(s=>s.id!==shift.id)}else imported++; }
-    // Push local additions and changes. Missing Google events are recreated only for existing local shifts.
-    for(const shift of shifts){ const link=linkedByShift.get(shift.id); if(!link){ const response=await googleRequest(base,access,{method:"POST",body:JSON.stringify(toGoogleEvent(shift))}); const event=await response.json(); if(!response.ok){failed++;continue;} const {error}=await db.from("google_calendar_event_links").insert({connection_id:c.id,household_id:c.household_id,source_type:"shift",source_id:shift.id,source_period:"shift",google_event_id:event.id,google_etag:event.etag||null,due_date:shift.date,last_local_updated_at:new Date().toISOString()}); if(error)failed++;else created++; continue; }
+    // Push local additions and changes. Include mappings imported earlier in this same pass.
+    const {data:refreshedLinks} = await db.from("google_calendar_event_links").select("id,source_id,google_event_id,google_etag").eq("connection_id",c.id).eq("source_type","shift");
+    const currentLinks = (refreshedLinks || []) as Link[];
+    const currentLinkByShift = new Map(currentLinks.map(l=>[l.source_id,l]));
+    for(const shift of shifts){ const link=currentLinkByShift.get(shift.id); if(!link){ const response=await googleRequest(base,access,{method:"POST",body:JSON.stringify(toGoogleEvent(shift))}); const event=await response.json(); if(!response.ok){failed++;continue;} const {error}=await db.from("google_calendar_event_links").insert({connection_id:c.id,household_id:c.household_id,source_type:"shift",source_id:shift.id,source_period:"shift",google_event_id:event.id,google_etag:event.etag||null,due_date:shift.date,last_local_updated_at:new Date().toISOString()}); if(error)failed++;else created++; continue; }
       const current=events.find(e=>e.id===link.google_event_id); if(!current || current.status==="cancelled")continue;
       const desired=toGoogleEvent(shift); const parsed=fromGoogleEvent(current,shift); if(parsed && parsed.date===shift.date && parsed.startTime===shift.startTime && parsed.endTime===shift.endTime && (parsed.notes||"")===(shift.notes||""))continue;
       // If the Google event changed since last sync, the pull above takes precedence to avoid overwriting Google edits.
