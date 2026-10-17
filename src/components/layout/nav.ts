@@ -1,6 +1,6 @@
 import {
   ArrowDownCircle, ArrowLeftRight, ArrowUpCircle, BookOpen, Building2, Calculator,
-  CalendarDays, CheckSquare, CreditCard, Factory, House, LayoutDashboard, Plug,
+  CalendarDays, CheckSquare, Clock3, CreditCard, Factory, House, LayoutDashboard, Plug,
   ReceiptText, Repeat, Settings, ShoppingCart, Sparkles, Table2, Target,
   Undo2, Upload, Utensils, UserRound, Users, Wallet, TrendingUp,
 } from "lucide-react";
@@ -85,7 +85,8 @@ export const moduleGroups: ModuleGroup[] = [
       { label: "Casa", to: "/casa", icon: House },
       { label: "Leitura", to: "/leitura", icon: BookOpen },
       { label: "Alimentação", to: "/alimentacao", icon: Utensils },
-      { label: "Hábitos e rotina", to: "/habitos-rotina", icon: CheckSquare },
+      { label: "Hábitos", to: "/habitos-rotina", icon: CheckSquare },
+      { label: "Rotina", to: "/rotina", icon: Clock3 },
     ],
   },
   {
