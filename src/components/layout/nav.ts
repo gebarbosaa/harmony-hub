@@ -85,7 +85,7 @@ export const moduleGroups: ModuleGroup[] = [
       { label: "Casa", to: "/casa", icon: House },
       { label: "Leitura", to: "/leitura", icon: BookOpen },
       { label: "Alimentação", to: "/alimentacao", icon: Utensils },
-      { label: "Hábitos", to: "/habitos-rotina", icon: CheckSquare },
+      { label: "Hábitos", to: "/habitos", icon: CheckSquare },
       { label: "Rotina", to: "/rotina", icon: Clock3 },
     ],
   },
