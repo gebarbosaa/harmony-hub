@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Save, Trash2, CopyPlus } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader, Panel } from "@/components/ui-kit";
@@ -52,7 +52,7 @@ function SpreadsheetPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loaded, setLoaded] = useState(false);
 
-  async function loadOptions() {
+  const loadOptions = useCallback(async () => {
     if (!householdId || loaded) return;
 
     const [{ data: categoryData, error: categoryError }, { data: paymentData, error: paymentError }] =
@@ -71,13 +71,13 @@ function SpreadsheetPage() {
     setCategories((categoryData ?? []) as Category[]);
     setPayments((paymentData ?? []) as Payment[]);
     setLoaded(true);
-  }
+  }, [householdId, loaded]);
 
-  useMemo(() => {
+  useEffect(() => {
     void loadOptions().catch((error) => {
       toast.error(error instanceof Error ? error.message : "ERRO AO CARREGAR OPÇÕES");
     });
-  }, [householdId, loaded]);
+  }, [loadOptions]);
 
   function updateRow(key: string, field: keyof BulkRow, value: string) {
     setRows((current) => current.map((row) => (row.key === key ? { ...row, [field]: value } : row)));

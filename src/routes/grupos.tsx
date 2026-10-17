@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Copy, Users, UserPlus, Save, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader, Panel } from "@/components/ui-kit";
@@ -42,7 +42,9 @@ function GroupsPage() {
     } finally { setLoading(false); }
   }
 
-  useEffect(() => { void loadGroup(); }, [user?.id, profile?.household_id]);
+  const loadGroupRef = useRef(loadGroup);
+  loadGroupRef.current = loadGroup;
+  useEffect(() => { void loadGroupRef.current(); }, [user?.id, profile?.household_id]);
 
   async function createGroup() {
     if (!user || !groupName.trim()) return toast.error("INFORME O NOME DO GRUPO");
