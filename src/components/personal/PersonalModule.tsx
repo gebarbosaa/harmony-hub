@@ -204,7 +204,7 @@ export function PersonalModule({ module }: { module: PersonalModuleKey }) {
         setEntries(combined);
         writeLocalCache(combined);
         const primaryIds = new Set(remotePrimary.map(entry => entry.id));
-        const needsMigration = !primary.data || combined.some(entry => !primaryIds.has(entry.id)) || remoteLegacy.length > 0;
+        const needsMigration = !primary.data || combined.some(entry => !primaryIds.has(entry.id));
         if (needsMigration) {
           const { error: saveError } = await personalData().upsert({
             user_id: uid, module_key: module, tab_key: storageTab,
