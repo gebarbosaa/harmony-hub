@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { CalendarClock, Clock3, Plus, Trash2, LoaderCircle, CheckCircle2 } from "lucide-react";
 import { PageHeader, Panel } from "@/components/ui-kit";
@@ -91,19 +91,17 @@ function ShiftPlanner() {
     return () => window.clearTimeout(timer);
   }, [shifts, loaded, userId]);
 
-  const addShift = (event: React.FormEvent<HTMLFormElement>) => {
+  const addShift = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!date || !startTime || !endTime) return;
-    if (endTime <= startTime) {
-      window.alert("O horário final precisa ser posterior ao horário inicial. Para plantões que atravessam a meia-noite, informe o horário final no dia seguinte usando a observação.");
-      return;
-    }
     const shift: Shift = { id: crypto.randomUUID(), date, startTime, endTime, notes: notes.trim(), createdAt: new Date().toISOString() };
     setShifts(current => [...current, shift].sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime)));
     setNotes("");
   };
   const removeShift = (id: string) => setShifts(current => current.filter(shift => shift.id !== id));
-  const upcoming = shifts.filter(shift => shift.date >= new Date().toLocaleDateString("en-CA"));
+  const todayDate = new Date();
+  const today = todayDate.getFullYear() + "-" + String(todayDate.getMonth() + 1).padStart(2, "0") + "-" + String(todayDate.getDate()).padStart(2, "0");
+  const upcoming = shifts.filter(shift => shift.date >= today);
   const syncText = sync === "syncing" ? "Sincronizando…" : sync === "synced" ? "Salvo na sua conta" : sync === "error" ? "Falha na sincronização — dados locais preservados" : "Salvo neste dispositivo";
 
   return <div className="space-y-5">
@@ -119,7 +117,7 @@ function ShiftPlanner() {
     </Panel>
     <Panel title="PRÓXIMOS PLANTÕES">
       <p className="mb-3 flex items-center gap-2 text-xs text-muted-foreground">{sync === "syncing" ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}{syncText}</p>
-      {!loaded ? <p className="py-8 text-center text-sm text-muted-foreground">Carregando sua escala…</p> : upcoming.length === 0 ? <div className="rounded-xl border border-dashed border-border px-4 py-8 text-center"><CalendarClock className="mx-auto mb-2 h-6 w-6 text-muted-foreground" /><p className="text-sm font-semibold">Nenhum plantão cadastrado para hoje ou para os próximos dias.</p><p className="mt-1 text-xs text-muted-foreground">Adicione seus turnos acima para começar sua escala.</p></div> : <div className="space-y-2">{upcoming.map(shift => <article key={shift.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary"><Clock3 className="h-5 w-5" /></div><div className="min-w-0 flex-1"><p className="text-sm font-semibold">{dateLabel(shift.date)}</p><p className="mt-1 text-xs text-muted-foreground">{shift.startTime}–{shift.endTime}{shift.notes ? ` · ${shift.notes}` : ""}</p></div><button type="button" onClick={() => removeShift(shift.id)} aria-label="Excluir plantão" className="rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><Trash2 className="h-4 w-4" /></button></article>)}</div>}
+      {!loaded ? <p className="py-8 text-center text-sm text-muted-foreground">Carregando sua escala…</p> : upcoming.length === 0 ? <div className="rounded-xl border border-dashed border-border px-4 py-8 text-center"><CalendarClock className="mx-auto mb-2 h-6 w-6 text-muted-foreground" /><p className="text-sm font-semibold">Nenhum plantão cadastrado para hoje ou para os próximos dias.</p><p className="mt-1 text-xs text-muted-foreground">Adicione seus turnos acima para começar sua escala.</p></div> : <div className="space-y-2">{upcoming.map(shift => <article key={shift.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary"><Clock3 className="h-5 w-5" /></div><div className="min-w-0 flex-1"><p className="text-sm font-semibold">{dateLabel(shift.date)}</p><p className="mt-1 text-xs text-muted-foreground">{shift.startTime}–{shift.endTime}{shift.endTime <= shift.startTime ? " (+1 dia)" : ""}{shift.notes ? ` · ${shift.notes}` : ""}</p></div><button type="button" onClick={() => removeShift(shift.id)} aria-label="Excluir plantão" className="rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><Trash2 className="h-4 w-4" /></button></article>)}</div>}
     </Panel>
   </div>;
 }
