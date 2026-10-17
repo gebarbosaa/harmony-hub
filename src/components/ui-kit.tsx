@@ -1,33 +1,13 @@
 import type { HTMLAttributes, ReactNode } from "react";
-import { Plus, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 const CREATE_EVENT = "multicap:open-create";
 type CreateDetail = { title?: string; option?: string; source?: string };
 function normalizeTitle(value?: string) { return (value ?? "").trim().toUpperCase(); }
-const pageCreateOptions: Record<string, string> = {
-  "DESPESAS": "NOVA DESPESA",
-  "RECEITAS": "NOVA RECEITA",
-  "CONTAS A PAGAR": "NOVA CONTA A PAGAR",
-  "PARCELAS": "NOVA PARCELA",
-  "PARCELADOS": "NOVA PARCELA",
-  "ASSINATURAS": "NOVA ASSINATURA",
-  "CUSTOS FIXOS": "NOVO CUSTO FIXO",
-  "INVESTIMENTOS": "NOVO INVESTIMENTO",
-  "METAS": "NOVA META",
-};
-function CreateButton({ title }: { title: string }) {
-  function handleClick() {
-    const normalized = normalizeTitle(title);
-    const option = pageCreateOptions[normalized] ?? normalized;
-    window.dispatchEvent(new CustomEvent<CreateDetail>(CREATE_EVENT, { detail: { title: option, option, source: "quick-add" } }));
-  }
-  return <button type="button" onClick={handleClick} aria-label={`ADICIONAR ${title}`} title={`ADICIONAR ${title}`} className="group flex h-10 w-10 items-center justify-center rounded-xl border border-border/70 bg-card text-muted-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:bg-primary/5 hover:text-primary active:scale-95"><Plus className="h-5 w-5 transition-transform group-hover:rotate-90" strokeWidth={2} /></button>;
-}
 export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: ReactNode }) {
-  const defaultAction = <CreateButton title={title} />;
-  return <header className="flex flex-wrap items-center justify-between gap-4"><div><div className="flex items-center gap-2"><span className="h-7 w-1 rounded-full bg-primary" /><h1 className="label-caps text-2xl font-bold tracking-tight text-foreground md:text-3xl">{title}</h1></div>{subtitle ? <p className="ml-3 mt-1 text-sm text-muted-foreground">{subtitle}</p> : null}</div><div className="page-header-action">{action ?? defaultAction}</div></header>;
+  return <header className="flex flex-wrap items-center justify-between gap-4"><div><div className="flex items-center gap-2"><span className="h-7 w-1 rounded-full bg-primary" /><h1 className="label-caps text-2xl font-bold tracking-tight text-foreground md:text-3xl">{title}</h1></div>{subtitle ? <p className="ml-3 mt-1 text-sm text-muted-foreground">{subtitle}</p> : null}</div>{action ? <div className="page-header-action">{action}</div> : null}</header>;
 }
 function CreatePanel({ title, children, className, aside }: { title: string; children: ReactNode; className?: string; aside?: ReactNode }) {
   const [open, setOpen] = useState(false); const normalizedTitle = normalizeTitle(title);
