@@ -89,11 +89,13 @@ const keyFor = (module: string, tab: string) => "harmony-personal-v1:" + module 
 function sharedTabFor(module: PersonalModuleKey, tab: string): string {
   if (module === "habitos-rotina" && (tab === "Minha semana" || tab === "Meu mês")) return "Hábitos";
   if (module === "rotina" && (tab === "Hoje" || tab === "Semana" || tab === "Planejamento")) return "Atividades";
+  if (module === "casa" && tab === "Rotina") return "Tarefas domésticas";
   return tab;
 }
 function legacyTabsFor(module: PersonalModuleKey, tab: string): string[] {
   if (module === "habitos-rotina" && (tab === "Minha semana" || tab === "Meu mês")) return ["Minha semana", "Meu mês"];
   if (module === "rotina" && (tab === "Hoje" || tab === "Semana" || tab === "Planejamento")) return ["Hoje", "Semana", "Planejamento"];
+  if (module === "casa" && tab === "Rotina") return ["Rotina"];
   return [];
 }
 function mergeEntries(...groups: Entry[][]): Entry[] {
@@ -308,7 +310,7 @@ export function PersonalModule({ module }: { module: PersonalModuleKey }) {
     return e.date >= localDateKey(monday) && e.date <= localDateKey(sunday);
   });
   const routineForm = <form className="grid gap-2 sm:grid-cols-2" onSubmit={e=>{e.preventDefault();addRoutine();}}>
-    <input className="min-w-0 rounded-xl border border-border bg-background px-3 py-3 text-sm sm:col-span-2" value={input} onChange={e=>setInput(e.target.value)} placeholder="Ex.: caminhar, estudar, arrumar o quarto…" aria-label="Atividade da rotina" required />
+    <input className="min-w-0 rounded-xl border border-border bg-background px-3 py-3 text-sm sm:col-span-2" value={input} onChange={e=>setInput(e.target.value)} placeholder={module === "casa" ? "Ex.: lavar roupa, limpar banheiro, trocar roupa de cama…" : "Ex.: caminhar, estudar, arrumar o quarto…"} aria-label={module === "casa" ? "Tarefa doméstica" : "Atividade da rotina"} required />
     <label className="grid gap-1 text-xs font-semibold text-muted-foreground">Data<input type="date" className="rounded-xl border border-border bg-background px-3 py-3 text-sm text-foreground" value={routineDate} onChange={e=>setRoutineDate(e.target.value)} required /></label>
     <label className="grid gap-1 text-xs font-semibold text-muted-foreground">Horário<input type="time" className="rounded-xl border border-border bg-background px-3 py-3 text-sm text-foreground" value={routineTime} onChange={e=>setRoutineTime(e.target.value)} required /></label>
     <input className="min-w-0 rounded-xl border border-border bg-background px-3 py-3 text-sm sm:col-span-2" value={extra} onChange={e=>setExtra(e.target.value)} placeholder="Detalhes (opcional)" aria-label="Detalhes da atividade" />
@@ -337,6 +339,7 @@ export function PersonalModule({ module }: { module: PersonalModuleKey }) {
       :module==="leitura"&&tab==="Lendo agora"?<><div className="grid gap-3 sm:grid-cols-2"><label className="text-sm">Página atual<input className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-3" type="number" min="0" value={page} onChange={e=>setPage(e.target.value)}/></label><label className="text-sm">Total de páginas<input className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-3" type="number" min="1" value={totalPages} onChange={e=>setTotalPages(e.target.value)}/></label></div><div className="mt-3 h-3 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-primary transition-all" style={{width:progress+"%"}}/></div><p className="mt-1 text-xs text-muted-foreground">{progress.toFixed(0)}% concluído</p>{addForm("Título do livro atual","Salvar livro")}{list("Cadastre o livro que está lendo.")}</>
       :module==="habitos-rotina"&&(tab==="Minha semana"||tab==="Meu mês")?<><div className="mb-4 grid grid-cols-2 gap-3"><div className="rounded-xl border border-border bg-background p-3"><p className="text-xs text-muted-foreground">Concluídos hoje</p><p className="mt-1 text-2xl font-bold tabular-nums">{entries.filter(e=>(e.completions?.includes(todayKey)??!!e.done)).length}<span className="text-sm font-medium text-muted-foreground">/{entries.length}</span></p></div><div className="rounded-xl border border-border bg-background p-3"><p className="text-xs text-muted-foreground">{tab==="Minha semana"?"Conclusões nos últimos 7 dias":"Conclusões nos últimos 30 dias"}</p><p className="mt-1 text-2xl font-bold tabular-nums">{entries.reduce((total,e)=>total+(e.completions??(e.done?[todayKey]:[])).filter(d=>{const age=(new Date(todayKey+"T12:00:00").getTime()-new Date(d+"T12:00:00").getTime())/86400000;return age>=0&&age<(tab==="Minha semana"?7:30)}).length,0)}</p></div></div>{addForm("Ex.: beber água, treinar, ler 30 min…","Adicionar hábito")}{list("Adicione seus hábitos e marque cada conclusão.",true)}<p className="mt-3 text-xs text-muted-foreground">Marcar um hábito registra a conclusão de hoje. O histórico fica guardado para acompanhar sua consistência, sem desmarcar os dias anteriores.</p></>
       :module==="rotina"&&(tab==="Hoje"||tab==="Semana"||tab==="Planejamento")?<>{routineForm}{list(tab==="Hoje"?"Nenhuma atividade para hoje.":tab==="Semana"?"Nenhuma atividade nesta semana.":"Seu planejamento está vazio.",tab!=="Planejamento")}</>
+      :module==="casa"&&tab==="Rotina"?<>{routineForm}{list("Sua lista de tarefas domésticas está vazia.",true)}<p className="mt-3 text-xs text-muted-foreground">As tarefas ficam salvas com data e horário. Marque cada tarefa quando terminar.</p></>
       :module==="treinos"&&tab==="Plano semanal"?<TreinosPlano entries={entries} setEntries={setEntries} empty={!ready} onRecordSession={recordWorkoutSession}/>
       :module==="treinos"&&tab==="Histórico"?<TreinosHistorico entries={entries} setEntries={setEntries} empty={!ready}/>
       :<>{addForm(tab==="Sobre mim"?"Escreva sobre você…":tab==="Gratidão"?"Pelo que você é grata hoje?":tab==="Carta"?"Escreva sua carta…":tab==="Diário"?"Escreva seu registro…":"Adicionar registro…")}{list("Ainda não há registros nesta aba.")}</>}
