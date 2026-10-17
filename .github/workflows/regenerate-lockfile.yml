@@ -1,0 +1,39 @@
+name: Regenerate lockfile (base-quality step 1)
+
+on:
+  push:
+    branches:
+      - fix/base-quality-step-1
+    paths:
+      - .github/workflows/regenerate-lockfile.yml
+
+permissions:
+  contents: write
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout working branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/base-quality-step-1
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Regenerate package lock without changing package.json
+        run: npm install --package-lock-only --ignore-scripts
+      - name: Commit lockfile if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet -- package-lock.json; then
+            git add package-lock.json
+            git commit -m "Regenera package-lock.json para sincronizar dependências"
+            git push origin HEAD:fix/base-quality-step-1
+          else
+            echo "package-lock.json já está sincronizado."
+          fi
