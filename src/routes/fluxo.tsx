@@ -5,6 +5,7 @@ import { PageHeader, Panel, StatCard, Tag, PersonDot } from "@/components/ui-kit
 import { formatCurrency } from "@/lib/finance";
 import { cn } from "@/lib/utils";
 import { useHouseholdTable } from "@/hooks/use-household-data";
+import { MonthSelector, useGlobalMonth } from "@/hooks/use-global-month";
 
 export const Route = createFileRoute("/fluxo")({
   head: () => ({ meta: [{ title: "FLUXO — HARMONY HUB" }, { name: "description", content: "Fluxo financeiro consolidado por período." }] }),
@@ -37,6 +38,7 @@ const typeLabel = (type: Tx["type"]) => type === "RECEITA" ? "RECEITA" : type ==
 const counts = (t: Tx) => t.type !== "DESPESA" || !t.card_name || t.paid;
 
 function FluxoPage() {
+  const { month: selectedMonth, setMonth } = useGlobalMonth("fluxo");
   const tx = useHouseholdTable<Tx>(
     "transactions",
     "id,date,description,category,pay_method,payment_method_name,responsible,amount,type,paid,card_name,installment_current,installment_total,source_type,third_party_expense_id,household_id",
@@ -50,8 +52,8 @@ function FluxoPage() {
 
   const today = new Date();
   const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-  const monthKey = todayKey.slice(0, 7);
-  const yearKey = todayKey.slice(0, 4);
+  const monthKey = selectedMonth;
+  const yearKey = selectedMonth.slice(0, 4);
   const startOfWeek = new Date(today);
   const day = startOfWeek.getDay();
   startOfWeek.setDate(startOfWeek.getDate() - (day === 0 ? 6 : day - 1));
@@ -152,7 +154,7 @@ function FluxoPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="FLUXO" subtitle="TODAS AS MOVIMENTAÇÕES FINANCEIRAS ORGANIZADAS POR PERÍODO." />
+      <PageHeader title="FLUXO" subtitle="TODAS AS MOVIMENTAÇÕES FINANCEIRAS ORGANIZADAS POR PERÍODO." action={<MonthSelector month={selectedMonth} setMonth={setMonth} />} />
       <div className="flex flex-wrap gap-2">
         {(["HOJE", "SEMANA", "MES", "ANO"] as Period[]).map(item => (
           <button key={item} type="button" onClick={() => setPeriod(item)} className={cn("label-caps rounded-lg border px-3 py-2 text-[10px]", period === item ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
