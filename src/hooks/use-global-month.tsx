@@ -7,13 +7,26 @@ const END_MONTH = "2027-12";
 function currentMonth() { const now = new Date(); const value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`; return value < START_MONTH ? START_MONTH : value > END_MONTH ? END_MONTH : value; }
 type GlobalMonthContextValue = { month: string; setMonth: (month: string) => void };
 const GlobalMonthContext = createContext<GlobalMonthContextValue | null>(null);
-export function GlobalMonthProvider({ children }: { children: ReactNode }) { const [month,setMonth]=useState(()=>currentMonth()); return <GlobalMonthContext.Provider value={useMemo(()=>({month,setMonth}),[month])}>{children}</GlobalMonthContext.Provider>; }
-export function useGlobalMonth(scope="global") {
- const context=useContext(GlobalMonthContext);
- if(!context) throw new Error("useGlobalMonth must be used inside GlobalMonthProvider");
- const storageKey=`harmony-month-${scope}`;
- const [month,setMonthState]=useState(()=>{if(typeof window==="undefined")return currentMonth();try{const saved=localStorage.getItem(storageKey)||currentMonth();return saved>=START_MONTH&&saved<=END_MONTH?saved:currentMonth();}catch{return currentMonth();}});
- return { month, setMonth:(next:string)=>{if(next<START_MONTH||next>END_MONTH)return;setMonthState(next);try{if(typeof window!=="undefined")localStorage.setItem(storageKey,next);}catch{/* storage may be unavailable */}} };
+export function GlobalMonthProvider({ children }: { children: ReactNode }) {
+  const [month, setMonthState] = useState(() => {
+    if (typeof window === "undefined") return currentMonth();
+    try {
+      const saved = localStorage.getItem("harmony-month-global");
+      return saved && saved >= START_MONTH && saved <= END_MONTH ? saved : currentMonth();
+    } catch { return currentMonth(); }
+  });
+  const setMonth = (next: string) => {
+    if (next < START_MONTH || next > END_MONTH) return;
+    setMonthState(next);
+    try { if (typeof window !== "undefined") localStorage.setItem("harmony-month-global", next); } catch { /* storage may be unavailable */ }
+  };
+  const value = useMemo(() => ({ month, setMonth }), [month]);
+  return <GlobalMonthContext.Provider value={value}>{children}</GlobalMonthContext.Provider>;
+}
+export function useGlobalMonth(_scope = "global") {
+  const context = useContext(GlobalMonthContext);
+  if (!context) throw new Error("useGlobalMonth must be used inside GlobalMonthProvider");
+  return context;
 }
 export function formatGlobalMonth(month:string) { const parts=month.split("-"); const year=Number(parts[0]??0); const monthNumber=Number(parts[1]??1); return new Date(year,monthNumber-1,1).toLocaleDateString("pt-BR",{month:"long",year:"numeric"}).toUpperCase(); }
 export function MonthSelector({ month, setMonth, className }: { month:string; setMonth:(month:string)=>void; className?:string }) {
