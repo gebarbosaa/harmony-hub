@@ -133,24 +133,24 @@ export const personalNavItems = navItems;
 export const businessNavItems: NavItem[] = moduleGroups.find(group => group.context === "BUSINESS")!.items;
 
 export const personalQuickAddOptions = [
-  { label: "Nova despesa", icon: ArrowDownCircle, kind: "DESPESA" },
-  { label: "Nova receita", icon: ArrowUpCircle, kind: "RECEITA" },
-  { label: "Nova conta a pagar", icon: Wallet, kind: "CONTA_A_PAGAR" },
-  { label: "Nova parcela", icon: CreditCard, kind: "PARCELA" },
-  { label: "Nova assinatura", icon: Repeat, kind: "ASSINATURA" },
-  { label: "Novo investimento", icon: TrendingUp, kind: "INVESTIMENTO" },
-  { label: "Novo resgate", icon: Undo2, kind: "RESGATE" },
-  { label: "Nova meta", icon: Target, kind: "META" },
-  { label: "Novo custo fixo", icon: Repeat, kind: "CUSTO_FIXO" },
+  { label: "NOVA DESPESA", icon: ArrowDownCircle, kind: "DESPESA" },
+  { label: "NOVA RECEITA", icon: ArrowUpCircle, kind: "RECEITA" },
+  { label: "NOVA CONTA A PAGAR", icon: Wallet, kind: "CONTA_A_PAGAR" },
+  { label: "NOVA PARCELA", icon: CreditCard, kind: "PARCELA" },
+  { label: "NOVA ASSINATURA", icon: Repeat, kind: "ASSINATURA" },
+  { label: "NOVO INVESTIMENTO", icon: TrendingUp, kind: "INVESTIMENTO" },
+  { label: "NOVO RESGATE", icon: Undo2, kind: "RESGATE" },
+  { label: "NOVA META", icon: Target, kind: "META" },
+  { label: "NOVO CUSTO FIXO", icon: Repeat, kind: "CUSTO_FIXO" },
 ] as const;
 
 export const businessQuickAddOptions = [
-  { label: "Cadastro fácil da empresa", icon: Building2, kind: "EMPRESA" },
-  { label: "Novo insumo", icon: Wallet, kind: "INSUMO" },
-  { label: "Nova receita", icon: ArrowUpCircle, kind: "RECEITA_EMPRESARIAL" },
-  { label: "Novo produto", icon: Calculator, kind: "PRODUTO" },
-  { label: "Novo fornecedor", icon: Users, kind: "FORNECEDOR" },
-  { label: "Nova produção", icon: Factory, kind: "PRODUCAO" },
-  { label: "Nova venda", icon: ShoppingCart, kind: "VENDA" },
-  { label: "Novo lançamento", icon: Wallet, kind: "CAIXA" },
+  { label: "CADASTRO FÁCIL", icon: Building2, kind: "EMPRESA" },
+  { label: "NOVO INSUMO", icon: Wallet, kind: "INSUMO" },
+  { label: "NOVA RECEITA", icon: ArrowUpCircle, kind: "RECEITA_EMPRESARIAL" },
+  { label: "NOVO PRODUTO", icon: Calculator, kind: "PRODUTO" },
+  { label: "NOVO FORNECEDOR", icon: Users, kind: "FORNECEDOR" },
+  { label: "NOVA PRODUÇÃO", icon: Factory, kind: "PRODUCAO" },
+  { label: "NOVA VENDA", icon: ShoppingCart, kind: "VENDA" },
+  { label: "NOVO LANÇAMENTO", icon: Wallet, kind: "CAIXA" },
 ] as const;
