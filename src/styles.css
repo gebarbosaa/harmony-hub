@@ -249,3 +249,32 @@ main button { transition-duration: 180ms; }
 .core-hub-module:hover { transform: translateY(-1px); box-shadow: 0 7px 17px rgb(35 30 20 / .045); }
 @media (max-width: 720px) { .core-hub-hero { min-height: 250px; border-radius: 23px; padding: 24px 21px; } .core-hub-hero h1 { max-width: 290px; font-size: 31px; } .core-hub-hero-copy > p { max-width: 280px; } .core-hub-hero-art { top: auto; right: -145px; bottom: -105px; width: 240px; height: 240px; transform: none; opacity: .5; } .core-hub-hero-meta { max-width: 255px; gap: 9px 14px; } }
 .dark .core-hub-hero { background: linear-gradient(112deg, color-mix(in oklab, var(--primary) 15%, var(--card)) 0%, var(--card) 58%, color-mix(in oklab, #6f65a8 22%, var(--card)) 100%); }
+
+
+/* Routine planner: CORE-inspired weekly agenda with clearer hierarchy and soft, practical surfaces. */
+.routine-planner { max-width: 1440px; margin-inline: auto; }
+.routine-planner-hero { position: relative; display: flex; min-height: 220px; align-items: center; overflow: hidden; isolation: isolate; border: 1px solid color-mix(in oklab, var(--primary) 16%, var(--border)); border-radius: 26px; background: linear-gradient(112deg, color-mix(in oklab, var(--primary) 12%, var(--card)), var(--card) 58%, color-mix(in oklab, #d8d3ff 28%, var(--card))); padding: clamp(22px, 3.5vw, 36px); }
+.routine-planner-eyebrow { display: inline-flex; align-items: center; gap: 7px; color: var(--primary); font-size: 10px; font-weight: 800; letter-spacing: .12em; }
+.routine-planner-hero h2 { max-width: 540px; margin-top: 13px; font-size: clamp(27px, 3vw, 38px); font-weight: 780; letter-spacing: -.045em; line-height: 1.1; }
+.routine-planner-hero p { max-width: 500px; margin-top: 10px; color: var(--muted-foreground); font-size: 14px; line-height: 1.65; }
+.routine-planner-hero-mark { position: absolute; right: 7%; top: 50%; display: grid; width: 190px; height: 190px; place-items: center; border: 1px solid color-mix(in oklab, var(--primary) 18%, transparent); border-radius: 50%; color: color-mix(in oklab, var(--primary) 62%, transparent); transform: translateY(-50%) rotate(-10deg); }
+.routine-planner-hero-mark::before { position: absolute; inset: 17px; border: 1px solid color-mix(in oklab, var(--primary) 17%, transparent); border-radius: 45% 55% 52% 48%; content: ""; transform: rotate(28deg); }
+.routine-planner-hero-mark svg { width: 68px; height: 68px; stroke-width: 1; }
+.routine-planner-stat { display: flex; min-width: 0; align-items: flex-start; gap: 12px; border: 1px solid var(--border); border-radius: 18px; background: var(--card); padding: 16px; }
+.routine-planner-stat-icon { display: grid; width: 36px; height: 36px; flex: 0 0 auto; place-items: center; border-radius: 12px; background: color-mix(in oklab, var(--primary) 11%, var(--card)); color: var(--primary); }
+.routine-planner-stat-icon-1 { background: #e1f4e9; color: #347c5a; }
+.routine-planner-stat-icon-2 { background: #fff0d9; color: #9a6924; }
+.dark .routine-planner-stat-icon-1 { background: #203d31; color: #8cddb4; }
+.dark .routine-planner-stat-icon-2 { background: #473821; color: #f2c77e; }
+.routine-planner-stat p { color: var(--muted-foreground); font-size: 11px; font-weight: 600; }
+.routine-planner-stat strong { display: block; margin-top: 3px; font-size: 25px; font-weight: 780; letter-spacing: -.04em; line-height: 1.2; }
+.routine-planner-stat span:last-child { display: block; margin-top: 3px; color: var(--muted-foreground); font-size: 11px; }
+.routine-planner-calendar { box-shadow: 0 4px 22px rgb(35 30 20 / .025); }
+.routine-planner-day.is-today { box-shadow: inset 0 -3px 0 var(--primary); }
+.routine-planner-hour { background: color-mix(in oklab, var(--secondary) 42%, var(--card)); }
+.routine-planner-slot { transition: background .15s ease; }
+.routine-planner-slot:hover { background: color-mix(in oklab, var(--primary) 4%, var(--card)); }
+.routine-planner-event { min-height: 42px; border-radius: 8px; }
+.routine-planner-event.is-done { opacity: .72; }
+.dark .routine-planner-hero { background: linear-gradient(112deg, color-mix(in oklab, var(--primary) 16%, var(--card)), var(--card) 58%, color-mix(in oklab, #6f65a8 20%, var(--card))); }
+@media (max-width: 720px) { .routine-planner-hero { min-height: 230px; border-radius: 22px; padding: 22px; } .routine-planner-hero h2 { max-width: 290px; font-size: 29px; } .routine-planner-hero p { max-width: 280px; font-size: 13px; } .routine-planner-hero-mark { right: -105px; width: 190px; height: 190px; opacity: .55; } }
