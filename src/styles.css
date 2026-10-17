@@ -299,3 +299,27 @@ main button { transition-duration: 180ms; }
 .dark .food-hero { background:linear-gradient(112deg,color-mix(in oklab,#456044 35%,var(--card)),var(--card) 68%); }
 .dark .food-hero-art { color:color-mix(in oklab,#b5d6a9 26%,transparent); }
 @media(max-width:640px){.food-hero{min-height:220px;border-radius:21px;padding:21px}.food-hero h2{max-width:270px;font-size:29px}.food-hero p{max-width:270px;font-size:13px}.food-hero-art{right:-35px;font-size:115px;opacity:.65}.food-stat{padding:12px}}
+
+/* Weekly meal planner: seven day columns with meal rows, horizontally scrollable on small screens. */
+.food-week-scroll { width:100%; overflow-x:auto; padding-bottom:6px; }
+.food-week-grid { display:grid; grid-template-columns: minmax(108px, .85fr) repeat(7,minmax(138px,1fr)); min-width:1080px; border:1px solid var(--border); border-radius:16px; overflow:hidden; background:var(--card); }
+.food-week-corner,.food-week-dayhead,.food-week-meallabel,.food-week-cell { min-width:0; border-right:1px solid var(--border); border-bottom:1px solid var(--border); }
+.food-week-corner { display:flex; flex-direction:column; justify-content:center; gap:5px; padding:12px; background:var(--secondary); }
+.food-week-corner span,.food-week-dayhead span { font-size:10px; font-weight:800; letter-spacing:.08em; }
+.food-week-corner small,.food-week-dayhead small,.food-week-meallabel small { font-size:10px; color:var(--muted-foreground); }
+.food-week-dayhead { display:flex; align-items:center; justify-content:center; flex-direction:column; gap:4px; padding:12px 5px; background:color-mix(in oklab,var(--primary) 5%,var(--card)); text-align:center; }
+.food-week-dayhead strong { font-size:18px; line-height:1.1; }
+.food-week-meallabel { display:flex; flex-direction:column; justify-content:center; gap:6px; padding:12px 10px; background:var(--background); }
+.food-week-meallabel span { font-size:18px; }
+.food-week-meallabel strong { font-size:12px; }
+.food-week-cell { display:flex; min-height:116px; flex-direction:column; align-items:stretch; gap:7px; padding:7px; background:var(--card); }
+.food-week-entry { position:relative; padding:9px 28px 9px 9px; border:1px solid color-mix(in oklab,var(--primary) 22%,var(--border)); border-radius:10px; background:color-mix(in oklab,var(--primary) 6%,var(--card)); }
+.food-week-entry p { overflow-wrap:anywhere; font-size:12px; font-weight:650; line-height:1.4; }
+.food-week-entry small { display:block; margin-top:4px; color:var(--muted-foreground); font-size:10px; overflow-wrap:anywhere; }
+.food-week-entry .food-week-ingredients { line-height:1.4; }
+.food-week-done { position:absolute; top:7px; right:6px; display:grid; width:22px; height:22px; place-items:center; border:1px solid var(--border); border-radius:7px; background:var(--card); }
+.food-week-done.is-done { border-color:#16a34a; background:#16a34a1a; color:#16a34a; }
+.food-week-add { display:flex; min-height:30px; align-items:center; justify-content:center; gap:4px; margin-top:auto; border:1px dashed var(--border); border-radius:9px; color:var(--muted-foreground); font-size:10px; transition:background .15s,color .15s; }
+.food-week-add:hover { background:var(--secondary); color:var(--foreground); }
+.dark .food-week-dayhead { background:color-mix(in oklab,var(--primary) 12%,var(--card)); }
+.dark .food-week-entry { background:color-mix(in oklab,var(--primary) 11%,var(--card)); }
