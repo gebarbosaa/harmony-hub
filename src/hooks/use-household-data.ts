@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -165,6 +165,76 @@ export function useHouseholdTable<T extends HouseholdRow = HouseholdRow>(
   );
 
   return { ...query, rows: query.data ?? [], insert, update, remove, householdId };
+}
+
+
+/** Server-filtered, offset-paginated reads for large household tables. */
+export function useHouseholdPagedTable<T extends HouseholdRow = HouseholdRow>(
+  table: string,
+  select: string,
+  orderBy: string,
+  dateFrom: string,
+  dateTo: string,
+  pageSize = 100,
+) {
+  const householdId = useHouseholdId();
+  const queryClient = useQueryClient();
+  const queryKey = useMemo(
+    () => ["household", householdId, table, select, orderBy, dateFrom, dateTo, "paged"] as const,
+    [householdId, table, select, orderBy, dateFrom, dateTo],
+  );
+  const query = useInfiniteQuery({
+    queryKey,
+    enabled: Boolean(householdId),
+    initialPageParam: 0,
+    staleTime: 10_000,
+    gcTime: 5 * 60_000,
+    retry: 1,
+    refetchOnWindowFocus: true,
+    queryFn: async ({ pageParam }) => {
+      if (!householdId) return { rows: [] as T[], totalCount: 0, nextOffset: undefined as number | undefined };
+      try {
+        const { data, error, count } = await supabase
+          .from(table)
+          .select(select, { count: "exact" })
+          .eq("household_id", householdId)
+          .gte("date", dateFrom)
+          .lte("date", dateTo)
+          .order(orderBy, { ascending: false })
+          .range(pageParam, pageParam + pageSize - 1);
+        if (error) throw error;
+        const rows = (data ?? []) as unknown as T[];
+        return { rows, totalCount: count ?? 0, nextOffset: rows.length === pageSize ? pageParam + pageSize : undefined };
+      } catch (error) {
+        emitSyncEvent("error");
+        throw error;
+      }
+    },
+    getNextPageParam: lastPage => lastPage.nextOffset,
+  });
+  const rows = useMemo(() => query.data?.pages.flatMap(page => page.rows) ?? [], [query.data]);
+  useEffect(() => {
+    if (!householdId) return;
+    const existing = householdRealtimeChannels.get(householdId);
+    if (existing) existing.refs += 1;
+    else {
+      const channel = supabase
+        .channel(`household-sync:${householdId}`)
+        .on("postgres_changes", { event: "*", schema: "public", filter: `household_id=eq.${householdId}` }, payload => {
+          void queryClient.invalidateQueries({ queryKey: ["household", householdId] });
+          if (payload.table === "accounts_payable") void queryClient.invalidateQueries({ queryKey: ["contas-a-pagar", householdId] });
+        })
+        .subscribe();
+      householdRealtimeChannels.set(householdId, { channel, refs: 1, queryClient });
+    }
+    return () => {
+      const entry = householdRealtimeChannels.get(householdId);
+      if (!entry) return;
+      entry.refs -= 1;
+      if (entry.refs <= 0) { householdRealtimeChannels.delete(householdId); void supabase.removeChannel(entry.channel); }
+    };
+  }, [householdId, queryClient]);
+  return { ...query, rows, totalCount: query.data?.pages[0]?.totalCount ?? 0 };
 }
 
 export async function getCurrentHouseholdProfile() {
