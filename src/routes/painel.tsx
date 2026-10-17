@@ -102,7 +102,7 @@ export function MorePage() {
           <Panel key={group.label} className="core-hub-group">
             <section aria-labelledby={`painel-grupo-${index}`}>
               <div className="flex items-start gap-3 border-b border-border/70 pb-4">
-                <div className={`core-hub-group-icon core-hub-group-icon-${index % 5} flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl">
+                <div className={`core-hub-group-icon core-hub-group-icon-${index % 5} flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl`}>
                   <group.icon className="h-5 w-5" aria-hidden="true" />
                 </div>
                 <div className="min-w-0 flex-1">
