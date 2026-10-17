@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
 import { Wallet, CreditCard, Repeat, Coins, AlertTriangle, ArrowRight, CalendarClock, Clock3, House, CheckSquare, CalendarDays, Dumbbell } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { PageHeader, Panel, StatCard, ProgressBar, Tag, PersonDot } from "@/components/ui-kit";
+import { PageHeader, Panel, StatCard, ProgressBar, Tag, PersonDot, Hero, SectionHeading, Button, Shortcuts, IconBadge } from "@/components/ui-kit";
 import { formatCurrency, calculateGoalProgress, calculateBudgetUsage } from "@/lib/finance";
 import { openFinancialReport } from "@/lib/financial-report";
 import { useAuth } from "@/hooks/use-auth";
@@ -72,31 +72,55 @@ function Dashboard() {
   const openTodayCount = dailySections.reduce((total, section) => total + section.entries.filter(entry => !entry.done).length, 0);
   const firstName = profile?.name?.split(" ")[0] || "Geovanna";
   const todayLabel = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
-  return <div className="core-home space-y-8">
-    <section className="core-welcome">
-      <div className="core-welcome-copy">
-        <p className="core-eyebrow">{todayLabel}</p>
-        <h1>{greeting === "BOM DIA" ? "Bom dia" : greeting === "BOA TARDE" ? "Boa tarde" : "Boa noite"}, {firstName} <span aria-hidden="true">✦</span></h1>
-        <p>Seu dia, sua rotina e suas finanças em um só lugar.</p>
-        <div className="core-welcome-actions">
-          <Link to="/rotina" className="core-primary-action"><Clock3 className="h-4 w-4"/> Ver minha rotina <ArrowRight className="h-4 w-4"/></Link>
-          <span className="core-day-progress">{personalStatus === "ready" ? `${openTodayCount} tarefas para acompanhar hoje` : personalStatus === "loading" ? "Carregando seu dia…" : "Seu espaço pessoal"}</span>
-        </div>
-      </div>
-      <div className="core-welcome-art" aria-hidden="true"><div className="core-orbit core-orbit-one"/><div className="core-orbit core-orbit-two"/><div className="core-sun"/><div className="core-spark core-spark-one">✦</div><div className="core-spark core-spark-two">✧</div></div>
-    </section>
+  return <div className="app-container space-y-7">
+    <Hero
+      eyebrow={todayLabel}
+      title={<>{greeting === "BOM DIA" ? "Bom dia" : greeting === "BOA TARDE" ? "Boa tarde" : "Boa noite"}, {firstName} <span aria-hidden="true">✦</span></>}
+      description="Seu dia, sua rotina e suas finanças em um só lugar."
+      actions={<>
+        <Link to="/rotina" className="app-btn app-btn-md app-btn-primary"><Clock3 className="h-4 w-4"/> Ver minha rotina <ArrowRight className="h-4 w-4"/></Link>
+        <span className="text-xs text-muted-foreground">{personalStatus === "ready" ? `${openTodayCount} tarefas para acompanhar hoje` : personalStatus === "loading" ? "Carregando seu dia…" : "Seu espaço pessoal"}</span>
+      </>}
+      art={<div aria-hidden="true" className="app-hero-art" style={{ top: "-72px", right: "4%", width: 300, height: 300, opacity: .85 }}><div className="core-orbit core-orbit-one"/><div className="core-orbit core-orbit-two"/><div className="core-sun"/><div className="core-spark core-spark-one">✦</div><div className="core-spark core-spark-two">✧</div></div>}
+    />
 
     <section className="space-y-4" aria-labelledby="today-overview-title">
-      <div className="core-section-heading"><div><p className="core-eyebrow">SEU DIA</p><h2 id="today-overview-title">O que importa hoje</h2><p>Continue de onde parou, sem precisar procurar em vários menus.</p></div><span className="core-count-pill">{personalStatus === "ready" ? `${openTodayCount} pendentes` : personalStatus === "loading" ? "Atualizando" : "Visão diária"}</span></div>
+      <SectionHeading
+        id="today-overview-title"
+        eyebrow="SEU DIA"
+        title="O que importa hoje"
+        description="Continue de onde parou, sem precisar procurar em vários menus."
+        count={<span className="app-count-pill">{personalStatus === "ready" ? `${openTodayCount} pendentes` : personalStatus === "loading" ? "Atualizando" : "Visão diária"}</span>}
+      />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{dailySections.map(section => { const Icon = section.icon; const pending = section.entries.filter(entry => !entry.done); const tone = section.key === "rotina" ? "lilac" : section.key === "casa" ? "mint" : section.key === "habitos-rotina" ? "peach" : "blue"; return <Link key={section.key} to={section.href} className={`core-day-card core-tone-${tone}`}><div className="core-day-card-top"><span className="core-day-icon"><Icon className="h-5 w-5"/></span><span className="core-card-arrow"><ArrowRight className="h-4 w-4"/></span></div><h3>{section.title}</h3>{personalStatus === "ready" ? <><p className="core-day-metric">{pending.length ? `${pending.length} para fazer` : section.entries.length ? "Tudo em dia" : "Comece por aqui"}</p><p className="core-day-detail">{pending[0]?.text ?? (section.entries.length ? "Você concluiu o que planejou." : "Adicione seu primeiro registro.")}</p></> : <p className="core-day-detail">{personalStatus === "loading" ? "Buscando seus registros…" : "Entre para ver seus registros sincronizados."}</p>}</Link> })}</div>
-      <div className="core-shortcuts"><span>Ir direto para</span><Link to="/plantoes"><CalendarClock className="h-4 w-4"/> Plantões</Link><Link to="/calendario"><CalendarDays className="h-4 w-4"/> Calendário</Link><Link to="/casa"><House className="h-4 w-4"/> Casa</Link><Link to="/habitos"><CheckSquare className="h-4 w-4"/> Hábitos</Link></div>
+      <Shortcuts>
+        <span>Ir direto para</span>
+        <Link to="/plantoes"><CalendarClock className="h-4 w-4"/> Plantões</Link>
+        <Link to="/calendario"><CalendarDays className="h-4 w-4"/> Calendário</Link>
+        <Link to="/casa"><House className="h-4 w-4"/> Casa</Link>
+        <Link to="/habitos"><CheckSquare className="h-4 w-4"/> Hábitos</Link>
+      </Shortcuts>
     </section>
 
     <section className="space-y-4" aria-labelledby="finance-overview-title">
-      <div className="core-section-heading core-finance-heading"><div><p className="core-eyebrow">DINHEIRO</p><h2 id="finance-overview-title">Visão financeira</h2><p>Um resumo claro para você saber como está o mês.</p></div><div className="flex flex-wrap items-center gap-2"><MonthSelector month={monthKey} setMonth={setMonth}/><button type="button" onClick={exportReport} className="core-secondary-action">Baixar relatório</button></div></div>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4"><StatCard label="Saldo do mês" value={formatCurrency(balance)} delta={`${income>0?"Receitas registradas":"Sem receitas no mês"}`} tone={balance>=0?"primary":"danger"} icon={<Wallet className="h-4 w-4"/>}/><StatCard label="Despesas do mês" value={formatCurrency(expenses)} delta={`${currentTx.filter(t=>t.type==="DESPESA"&&counts(t)).length} lançamentos`} tone="danger" icon={<Coins className="h-4 w-4"/>}/><StatCard label="Parcelados" value={formatCurrency(installmentTotal)} delta={`${activeInstallments.length} compras ativas`} tone="info" icon={<CreditCard className="h-4 w-4"/>}/><StatCard label="Custos fixos" value={formatCurrency(fixedTotal)} delta={`${activeFixed.length} ativos`} tone="success" icon={<Repeat className="h-4 w-4"/>}/></div>
+      <SectionHeading
+        id="finance-overview-title"
+        eyebrow="DINHEIRO"
+        title="Visão financeira"
+        description="Um resumo claro para você saber como está o mês."
+        actions={<>
+          <MonthSelector month={monthKey} setMonth={setMonth}/>
+          <Button variant="secondary" size="sm" onClick={exportReport}>Baixar relatório</Button>
+        </>}
+      />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard label="Saldo do mês" value={formatCurrency(balance)} delta={`${income>0?"Receitas registradas":"Sem receitas no mês"}`} tone={balance>=0?"primary":"danger"} icon={<Wallet className="h-4 w-4"/>}/>
+        <StatCard label="Despesas do mês" value={formatCurrency(expenses)} delta={`${currentTx.filter(t=>t.type==="DESPESA"&&counts(t)).length} lançamentos`} tone="danger" icon={<Coins className="h-4 w-4"/>}/>
+        <StatCard label="Parcelados" value={formatCurrency(installmentTotal)} delta={`${activeInstallments.length} compras ativas`} tone="info" icon={<CreditCard className="h-4 w-4"/>}/>
+        <StatCard label="Custos fixos" value={formatCurrency(fixedTotal)} delta={`${activeFixed.length} ativos`} tone="success" icon={<Repeat className="h-4 w-4"/>}/>
+      </div>
     </section>
-    <Panel className="border-warning/50"><div className="flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning/15 text-warning"><AlertTriangle className="h-5 w-5"/></span><div><h2 className="text-sm font-semibold">Contas vencendo em breve</h2><p className="text-xs text-muted-foreground">{upcoming.length} contas nos próximos 5 dias</p></div></div><Link to="/contas-a-pagar" className="core-text-link">Ver contas <ArrowRight className="h-3.5 w-3.5"/></Link></div>{upcoming.length===0?<p className="mt-4 py-4 text-center text-sm text-muted-foreground">Nenhuma conta vencendo nos próximos 5 dias.</p>:<div className="mt-4 grid gap-2 md:grid-cols-2">{upcoming.map(b=><div key={b.id} className="flex items-center justify-between rounded-xl border border-border bg-secondary/40 px-3 py-2.5"><div><p className="text-sm font-medium">{b.name}</p><Tag tone="warning">Dia {b.date.getDate()}</Tag></div><div className="text-right"><p className="text-sm font-bold">{formatCurrency(b.amount)}</p><Link to="/contas-a-pagar" className="text-xs font-medium text-primary">Ver conta</Link></div></div>)}</div>}</Panel>
+    <Panel className="border-warning/50"><div className="flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-3"><IconBadge icon={<AlertTriangle className="h-5 w-5"/>} tone="warning" size="lg"/><div><h2 className="text-sm font-semibold">Contas vencendo em breve</h2><p className="text-xs text-muted-foreground">{upcoming.length} contas nos próximos 5 dias</p></div></div><Link to="/contas-a-pagar" className="app-link">Ver contas</Link></div>{upcoming.length===0?<p className="mt-4 py-4 text-center text-sm text-muted-foreground">Nenhuma conta vencendo nos próximos 5 dias.</p>:<div className="mt-4 grid gap-2 md:grid-cols-2">{upcoming.map(b=><div key={b.id} className="flex items-center justify-between rounded-xl border border-border bg-secondary/40 px-3 py-2.5"><div><p className="text-sm font-medium">{b.name}</p><Tag tone="warning">Dia {b.date.getDate()}</Tag></div><div className="text-right"><p className="text-sm font-bold">{formatCurrency(b.amount)}</p><Link to="/contas-a-pagar" className="text-xs font-medium text-primary">Ver conta</Link></div></div>)}</div>}</Panel>
     <div className="grid gap-4 lg:grid-cols-3"><Panel title="EVOLUÇÃO RECENTE" className="lg:col-span-2"><div className="h-64">{isMounted&&<ResponsiveContainer width="100%" height="100%"><AreaChart data={monthlyEvolution}><CartesianGrid stroke="var(--border)" vertical={false}/><XAxis dataKey="mes" stroke="var(--muted-foreground)" fontSize={11} tickLine={false}/><YAxis stroke="var(--muted-foreground)" fontSize={11} tickLine={false} width={48}/><Tooltip formatter={(v:number)=>formatCurrency(v)}/><Area type="monotone" dataKey="gastos" stroke="var(--orange-primary)" fill="var(--orange-primary)" fillOpacity={0.15}/><Area type="monotone" dataKey="receitas" stroke="var(--success)" fill="transparent"/></AreaChart></ResponsiveContainer>}</div></Panel><Panel title="DISTRIBUIÇÃO DE GASTOS"><div className="h-64">{isMounted&&(categoryDistribution.length?<ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={categoryDistribution} dataKey="value" nameKey="name" innerRadius={55} outerRadius={85} paddingAngle={3} stroke="none">{categoryDistribution.map((entry,index)=><Cell key={entry.name} fill={entry.value>entry.budget?"var(--danger)":PIE_COLORS[index%5]}/>)}</Pie><Legend wrapperStyle={{fontSize:10}}/><Tooltip formatter={(v:number)=>formatCurrency(v)}/></PieChart></ResponsiveContainer>:<div className="flex h-full items-center justify-center text-sm text-muted-foreground">Cadastre despesas para ver a distribuição.</div>)}</div></Panel></div>
     <div className="grid gap-4 lg:grid-cols-2"><Panel title="DIVISÃO DE GASTOS"><div className="space-y-4 pt-2">{splitData.length?splitData.map(person=>{const total=splitData.reduce((s,p)=>s+p.value,0)||1;const percent=person.value/total*100;return <div key={person.name} className="space-y-2"><div className="flex items-center justify-between"><PersonDot name={person.name}/><span className="text-sm font-semibold">{formatCurrency(person.value)}</span></div><ProgressBar percent={percent} tone="primary"/><p className="text-[11px] text-muted-foreground">{Math.round(percent)}% do total</p></div>}):<p className="py-8 text-center text-sm text-muted-foreground">Nenhuma despesa cadastrada.</p>}</div></Panel><Panel title="MAIORES CATEGORIAS"><div className="space-y-4">{categoryDistribution.length?categoryDistribution.map(cat=>{const usage=calculateBudgetUsage(cat.value,cat.budget);return <div key={cat.name} className="space-y-2"><div className="flex items-center justify-between text-sm"><span className="label-caps text-[11px]">{cat.name}</span><span className="font-semibold">{formatCurrency(cat.value)}</span></div><ProgressBar percent={usage}/><p className="text-[11px] text-muted-foreground">{Math.round(usage)}% do orçamento de {formatCurrency(cat.budget)}</p></div>}):<p className="py-8 text-center text-sm text-muted-foreground">Nenhum gasto registrado neste mês.</p>}</div></Panel></div>
     <div className="grid gap-4"><Panel title="META PRINCIPAL">{mainGoal?<><p className="label-caps text-sm">{mainGoal.name}</p><p className="mt-1 text-xs text-muted-foreground">{formatCurrency(Number(mainGoal.current_amount))} / {formatCurrency(Number(mainGoal.target_amount))}</p><div className="mt-3"><ProgressBar percent={calculateGoalProgress(Number(mainGoal.current_amount),Number(mainGoal.target_amount))} tone="primary"/></div><div className="mt-3 flex items-center justify-between text-[11px] text-muted-foreground"><span>{Math.round(calculateGoalProgress(Number(mainGoal.current_amount),Number(mainGoal.target_amount)))}% concluído</span><span>{mainGoal.deadline?`Previsão: ${mainGoal.deadline}`:"Sem prazo"}</span></div><Link to="/metas" className="label-caps mt-4 inline-flex items-center gap-1 text-[11px] text-primary">VER TODAS AS METAS <ArrowRight className="h-3 w-3"/></Link></>:<div className="py-8 text-center"><p className="text-sm text-muted-foreground">Nenhuma meta cadastrada.</p><Link to="/metas" className="label-caps mt-3 inline-flex text-[11px] text-primary">CRIAR META</Link></div>}</Panel></div>

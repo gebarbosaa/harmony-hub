@@ -323,3 +323,146 @@ main button { transition-duration: 180ms; }
 .food-week-add:hover { background:var(--secondary); color:var(--foreground); }
 .dark .food-week-dayhead { background:color-mix(in oklab,var(--primary) 12%,var(--card)); }
 .dark .food-week-entry { background:color-mix(in oklab,var(--primary) 11%,var(--card)); }
+
+/* ============================================================
+   APP-WIDE DESIGN SYSTEM — standardized building blocks.
+   Every page in the app should compose from these primitives
+   so the whole site reads as one product. Keep the rules here;
+   keep one-off page styling inside the page's CSS module.
+   ============================================================ */
+
+/* Container: caps content width consistently across all routes. */
+.app-container { width: 100%; max-width: 1320px; margin-inline: auto; }
+
+/* Surfaces: a single, canonical card look. Avoid arbitrary rounded-[Npx] values. */
+.app-card { border: 1px solid var(--border); border-radius: 20px; background: var(--card); box-shadow: 0 4px 18px rgb(35 30 20 / .025); transition: border-color .18s, box-shadow .18s, transform .18s; }
+.app-card:hover { border-color: color-mix(in oklab, var(--primary) 28%, var(--border)); box-shadow: 0 12px 28px rgb(30 25 20 / .045); }
+.app-card-flat { border: 1px solid var(--border); border-radius: 18px; background: var(--card); }
+.app-card-tight { padding: 14px; }
+.app-card-default { padding: 18px; }
+.app-card-loose { padding: 22px; }
+.app-card-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+.app-card-title { font-size: 13px; font-weight: 700; letter-spacing: .025em; text-transform: uppercase; color: var(--foreground); }
+
+/* Page hero: a calm welcome/banner block with eyebrow, title, description, action. */
+.app-hero { position: relative; display: flex; min-height: 220px; align-items: center; overflow: hidden; isolation: isolate; border: 1px solid color-mix(in oklab, var(--primary) 16%, var(--border)); border-radius: 26px; background: linear-gradient(112deg, color-mix(in oklab, var(--primary) 12%, var(--card)) 0%, var(--card) 58%, color-mix(in oklab, #b9b5f5 18%, var(--card)) 100%); padding: clamp(22px, 3.5vw, 38px); box-shadow: 0 12px 36px rgb(55 43 25 / .035); }
+.app-hero-copy { position: relative; z-index: 2; max-width: 680px; }
+.app-hero h1 { max-width: 620px; margin: 0; font-size: clamp(26px, 3vw, 38px); font-weight: 780; letter-spacing: -.045em; line-height: 1.12; }
+.app-hero-copy > p { max-width: 540px; margin: 12px 0 0; color: var(--muted-foreground); font-size: 14px; line-height: 1.65; }
+.app-hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 22px; }
+.app-hero-art { position: absolute; z-index: 1; pointer-events: none; }
+
+/* Eyebrow / kicker: tiny uppercase label that anchors a section or page. */
+.app-eyebrow { display: inline-flex; align-items: center; gap: 7px; color: var(--primary); font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+
+/* Section heading: anchors a block with title + description + optional counter/action. */
+.app-section-heading { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 4px; }
+.app-section-heading h2 { margin: 0; font-size: clamp(20px, 2vw, 24px); font-weight: 720; letter-spacing: -.035em; line-height: 1.15; }
+.app-section-heading p { margin: 5px 0 0; color: var(--muted-foreground); font-size: 13px; }
+.app-section-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.app-count-pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; background: color-mix(in oklab, var(--primary) 10%, var(--card)); padding: 6px 12px; color: var(--primary); font-size: 11px; font-weight: 650; }
+
+/* Buttons: three standard sizes, all the same shape. Use these instead of inventing new ones. */
+.app-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 12px; font-size: 13px; font-weight: 650; line-height: 1; transition: transform .18s, background-color .18s, color .18s, border-color .18s, box-shadow .18s; white-space: nowrap; }
+.app-btn:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.app-btn:disabled { opacity: .55; pointer-events: none; }
+.app-btn-sm { min-height: 36px; padding: 0 12px; font-size: 12px; }
+.app-btn-md { min-height: 42px; padding: 0 16px; }
+.app-btn-lg { min-height: 46px; padding: 0 18px; font-size: 14px; }
+.app-btn-primary { background: var(--primary); color: var(--primary-foreground); box-shadow: 0 6px 18px color-mix(in oklab, var(--primary) 18%, transparent); }
+.app-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 9px 22px color-mix(in oklab, var(--primary) 24%, transparent); }
+.app-btn-secondary { border: 1px solid var(--border); background: var(--card); color: var(--foreground); }
+.app-btn-secondary:hover { border-color: var(--primary); color: var(--primary); }
+.app-btn-ghost { background: transparent; color: var(--muted-foreground); }
+.app-btn-ghost:hover { color: var(--foreground); background: var(--secondary); }
+.app-btn-danger { background: var(--danger); color: #fff; }
+.app-btn-danger:hover { transform: translateY(-1px); }
+
+/* Text link: a single style for "see more →" patterns. */
+.app-link { display: inline-flex; align-items: center; gap: 6px; color: var(--primary); font-size: 12px; font-weight: 650; }
+.app-link:hover { text-decoration: underline; }
+
+/* Icon badge: a small colored square for stat/icon prefixes. Six consistent tones. */
+.app-icon-badge { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 12px; flex-shrink: 0; }
+.app-icon-badge-lg { width: 44px; height: 44px; border-radius: 14px; }
+.app-icon-badge-sm { width: 32px; height: 32px; border-radius: 10px; }
+.app-tone-primary { background: color-mix(in oklab, var(--primary) 14%, var(--card)); color: var(--primary); }
+.app-tone-success { background: color-mix(in oklab, var(--success) 16%, var(--card)); color: var(--success); }
+.app-tone-danger { background: color-mix(in oklab, var(--danger) 14%, var(--card)); color: var(--danger); }
+.app-tone-warning { background: color-mix(in oklab, var(--warning) 18%, var(--card)); color: var(--warning); }
+.app-tone-info { background: color-mix(in oklab, var(--info) 14%, var(--card)); color: var(--info); }
+.app-tone-muted { background: var(--secondary); color: var(--muted-foreground); }
+
+/* Segmented control: used everywhere for the PESSOAL/EMPRESARIAL toggle and similar. */
+.app-segmented { display: inline-flex; gap: 4px; padding: 4px; border-radius: 12px; border: 1px solid var(--border); background: color-mix(in oklab, var(--secondary) 60%, var(--card)); }
+.app-segmented-btn { display: inline-flex; align-items: center; gap: 6px; border-radius: 9px; padding: 7px 12px; font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--muted-foreground); transition: background-color .18s, color .18s, box-shadow .18s; }
+.app-segmented-btn:hover { color: var(--foreground); }
+.app-segmented-btn[aria-pressed="true"], .app-segmented-btn.is-active { background: var(--primary); color: var(--primary-foreground); box-shadow: 0 3px 10px color-mix(in oklab, var(--primary) 18%, transparent); }
+
+/* Empty state: icon + title + description + optional action. */
+.app-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 32px 16px; text-align: center; }
+.app-empty-icon { display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 16px; background: color-mix(in oklab, var(--primary) 10%, var(--card)); color: var(--primary); }
+.app-empty h3 { margin: 6px 0 0; font-size: 14px; font-weight: 700; }
+.app-empty p { margin: 4px 0 0; max-width: 360px; color: var(--muted-foreground); font-size: 12px; line-height: 1.6; }
+
+/* Stat tile: number + label. Used in dashboards and headers. */
+.app-stat { display: flex; flex-direction: column; gap: 4px; padding: 16px; border-radius: 18px; border: 1px solid var(--border); background: var(--card); }
+.app-stat span { color: var(--muted-foreground); font-size: 11px; font-weight: 600; }
+.app-stat strong { font-size: clamp(20px, 2vw, 26px); font-weight: 780; letter-spacing: -.04em; line-height: 1.15; }
+.app-stat small { color: var(--muted-foreground); font-size: 11px; }
+
+/* Toolbar: a row of controls above a list/table — keeps spacing consistent. */
+.app-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 14px; border-radius: 18px; border: 1px solid var(--border); background: var(--card); }
+.app-toolbar-title { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.app-toolbar-title h2 { margin: 0; font-size: 14px; font-weight: 700; }
+.app-toolbar-title p { margin: 2px 0 0; color: var(--muted-foreground); font-size: 12px; }
+.app-toolbar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+/* Data list: rows of items in a card (used by 20+ pages). */
+.app-list { display: flex; flex-direction: column; }
+.app-list-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-top: 1px solid var(--border); }
+.app-list-row:first-child { border-top: none; }
+.app-list-row:hover { background: color-mix(in oklab, var(--primary) 3%, var(--card)); }
+.app-list-row-main { min-width: 0; flex: 1; }
+.app-list-row-title { font-size: 13px; font-weight: 600; line-height: 1.35; }
+.app-list-row-meta { margin-top: 2px; color: var(--muted-foreground); font-size: 11px; }
+.app-list-row-aside { text-align: right; flex-shrink: 0; }
+
+/* Field group: a consistent label + control stack used in 30+ pages. */
+.app-field { display: flex; flex-direction: column; gap: 6px; }
+.app-field > label { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted-foreground); }
+.app-field input, .app-field select, .app-field textarea { width: 100%; border-radius: 12px; border: 1px solid var(--border); background: var(--background); padding: 10px 12px; font-size: 13px; transition: border-color .18s, box-shadow .18s; }
+.app-field input:focus, .app-field select:focus, .app-field textarea:focus { border-color: color-mix(in oklab, var(--primary) 70%, var(--border)); box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 14%, transparent); outline: none; }
+
+/* Tabs: used for the day/week filters, sub-pages, etc. */
+.app-tabs { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; border-radius: 12px; background: color-mix(in oklab, var(--secondary) 60%, var(--card)); border: 1px solid var(--border); width: fit-content; }
+.app-tab { padding: 7px 12px; border-radius: 9px; font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--muted-foreground); transition: background-color .18s, color .18s; }
+.app-tab:hover { color: var(--foreground); }
+.app-tab[aria-current="page"], .app-tab.is-active { background: var(--primary); color: var(--primary-foreground); }
+
+/* Shortcuts / quick links strip (used on home, hub, etc.). */
+.app-shortcuts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-top: 2px; }
+.app-shortcuts > span { margin-right: 4px; color: var(--muted-foreground); font-size: 12px; }
+.app-shortcuts a { display: inline-flex; min-height: 34px; align-items: center; gap: 7px; border: 1px solid var(--border); border-radius: 999px; background: var(--card); padding: 0 12px; font-size: 12px; font-weight: 600; color: var(--foreground); transition: border-color .18s, color .18s; }
+.app-shortcuts a:hover { border-color: var(--primary); color: var(--primary); }
+
+/* Dark mode polish for the new primitives. */
+.dark .app-card { box-shadow: 0 4px 18px rgb(0 0 0 / .35); }
+.dark .app-card:hover { box-shadow: 0 12px 28px rgb(0 0 0 / .5); }
+.dark .app-hero { background: linear-gradient(112deg, color-mix(in oklab, var(--primary) 14%, var(--card)) 0%, var(--card) 58%, color-mix(in oklab, #6f65a8 20%, var(--card)) 100%); }
+.dark .app-list-row:hover { background: color-mix(in oklab, var(--primary) 6%, var(--card)); }
+.dark .app-segmented, .dark .app-tabs { background: color-mix(in oklab, var(--card) 88%, transparent); }
+
+/* Mobile refinements so the same primitives feel right on small screens. */
+@media (max-width: 720px) {
+  .app-hero { min-height: 210px; border-radius: 22px; padding: 22px; }
+  .app-hero h1 { max-width: 280px; font-size: 28px; }
+  .app-hero-copy > p { max-width: 280px; font-size: 13px; }
+  .app-hero-actions { align-items: flex-start; flex-direction: column; gap: 10px; margin-top: 18px; }
+  .app-section-heading { align-items: flex-start; flex-direction: column; }
+  .app-section-actions { width: 100%; }
+  .app-toolbar { padding: 12px; }
+  .app-shortcuts > span { width: 100%; }
+  .app-btn-md, .app-btn-lg { width: 100%; }
+}
+
