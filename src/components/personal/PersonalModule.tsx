@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Panel } from "@/components/ui-kit";
 
 export type PersonalModuleKey = "desenvolvimento-pessoal" | "casa" | "leitura" | "alimentacao" | "habitos-rotina" | "rotina" | "treinos";
-type Entry = { id: string; text: string; extra?: string; done?: boolean; createdAt: string };
+type Entry = { id: string; text: string; extra?: string; done?: boolean; createdAt: string; date?: string; time?: string; completions?: string[] };
 const CONFIG: Record<PersonalModuleKey, { title: string; emoji: string; description: string; tabs: string[] }> = {
   "desenvolvimento-pessoal": { title: "Desenvolvimento Pessoal", emoji: "🌱", description: "Um espaço para se conhecer, cuidar de si e acompanhar seu crescimento.", tabs: ["Sobre mim","Metas","Diário","Humor & Score","Respiração","Gratidão","Carta","30 Dias"] },
   casa: { title: "Casa", emoji: "🏠", description: "Organize compras, cômodos, tarefas e cuidados da casa.", tabs: ["Cômodos","Mercado","Rotina","Despensa","Cardápio","Manutenção","Co-op","Segurança","Utilidades"] },
@@ -82,6 +82,9 @@ function makeWorkoutBlock(partial: Partial<WorkoutBlock> = {}): WorkoutBlock {
   };
 }
 
+function localDateKey(date = new Date()): string {
+  return String(date.getFullYear()) + "-" + String(date.getMonth() + 1).padStart(2, "0") + "-" + String(date.getDate()).padStart(2, "0");
+}
 const keyFor = (module: string, tab: string) => "harmony-personal-v1:" + module + ":" + tab;
 function readLocal(module: string, tab: string): Entry[] {
   try {
@@ -115,6 +118,8 @@ export function PersonalModule({ module }: { module: PersonalModuleKey }) {
   const loadingRef = useRef(true);
   const [input,setInput] = useState("");
   const [extra,setExtra] = useState("");
+  const [routineDate,setRoutineDate] = useState(() => localDateKey());
+  const [routineTime,setRoutineTime] = useState("09:00");
   const [theme,setTheme] = useState<"light"|"dark">("light");
   const [mood,setMood] = useState("🙂");
   const [score,setScore] = useState(7);
@@ -218,9 +223,66 @@ export function PersonalModule({ module }: { module: PersonalModuleKey }) {
     setEntries(old => [item,...old]); setInput(""); setExtra("");
   };
   const remove = (id:string) => setEntries(old=>old.filter(e=>e.id!==id));
-  const toggle = (id:string) => setEntries(old=>old.map(e=>e.id===id?{...e,done:!e.done}:e));
+  const recordWorkoutSession = async (block: WorkoutBlock) => {
+    const createdAt = new Date().toISOString();
+    const session = makeWorkoutBlock({ ...block, id: crypto.randomUUID(), day: todayKey, done: true, createdAt, exercises: block.exercises.map(ex=>({ ...ex, done: true })) });
+    const cached = readLocal("treinos", "Histórico") as WorkoutEntry[];
+    let history = cached;
+    let canSync = !!userId;
+    if (userId) {
+      try {
+        const result = await personalData().select("entries").eq("user_id", userId).eq("module_key", "treinos").eq("tab_key", "Histórico").maybeSingle();
+        if (result.error) { canSync = false; setSyncStatus("error"); }
+        else if (Array.isArray(result.data?.entries)) history = result.data.entries as WorkoutEntry[];
+      } catch { canSync = false; setSyncStatus("error"); }
+    }
+    const next = [...history, workoutBlockToEntry(session)];
+    try { localStorage.setItem(keyFor("treinos", "Histórico"), JSON.stringify(next)); } catch { /* local history is optional */ }
+    if (userId && canSync) {
+      setSyncStatus("syncing");
+      try {
+        const result = await personalData().upsert({ user_id: userId, module_key: "treinos", tab_key: "Histórico", entries: next, updated_at: new Date().toISOString() }, { onConflict: "user_id,module_key,tab_key" });
+        setSyncStatus(result.error ? "error" : "synced");
+      } catch { setSyncStatus("error"); }
+    }
+  };
+  const todayKey = localDateKey();
+  const toggle = (id:string) => setEntries(old=>old.map(e=>{
+    if (e.id !== id) return e;
+    if (module === "habitos-rotina") {
+      const completions = e.completions ?? (e.done ? [todayKey] : []);
+      return { ...e, done: !completions.includes(todayKey), completions: completions.includes(todayKey) ? completions.filter(d=>d!==todayKey) : [...completions, todayKey] };
+    }
+    return { ...e, done: !e.done };
+  }));
+  const addRoutine = () => {
+    if (!input.trim() || !routineDate) return;
+    const item: Entry = { id: crypto.randomUUID(), text: input.trim(), extra: extra.trim(), date: routineDate, time: routineTime, createdAt: new Date().toISOString() };
+    setEntries(old => [...old, item].sort((a,b)=>(a.date||"9999-99-99").localeCompare(b.date||"9999-99-99")||(a.time||"").localeCompare(b.time||"")));
+    setInput(""); setExtra("");
+  };
+  const routineEntries = entries.filter(e => {
+    if (module !== "rotina" || tab === "Planejamento" || !e.date) return true;
+    if (tab === "Hoje") return e.date === todayKey;
+    const today = new Date();
+    const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+    const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+    return e.date >= localDateKey(monday) && e.date <= localDateKey(sunday);
+  });
+  const routineForm = <form className="grid gap-2 sm:grid-cols-2" onSubmit={e=>{e.preventDefault();addRoutine();}}>
+    <input className="min-w-0 rounded-xl border border-border bg-background px-3 py-3 text-sm sm:col-span-2" value={input} onChange={e=>setInput(e.target.value)} placeholder="Ex.: caminhar, estudar, arrumar o quarto…" aria-label="Atividade da rotina" required />
+    <label className="grid gap-1 text-xs font-semibold text-muted-foreground">Data<input type="date" className="rounded-xl border border-border bg-background px-3 py-3 text-sm text-foreground" value={routineDate} onChange={e=>setRoutineDate(e.target.value)} required /></label>
+    <label className="grid gap-1 text-xs font-semibold text-muted-foreground">Horário<input type="time" className="rounded-xl border border-border bg-background px-3 py-3 text-sm text-foreground" value={routineTime} onChange={e=>setRoutineTime(e.target.value)} required /></label>
+    <input className="min-w-0 rounded-xl border border-border bg-background px-3 py-3 text-sm sm:col-span-2" value={extra} onChange={e=>setExtra(e.target.value)} placeholder="Detalhes (opcional)" aria-label="Detalhes da atividade" />
+    <button className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground sm:col-span-2" type="submit"><Plus className="h-4 w-4"/>Adicionar atividade</button>
+  </form>;
   const addForm = (placeholder:string, button="Adicionar") => <form className="flex flex-col gap-2 sm:flex-row" onSubmit={e=>{e.preventDefault();add();}}><input className="min-w-0 flex-1 rounded-xl border border-border bg-background px-3 py-3 text-sm" value={input} onChange={e=>setInput(e.target.value)} placeholder={placeholder} aria-label={placeholder}/><input className="min-w-0 rounded-xl border border-border bg-background px-3 py-3 text-sm sm:max-w-[200px]" value={extra} onChange={e=>setExtra(e.target.value)} placeholder="Detalhes (opcional)" aria-label="Detalhes opcionais"/><button className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground" type="submit"><Plus className="h-4 w-4"/>{button}</button></form>;
-  const list = (empty:string, checkable=false) => <div className="mt-4 space-y-2">{entries.length===0?<p className="rounded-xl border border-dashed border-border px-4 py-7 text-center text-sm text-muted-foreground">{ready?empty:"Carregando registros…"}</p>:entries.map(e=><div key={e.id} className="flex items-start gap-3 rounded-xl border border-border bg-card p-3">{checkable&&<button type="button" aria-label={e.done?"Desmarcar":"Concluir"} onClick={()=>toggle(e.id)} className={"mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border "+(e.done?"border-primary bg-primary text-primary-foreground":"border-border")}>{e.done&&<Check className="h-3 w-3"/>}</button>}<div className="min-w-0 flex-1"><p className={"break-words text-sm "+(e.done?"text-muted-foreground line-through":"text-foreground")}>{e.text}</p>{e.extra&&<p className="mt-1 text-xs text-muted-foreground">{e.extra}</p>}<p className="mt-1 text-[10px] text-muted-foreground">{new Date(e.createdAt).toLocaleDateString("pt-BR")}</p></div><button type="button" onClick={()=>remove(e.id)} aria-label={"Excluir "+e.text} className="rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><Trash2 className="h-4 w-4"/></button></div>)}</div>;
+  const list = (empty:string, checkable=false) => {
+    const visibleEntries = module === "rotina" ? routineEntries : entries;
+    const isDone = (e: Entry) => module === "habitos-rotina" ? (e.completions?.includes(todayKey) ?? !!e.done) : !!e.done;
+    return <div className="mt-4 space-y-2">{visibleEntries.length===0?<p className="rounded-xl border border-dashed border-border px-4 py-7 text-center text-sm text-muted-foreground">{ready?empty:"Carregando registros…"}</p>:visibleEntries.map(e=><div key={e.id} className="flex items-start gap-3 rounded-xl border border-border bg-card p-3">{checkable&&<button type="button" aria-label={isDone(e)?"Desmarcar":"Concluir"} onClick={()=>toggle(e.id)} className={"mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border "+(isDone(e)?"border-primary bg-primary text-primary-foreground":"border-border")}>{isDone(e)&&<Check className="h-3 w-3"/>}</button>}<div className="min-w-0 flex-1"><p className={"break-words text-sm "+(isDone(e)?"text-muted-foreground line-through":"text-foreground")}>{e.text}</p>{(e.date||e.time)&&<p className="mt-1 text-xs font-medium text-primary">{e.date?new Date(e.date+"T12:00:00").toLocaleDateString("pt-BR",{weekday:"short",day:"2-digit",month:"short"}):""}{e.time?" · "+e.time:""}</p>}{e.extra&&<p className="mt-1 text-xs text-muted-foreground">{e.extra}</p>}<p className="mt-1 text-[10px] text-muted-foreground">{new Date(e.createdAt).toLocaleDateString("pt-BR")}{module==="habitos-rotina"&&e.completions?.length?" · "+e.completions.length+" dia(s) concluído(s)":""}</p></div><button type="button" onClick={()=>remove(e.id)} aria-label={"Excluir "+e.text} className="rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><Trash2 className="h-4 w-4"/></button></div>)}</div>;
+  };
   const titles:Record<string,string>={"Sobre mim":"Conheça sua história","Metas":"Metas pessoais","Diário":"Seu espaço de escrita","Humor & Score":"Como você está hoje?","Respiração":"Pausa para respirar","Gratidão":"Três coisas boas do dia","Carta":"Carta para o eu do futuro","30 Dias":"Desafio de 30 dias","Cômodos":"Organize seus espaços","Mercado":"Lista do mercado","Rotina":"Rotina da casa","Despensa":"Estoque da despensa","Cardápio":"Cardápio da casa","Manutenção":"Manutenção e reparos","Co-op":"Organização compartilhada","Segurança":"Segurança da casa","Utilidades":"Contas e utilidades","Lendo agora":"Leitura atual","Estante":"Minha estante","Insights":"Seu ritmo de leitura","Emprestados":"Livros emprestados","Desafio":"Desafio de leitura","Jejum":"Timer de jejum","Receitas":"Minhas receitas","Lista":"Lista de compras","Minha semana":"Hábitos da semana","Meu mês":"Consistência mensal","Revisão":"Revisão semanal","Foco":"Sessão de foco","Hoje":"Minha rotina de hoje","Semana":"Organização da semana","Planejamento":"Planeje sua rotina","Plano semanal":"Treino planejado para a semana","Histórico":"Histórico de treinos"};
   const card = "rounded-2xl border border-border bg-card p-4 sm:p-5";
   const pill = (active:boolean) => "shrink-0 rounded-full border px-4 py-2 text-xs font-semibold transition "+(active?"border-foreground bg-foreground text-background":"border-border bg-background text-muted-foreground hover:text-foreground");
@@ -236,11 +298,9 @@ export function PersonalModule({ module }: { module: PersonalModuleKey }) {
       :module==="casa"&&tab==="Mercado"?<><div className="mb-3 flex flex-wrap gap-2">{MARKET_CATEGORIES.map(c=><button type="button" key={c} className={pill(category===c)} onClick={()=>setCategory(c)}>{c}</button>)}</div><form className="flex flex-col gap-2 sm:flex-row" onSubmit={e=>{e.preventDefault();add(input,category);}}><input className="min-w-0 flex-1 rounded-xl border border-border bg-background px-3 py-3 text-sm" value={input} onChange={e=>setInput(e.target.value)} placeholder={"Adicionar item em "+category}/><button className="rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground" type="submit">+ Adicionar item</button></form><p className="mt-3 text-xs text-muted-foreground">{entries.filter(e=>e.done).length} de {entries.length} itens comprados</p>{list("Sua lista do mercado está vazia.",true)}</>
       :module==="alimentacao"&&tab==="Cardápio"?<><div className="mb-3 flex flex-wrap gap-2">{["Segunda","Terça","Quarta","Quinta","Sexta","Sábado","Domingo"].map(d=><button key={d} className={pill(mealDay===d)} onClick={()=>setMealDay(d)}>{d}</button>)}</div><div className="mb-3 flex flex-wrap gap-2">{MEALS.map(m=><button key={m} className={pill(mealType===m)} onClick={()=>setMealType(m)}>{m}</button>)}</div><form className="flex flex-col gap-2 sm:flex-row" onSubmit={e=>{e.preventDefault();add(input,mealDay+" · "+mealType);}}><input className="min-w-0 flex-1 rounded-xl border border-border bg-background px-3 py-3 text-sm" value={input} onChange={e=>setInput(e.target.value)} placeholder="Refeição planejada"/><button className="rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground">+ Adicionar refeição</button></form>{list("Nenhuma refeição planejada.")}</>
       :module==="leitura"&&tab==="Lendo agora"?<><div className="grid gap-3 sm:grid-cols-2"><label className="text-sm">Página atual<input className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-3" type="number" min="0" value={page} onChange={e=>setPage(e.target.value)}/></label><label className="text-sm">Total de páginas<input className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-3" type="number" min="1" value={totalPages} onChange={e=>setTotalPages(e.target.value)}/></label></div><div className="mt-3 h-3 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-primary transition-all" style={{width:progress+"%"}}/></div><p className="mt-1 text-xs text-muted-foreground">{progress.toFixed(0)}% concluído</p>{addForm("Título do livro atual","Salvar livro")}{list("Cadastre o livro que está lendo.")}</>
-      :module==="habitos-rotina"&&(tab==="Minha semana"||tab==="Meu mês")?<>{addForm("Ex.: beber água, treinar, ler 30 min…","Adicionar hábito")}{list("Adicione seus hábitos e marque cada conclusão.",true)}</>
-      :module==="rotina"&&tab==="Hoje"?<>{addForm("Ex.: caminhada às 18h, organizar quarto…","Adicionar atividade")}{list("Sua rotina de hoje está vazia. Adicione a primeira atividade.",true)}</>
-      :module==="rotina"&&tab==="Semana"?<>{addForm("Ex.: estudar segunda e quarta às 19h…","Planejar atividade")}{list("Sua semana ainda não tem atividades planejadas.",true)}</>
-      :module==="rotina"&&tab==="Planejamento"?<>{addForm("Ex.: acordar às 7h, pausa para almoço…","Adicionar ao planejamento")}{list("Seu planejamento de rotina está vazio.")}</>
-      :module==="treinos"&&tab==="Plano semanal"?<TreinosPlano entries={entries} setEntries={setEntries} empty={!ready}/>
+      :module==="habitos-rotina"&&(tab==="Minha semana"||tab==="Meu mês")?<><div className="mb-4 grid grid-cols-2 gap-3"><div className="rounded-xl border border-border bg-background p-3"><p className="text-xs text-muted-foreground">Concluídos hoje</p><p className="mt-1 text-2xl font-bold tabular-nums">{entries.filter(e=>(e.completions?.includes(todayKey)??!!e.done)).length}<span className="text-sm font-medium text-muted-foreground">/{entries.length}</span></p></div><div className="rounded-xl border border-border bg-background p-3"><p className="text-xs text-muted-foreground">{tab==="Minha semana"?"Conclusões nos últimos 7 dias":"Conclusões nos últimos 30 dias"}</p><p className="mt-1 text-2xl font-bold tabular-nums">{entries.reduce((total,e)=>total+(e.completions??(e.done?[todayKey]:[])).filter(d=>{const age=(new Date(todayKey+"T12:00:00").getTime()-new Date(d+"T12:00:00").getTime())/86400000;return age>=0&&age<(tab==="Minha semana"?7:30)}).length,0)}</p></div></div>{addForm("Ex.: beber água, treinar, ler 30 min…","Adicionar hábito")}{list("Adicione seus hábitos e marque cada conclusão.",true)}<p className="mt-3 text-xs text-muted-foreground">Marcar um hábito registra a conclusão de hoje. O histórico fica guardado para acompanhar sua consistência, sem desmarcar os dias anteriores.</p></>
+      :module==="rotina"&&(tab==="Hoje"||tab==="Semana"||tab==="Planejamento")?<>{routineForm}{list(tab==="Hoje"?"Nenhuma atividade para hoje.":tab==="Semana"?"Nenhuma atividade nesta semana.":"Seu planejamento está vazio.",tab!=="Planejamento")}</>
+      :module==="treinos"&&tab==="Plano semanal"?<TreinosPlano entries={entries} setEntries={setEntries} empty={!ready} onRecordSession={recordWorkoutSession}/>
       :module==="treinos"&&tab==="Histórico"?<TreinosHistorico entries={entries} setEntries={setEntries} empty={!ready}/>
       :<>{addForm(tab==="Sobre mim"?"Escreva sobre você…":tab==="Gratidão"?"Pelo que você é grata hoje?":tab==="Carta"?"Escreva sua carta…":tab==="Diário"?"Escreva seu registro…":"Adicionar registro…")}{list("Ainda não há registros nesta aba.")}</>}
     </Panel>
@@ -249,7 +309,7 @@ export function PersonalModule({ module }: { module: PersonalModuleKey }) {
 }
 
 /* ---------- Treinos: Plano semanal (block-based) ---------- */
-function TreinosPlano({ entries, setEntries, empty }: { entries: Entry[]; setEntries: (updater: (prev: Entry[]) => Entry[]) => void; empty: boolean }) {
+function TreinosPlano({ entries, setEntries, empty, onRecordSession }: { entries: Entry[]; setEntries: (updater: (prev: Entry[]) => Entry[]) => void; empty: boolean; onRecordSession: (block: WorkoutBlock) => void | Promise<void> }) {
   const blocks: WorkoutBlock[] = useMemo(() => (entries as WorkoutEntry[]).map(entryToWorkoutBlock), [entries]);
   const ordered = useMemo(() => {
     const dayRank = new Map<string, number>(WORKOUT_DAYS.map((d, i) => [d, i] as const));
@@ -416,6 +476,14 @@ function TreinosPlano({ entries, setEntries, empty }: { entries: Entry[]; setEnt
                   ))
                 )}
               </div>
+
+              <button
+                type="button"
+                onClick={() => { void onRecordSession(block); }}
+                className="mt-3 inline-flex items-center gap-2 rounded-xl border border-primary/40 bg-primary/5 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/10"
+              >
+                <Check className="h-3.5 w-3.5" /> Registrar sessão no histórico
+              </button>
 
               <form
                 className="mt-3 flex flex-wrap items-center gap-2"
