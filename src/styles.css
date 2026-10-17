@@ -210,3 +210,12 @@
 .core-text-link { display: inline-flex; align-items: center; gap: 6px; color: var(--primary); font-size: 12px; font-weight: 650; }
 .core-home [data-slot="card"], .core-home .rounded-2xl.border.border-border.bg-card { box-shadow: 0 4px 16px rgb(35 30 20 / .025); }
 @media (max-width: 720px) { .core-welcome { min-height: 205px; border-radius: 23px; padding: 25px 21px; } .core-welcome-art { top: -88px; right: -170px; opacity: .4; } .core-welcome h1 { max-width: 280px; font-size: 30px; } .core-welcome-copy > p:not(.core-eyebrow) { max-width: 260px; } .core-welcome-actions { align-items: flex-start; flex-direction: column; gap: 10px; margin-top: 19px; } .core-section-heading { align-items: flex-start; flex-direction: column; } .core-finance-heading { align-items: flex-start; } .core-day-card { min-height: 172px; padding: 15px; } .core-shortcuts { gap: 7px; } .core-shortcuts > span { width: 100%; } }
+
+/* Shared app-wide polish, not only the home dashboard. */
+.core-page-header { padding-bottom: 3px; }
+.core-page-header h1 { letter-spacing: -.04em; }
+main .rounded-2xl.border.border-border\/70.bg-card, main .rounded-2xl.border.border-border.bg-card { border-radius: 20px; }
+main section.rounded-2xl.border.border-border\/70.bg-card { box-shadow: 0 5px 24px rgb(38 32 22 / .035); }
+main .label-caps { letter-spacing: .025em; }
+main input:not([type="checkbox"]), main select, main textarea { border-radius: 12px; }
+main button { transition-duration: 180ms; }
