@@ -42,6 +42,8 @@ function ShiftPlanner() {
   const [userId, setUserId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [sync, setSync] = useState<"local" | "syncing" | "synced" | "error">("local");
+  const [googleSyncing, setGoogleSyncing] = useState(false);
+  const [googleSyncMessage, setGoogleSyncMessage] = useState("");
   const loading = useRef(true);
 
   useEffect(() => {
@@ -109,7 +111,25 @@ function ShiftPlanner() {
     setEditingId(shift.id); setDate(shift.date); setStartTime(shift.startTime); setEndTime(shift.endTime); setNotes(shift.notes);
   };
   const cancelEdit = () => { setEditingId(null); setNotes(""); };
-  const removeShift = (id: string) => { const linked = shifts.find(shift => shift.id === id); if (!linked) return; const confirmed = window.confirm("Excluir este plantão da sua escala? Se estiver vinculado ao Google Agenda, a exclusão do evento será tratada na sincronização e não será feita sem confirmação."); if (confirmed) setShifts(current => current.filter(shift => shift.id !== id)); };
+  const removeShift = (id: string) => { const linked = shifts.find(shift => shift.id === id); if (!linked) return; const confirmed = window.confirm("Excluir este plantão da sua escala? O evento do Google Agenda não será excluído automaticamente; a sincronização informará se houver um vínculo que precisa de confirmação."); if (confirmed) setShifts(current => current.filter(shift => shift.id !== id)); };
+  const syncGoogle = async () => {
+    setGoogleSyncing(true); setGoogleSyncMessage("");
+    try {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) throw new Error("Entre na sua conta para sincronizar com o Google Agenda.");
+      const base = import.meta.env["VITE_SUPABASE_URL"];
+      if (!base) throw new Error("A URL do Supabase não está configurada.");
+      const response = await fetch(`${base}/functions/v1/google-calendar-shifts-sync`, { method: "POST", headers: { Authorization: `Bearer ${data.session.access_token}`, "Content-Type": "application/json" }, body: "{}" });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Falha na sincronização de plantões.");
+      const message = `Google Agenda: ${result.created} criado(s), ${result.updated} atualizado(s), ${result.imported} importado(s), ${result.conflicts} conflito(s), ${result.deleteConfirmationRequired} exclusão(ões) aguardando confirmação, ${result.failed} falha(s).`;
+      setGoogleSyncMessage(message);
+      if (result.deleteConfirmationRequired > 0) window.alert(`${message} Nenhum evento foi excluído do Google automaticamente.`);
+      else if (result.conflicts > 0 || result.failed > 0) window.alert(message);
+      else window.alert(message);
+    } catch (error) { setGoogleSyncMessage(error instanceof Error ? error.message : "Erro ao sincronizar Google Agenda."); window.alert(error instanceof Error ? error.message : "Erro ao sincronizar Google Agenda."); }
+    finally { setGoogleSyncing(false); }
+  };
   const todayDate = new Date();
   const today = todayDate.getFullYear() + "-" + String(todayDate.getMonth() + 1).padStart(2, "0") + "-" + String(todayDate.getDate()).padStart(2, "0");
   const upcoming = shifts.filter(shift => shift.date >= today);
@@ -131,7 +151,7 @@ function ShiftPlanner() {
     </Panel>
     <Panel title={showPast ? "TODOS OS PLANTÕES" : "PRÓXIMOS PLANTÕES"}>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><p className="text-xs text-muted-foreground">{upcoming.length} próximo(s) · {past.length} anterior(es)</p><button type="button" onClick={() => setShowPast(value => !value)} className="rounded-lg border border-border px-3 py-2 text-xs font-semibold">{showPast ? "Ocultar anteriores" : "Ver plantões anteriores"}</button></div>
-      <p className="mb-3 flex items-center gap-2 text-xs text-muted-foreground">{sync === "syncing" ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}{syncText}</p>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3"><p className="flex items-center gap-2 text-xs text-muted-foreground">{sync === "syncing" ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}{syncText}</p><button type="button" onClick={() => void syncGoogle()} disabled={googleSyncing} className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-xs font-semibold disabled:opacity-50">{googleSyncing ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <CalendarClock className="h-3.5 w-3.5" />}{googleSyncing ? "Sincronizando Google…" : "Sincronizar Google Agenda"}</button></div>{googleSyncMessage && <p role="status" className="mb-3 rounded-lg bg-muted p-3 text-xs text-muted-foreground">{googleSyncMessage}</p>}
       {!loaded ? <p className="py-8 text-center text-sm text-muted-foreground">Carregando sua escala…</p> : visibleShifts.length === 0 ? <div className="rounded-xl border border-dashed border-border px-4 py-8 text-center"><CalendarClock className="mx-auto mb-2 h-6 w-6 text-muted-foreground" /><p className="text-sm font-semibold">Nenhum plantão cadastrado para hoje ou para os próximos dias.</p><p className="mt-1 text-xs text-muted-foreground">Adicione seus turnos acima para começar sua escala.</p></div> : <div className="space-y-2">{visibleShifts.map(shift => <article key={shift.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary"><Clock3 className="h-5 w-5" /></div><div className="min-w-0 flex-1"><p className="text-sm font-semibold">{dateLabel(shift.date)}</p><p className="mt-1 text-xs text-muted-foreground">{shift.startTime}–{shift.endTime}{shift.endTime <= shift.startTime ? " (+1 dia)" : ""}{shift.notes ? ` · ${shift.notes}` : ""}</p></div><button type="button" onClick={() => editShift(shift)} aria-label="Editar plantão" className="rounded-lg p-2 text-muted-foreground hover:bg-primary/10 hover:text-primary"><Pencil className="h-4 w-4" /></button><button type="button" onClick={() => removeShift(shift.id)} aria-label="Excluir plantão" className="rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><Trash2 className="h-4 w-4" /></button></article>)}</div>}
     </Panel>
   </div>;
