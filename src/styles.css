@@ -110,14 +110,14 @@
 @layer base {
   * { border-color: var(--color-border); }
   html { scroll-behavior: smooth; overflow-x: hidden; }
-  body { background: var(--color-background); color: var(--color-foreground); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  body { background: var(--color-background); color: var(--color-foreground); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; overflow-x: hidden; text-transform: uppercase; }
   ::selection { background: color-mix(in oklab, var(--primary) 35%, transparent); color: var(--foreground); }
   ::-webkit-scrollbar { width: 8px; height: 8px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--secondary); border-radius: 999px; }
   .dark ::-webkit-scrollbar-thumb { background: var(--muted); }
   ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
-  input, textarea, select, button { text-transform: none; }
+  input, textarea, select, button { text-transform: uppercase; }
   input, textarea, select { transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease; }
   input:focus, textarea:focus, select:focus { outline: none; border-color: color-mix(in oklab, var(--primary) 70%, var(--border)); box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 14%, transparent); }
   button { transition: border-color .18s ease, background-color .18s ease, color .18s ease; }
@@ -452,6 +452,68 @@ main button { transition-duration: 180ms; }
 .dark .app-hero { background: linear-gradient(112deg, color-mix(in oklab, var(--primary) 14%, var(--card)) 0%, var(--card) 58%, color-mix(in oklab, #6f65a8 20%, var(--card)) 100%); }
 .dark .app-list-row:hover { background: color-mix(in oklab, var(--primary) 6%, var(--card)); }
 .dark .app-segmented, .dark .app-tabs { background: color-mix(in oklab, var(--card) 88%, transparent); }
+
+/* GLOBAL CONSISTENCY PASS — apply the same visual language to every module. */
+:root {
+  --app-content-max: 1320px;
+  --app-page-gap: clamp(16px, 2.2vw, 28px);
+  --app-control-height: 42px;
+  --app-radius-control: 12px;
+  --app-radius-card: 20px;
+}
+main {
+  width: 100%;
+  max-width: var(--app-content-max);
+  margin-inline: auto;
+  padding-inline: clamp(14px, 2vw, 28px);
+}
+main > * + * { margin-top: var(--app-page-gap); }
+main h1, main h2, main h3, main h4 {
+  text-wrap: pretty;
+}
+main h1 { line-height: 1.15; font-weight: 780; letter-spacing: -.035em; }
+main h2 { line-height: 1.2; font-weight: 720; letter-spacing: -.025em; }
+main h3 { line-height: 1.3; font-weight: 700; }
+main [data-slot="card"] {
+  border-color: var(--border);
+  border-radius: var(--app-radius-card);
+  box-shadow: 0 4px 18px rgb(35 30 20 / .025);
+}
+.dark main [data-slot="card"] { box-shadow: 0 4px 18px rgb(0 0 0 / .22); }
+main button:not([data-slot="checkbox"]):not([data-slot="switch"]) {
+  border-radius: var(--app-radius-control);
+}
+main input:not([type="checkbox"]):not([type="radio"]),
+main select,
+main textarea {
+  border-radius: var(--app-radius-control);
+}
+main input:not([type="checkbox"]):not([type="radio"]),
+main select {
+  min-height: var(--app-control-height);
+}
+main [role="dialog"], main [data-radix-dialog-content] {
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  box-shadow: 0 24px 80px rgb(0 0 0 / .18);
+}
+main table { width: 100%; border-collapse: separate; border-spacing: 0; }
+main th {
+  color: var(--muted-foreground);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: .045em;
+  text-align: left;
+}
+main td, main th { padding: 11px 12px; }
+main tr + tr td { border-top: 1px solid var(--border); }
+main a, main button { -webkit-tap-highlight-color: transparent; }
+@media (max-width: 720px) {
+  main { padding-inline: 14px; }
+  main [data-slot="card"] { border-radius: 17px; }
+  main [role="dialog"], main [data-radix-dialog-content] { border-radius: 20px; }
+  main table { display: block; overflow-x: auto; max-width: 100%; }
+}
 
 /* Mobile refinements so the same primitives feel right on small screens. */
 @media (max-width: 720px) {
