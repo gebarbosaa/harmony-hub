@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { SlidersHorizontal, RotateCcw, Eye, EyeOff, Sparkles, ArrowUpRight, CalendarDays, Heart, LayoutGrid } from "lucide-react";
+import { SlidersHorizontal, RotateCcw, Eye, EyeOff, Sparkles, ArrowUpRight, CalendarDays, Heart, LayoutGrid, House, ShoppingCart, Clock3, Package, Utensils, Wrench, Users, ShieldCheck, Wallet } from "lucide-react";
 import { Panel } from "@/components/ui-kit";
 import { moduleGroups, type ModuleGroup } from "@/components/layout/nav";
 
@@ -33,10 +33,37 @@ export function MorePage() {
   const [mode, setMode] = useState<"PESSOAL" | "EMPRESARIAL">(readMode);
   const [customizing, setCustomizing] = useState(false);
   const [visibleModules, setVisibleModules] = useState<string[] | null>(readVisibleModules);
-  const groups: ModuleGroup[] = useMemo(() => moduleGroups.filter(group =>
-    group.context === "SYSTEM" || (mode === "EMPRESARIAL" ? group.context === "BUSINESS" : group.context === "PERSONAL"),
-  ), [mode]);
-  const allModuleIds = useMemo(() => moduleGroups.flatMap(group => group.items.map(item => item.to)), []);
+  const groups: ModuleGroup[] = useMemo(() => {
+    const visibleGroups = moduleGroups.filter(group =>
+      group.context === "SYSTEM" || (mode === "EMPRESARIAL" ? group.context === "BUSINESS" : group.context === "PERSONAL"),
+    );
+    if (mode === "EMPRESARIAL") return visibleGroups;
+
+    const casaRoutes = new Set(["/casa", "/alimentacao", "/rotina"]);
+    const reorganizedGroups = visibleGroups
+      .map(group => ({ ...group, items: group.items.filter(item => !casaRoutes.has(item.to)) }))
+      .filter(group => group.items.length > 0);
+    const casaTabs = [
+      { label: "Cômodos", tab: "Cômodos", icon: House },
+      { label: "Mercado", tab: "Mercado", icon: ShoppingCart },
+      { label: "Rotina doméstica", tab: "Rotina", icon: Clock3 },
+      { label: "Despensa", tab: "Despensa", icon: Package },
+      { label: "Cardápio", tab: "Cardápio", icon: Utensils },
+      { label: "Manutenção", tab: "Manutenção", icon: Wrench },
+      { label: "Co-op", tab: "Co-op", icon: Users },
+      { label: "Segurança", tab: "Segurança", icon: ShieldCheck },
+      { label: "Utilidades", tab: "Utilidades", icon: Wallet },
+    ];
+    reorganizedGroups.push({
+      label: "Casa",
+      description: "Organize os cômodos, compras, refeições, tarefas e cuidados da casa em um só lugar.",
+      icon: House,
+      context: "PERSONAL",
+      items: casaTabs.map(item => ({ label: item.label, to: `/casa#tab=${encodeURIComponent(item.tab)}`, icon: item.icon })),
+    });
+    return reorganizedGroups;
+  }, [mode]);
+  const allModuleIds = useMemo(() => groups.flatMap(group => group.items.map(item => item.to)), [groups]);
   const activeModuleIds = visibleModules === null ? allModuleIds : allModuleIds.filter(id => visibleModules.includes(id));
   useEffect(() => {
     if (visibleModules === null) return;

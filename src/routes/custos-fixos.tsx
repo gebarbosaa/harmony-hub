@@ -12,7 +12,7 @@ import { MonthSelector, useGlobalMonth } from "@/hooks/use-global-month";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/custos-fixos")({
-  head: () => ({ meta: [{ title: "CUSTOS FIXOS E ASSINATURAS — MULTICAP" }] }),
+  head: () => ({ meta: [{ title: "CUSTOS FIXOS E ASSINATURAS — Harmony Hub" }] }),
   component: FixedCostsPage,
 });
 
