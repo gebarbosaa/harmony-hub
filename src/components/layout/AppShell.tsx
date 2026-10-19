@@ -51,7 +51,7 @@ function SidebarSections({pathname,hash,mode,onModeChange}:{pathname:string;hash
           })}
         </div>
       </section>)}
-    </nav>} : <nav aria-label="Navegação empresarial" className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+    </nav> : <nav aria-label="Navegação empresarial" className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
       <p className="px-3 pb-2 text-[10px] font-semibold tracking-wide text-muted-foreground">GESTÃO EMPRESARIAL</p>
       {businessItems.map(item=>{
         const itemHash=item.to.includes("#")?"#"+item.to.split("#")[1]:"";
