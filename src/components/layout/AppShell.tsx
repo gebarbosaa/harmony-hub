@@ -37,7 +37,7 @@ function SidebarSections({pathname,hash,mode,onModeChange}:{pathname:string;hash
     {label:"Estoque e operação",description:"Insumos, estoque, compras, fornecedores e produção.",order:["Insumos","Estoque de insumos","Compras","Fornecedores","Produção"]},
     {label:"Produtos e vendas",description:"Receitas, precificação e vendas.",order:["Receitas empresariais","Produtos e precificação","Vendas"]},
     {label:"Financeiro",description:"Caixa empresarial e simulação de lucro presumido.",order:["Financeiro empresarial","Lucro presumido"]},
-  ].map(group=>({...group,items:group.order.map(label=>businessItems.find(item=>item.label===label)).filter((item):item is typeof businessItems[number]=>Boolean(item))}));
+  ].map(group=>({...group,items:businessItems.filter(item=>group.order.includes(item.label)).sort((a,b)=>group.order.indexOf(a.label)-group.order.indexOf(b.label))}));
   return <>
     <SidebarModeSwitch mode={mode} onChange={onModeChange}/>
     {mode==="PESSOAL" ? <nav aria-label="Navegação pessoal por grupos" className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
