@@ -97,9 +97,9 @@ export function MorePage() {
           {groups.flatMap(group => group.items.map(item => <label key={item.to} className="flex cursor-pointer items-center gap-3 rounded-xl border border-border/70 bg-card px-3 py-3 text-sm hover:border-primary/40"><input type="checkbox" checked={activeModuleIds.includes(item.to)} onChange={() => toggleModule(item.to)} className="h-4 w-4 accent-[var(--primary)]" /><item.icon className="h-4 w-4 shrink-0 text-muted-foreground" /><span className="min-w-0 flex-1">{item.label}</span>{activeModuleIds.includes(item.to) ? <Eye className="h-4 w-4 text-primary" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}</label>))}
         </div>
       </div>}
-      <div className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-12 md:auto-rows-min md:gap-5 xl:gap-6">
+      <div className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-2 md:gap-5 xl:gap-6">
         {groups.filter(group => group.items.some(item => activeModuleIds.includes(item.to))).map((group, index) => (
-          <Panel key={group.label} className={`core-hub-group min-w-0 ${({"Planejamento":"md:col-span-7 md:row-span-2","Contas e pagamentos":"md:col-span-5","Sistema":"md:col-span-5","Organização":"md:col-span-7 md:row-span-2","Movimentações":"md:col-span-5","Empresa":"md:col-span-7"} as Record<string,string>)[group.label] ?? "md:col-span-6"}`}>
+          <Panel key={group.label} className="core-hub-group min-w-0 w-full">
             <section aria-labelledby={`painel-grupo-${index}`}>
               <div className="flex items-start gap-3 border-b border-border/70 pb-4">
                 <div className={`core-hub-group-icon core-hub-group-icon-${index % 5} flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl`}>
