@@ -60,9 +60,6 @@ function EmpresarialPage(){
  const stockValue=bi.reduce((s,x)=>s+Number(x.stock_quantity)*Number(x.cost_per_base_unit),0),monthKey=todaySP().slice(0,7),salesTotal=bsa.filter(x=>x.sale_date?.startsWith(monthKey)&&x.status!=="CANCELADA").reduce((s,x)=>s+Number(x.total_amount),0),cashIn=bc.filter(x=>x.entry_date?.startsWith(monthKey)&&x.entry_type==="ENTRADA").reduce((s,x)=>s+Number(x.amount),0),cashOut=bc.filter(x=>x.entry_date?.startsWith(monthKey)&&x.entry_type==="SAIDA").reduce((s,x)=>s+Number(x.amount),0);
  return <div className="space-y-5">
 
- {!activeId&&tab!=="EMPRESA"?<Panel><div className="py-10 text-center"><Building2 className="mx-auto mb-3 h-9 w-9 text-primary"/><p className="font-bold">CADASTRE SUA EMPRESA PRIMEIRO</p><p className="mt-1 text-sm text-muted-foreground">O módulo empresarial mantém estoque, receitas, produção e caixa separados do financeiro pessoal.</p><button className={saveBtnClass+" mt-4"} onClick={()=>setTab("EMPRESA")}><Plus className="h-4 w-4"/>CADASTRAR EMPRESA</button></div></Panel>:
- <>
- {businesses.rows.length>1&&<div className="flex items-center gap-2"><span className="label-caps text-[9px] text-muted-foreground">EMPRESA ATIVA</span><select className={inputClass+" max-w-xs"} value={activeId??""} onChange={e=>setBusinessId(e.target.value)}>{businesses.rows.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></div>}
  <nav aria-label="Seções empresariais" className="space-y-4">
  {businessTabGroups.map(group=><section key={group.label} aria-label={group.label} className="rounded-xl border border-border/70 bg-card p-3 sm:p-4">
   <h2 className="mb-3 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{group.label}</h2>
@@ -71,6 +68,10 @@ function EmpresarialPage(){
   </div>
  </section>)}
 </nav>
+
+ {!activeId&&tab!=="EMPRESA"?<Panel><div className="py-10 text-center"><Building2 className="mx-auto mb-3 h-9 w-9 text-primary"/><p className="font-bold">CADASTRE SUA EMPRESA PRIMEIRO</p><p className="mt-1 text-sm text-muted-foreground">O módulo empresarial mantém estoque, receitas, produção e caixa separados do financeiro pessoal.</p><button className={saveBtnClass+" mt-4"} onClick={()=>setTab("EMPRESA")}><Plus className="h-4 w-4"/>CADASTRAR EMPRESA</button></div></Panel>:
+ <>
+ {businesses.rows.length>1&&<div className="flex items-center gap-2"><span className="label-caps text-[9px] text-muted-foreground">EMPRESA ATIVA</span><select className={inputClass+" max-w-xs"} value={activeId??""} onChange={e=>setBusinessId(e.target.value)}>{businesses.rows.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></div>}
  {tab==="DASHBOARD"&&<Dashboard ingredients={bi} recipes={br} products={bp} productions={bprod} stockValue={stockValue} salesTotal={salesTotal} cashIn={cashIn} cashOut={cashOut} salesRows={bsa} cashRows={bc} onNavigate={setTab}/>}
  {tab==="EMPRESA"&&<CompanyTab business={business} table={businesses} onSelected={setBusinessId}/>}
  {tab==="INSUMOS"&&<IngredientsTab business={business} rows={bi} table={ingredients} suppliers={bs} recipes={br} recipeItems={bri}/>}
