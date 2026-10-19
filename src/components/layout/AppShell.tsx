@@ -51,6 +51,20 @@ function SidebarSections({pathname,hash,mode,onModeChange}:{pathname:string;hash
           })}
         </div>
       </section>)}
+    </nav>} : <nav aria-label="Navegação empresarial" className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+      <p className="px-3 pb-2 text-[10px] font-semibold tracking-wide text-muted-foreground">GESTÃO EMPRESARIAL</p>
+      {businessItems.map(item=>{
+        const itemHash=item.to.includes("#")?"#"+item.to.split("#")[1]:"";
+        const active=pathname==="/empresarial"&&hash===itemHash;
+        return <button key={item.to} type="button" onClick={()=>{
+          const nextHash=item.to.includes("#")?item.to.slice(item.to.indexOf("#")):"";
+          if(nextHash){try{localStorage.setItem("harmony:last-business-tab",nextHash.slice(1))}catch{void 0}}
+          window.history.replaceState(null,"",nextHash?"/empresarial"+nextHash:"/empresarial");
+          window.dispatchEvent(new HashChangeEvent("hashchange"));
+        }} className={cn("flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-medium transition-colors",active?"bg-primary/10 text-primary":"text-muted-foreground hover:bg-sidebar-accent hover:text-foreground")}>
+          <item.icon className="h-4 w-4 shrink-0"/><span>{item.label}</span>{active&&<span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary"/>}
+        </button>
+      })}
     </nav>}
   </>;
 }
