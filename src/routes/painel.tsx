@@ -97,10 +97,10 @@ export function MorePage() {
           {groups.flatMap(group => group.items.map(item => <label key={item.to} className="flex cursor-pointer items-center gap-3 rounded-xl border border-border/70 bg-card px-3 py-3 text-sm hover:border-primary/40"><input type="checkbox" checked={activeModuleIds.includes(item.to)} onChange={() => toggleModule(item.to)} className="h-4 w-4 accent-[var(--primary)]" /><item.icon className="h-4 w-4 shrink-0 text-muted-foreground" /><span className="min-w-0 flex-1">{item.label}</span>{activeModuleIds.includes(item.to) ? <Eye className="h-4 w-4 text-primary" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}</label>))}
         </div>
       </div>}
-      <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2 xl:gap-6">
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:gap-6">
         {groups.filter(group => group.items.some(item => activeModuleIds.includes(item.to))).map((group, index) => (
-          <Panel key={group.label} className="core-hub-group">
-            <section aria-labelledby={`painel-grupo-${index}`}>
+          <Panel key={group.label} className="core-hub-group h-full">
+            <section className="flex h-full flex-col" aria-labelledby={`painel-grupo-${index}`}>
               <div className="flex items-start gap-3 border-b border-border/70 pb-4">
                 <div className={`core-hub-group-icon core-hub-group-icon-${index % 5} flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl`}>
                   <group.icon className="h-5 w-5" aria-hidden="true" />
