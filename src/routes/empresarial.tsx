@@ -60,11 +60,11 @@ function EmpresarialPage(){
  const stockValue=bi.reduce((s,x)=>s+Number(x.stock_quantity)*Number(x.cost_per_base_unit),0),monthKey=todaySP().slice(0,7),salesTotal=bsa.filter(x=>x.sale_date?.startsWith(monthKey)&&x.status!=="CANCELADA").reduce((s,x)=>s+Number(x.total_amount),0),cashIn=bc.filter(x=>x.entry_date?.startsWith(monthKey)&&x.entry_type==="ENTRADA").reduce((s,x)=>s+Number(x.amount),0),cashOut=bc.filter(x=>x.entry_date?.startsWith(monthKey)&&x.entry_type==="SAIDA").reduce((s,x)=>s+Number(x.amount),0);
  return <div className="space-y-5">
 
- <nav aria-label="Seções empresariais" className="space-y-4">
- {businessTabGroups.map(group=><section key={group.label} aria-label={group.label} className="rounded-xl border border-border/70 bg-card p-3 sm:p-4">
-  <h2 className="mb-3 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{group.label}</h2>
-  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
-   {group.tabs.map(t=>{const Icon=t.icon;return <button key={t.id} type="button" aria-current={tab===t.id?"page":undefined} onClick={()=>{setTab(t.id);try{window.location.hash=encodeURIComponent(t.id);localStorage.setItem("harmony:last-business-tab",t.id)}catch{void 0}}} className={`flex min-h-[72px] items-center gap-2 rounded-xl border px-3 py-3 text-left text-[10px] font-bold transition-colors ${tab===t.id?"border-primary bg-primary/10 text-primary shadow-sm":"border-border/70 bg-background text-foreground hover:border-primary/40 hover:bg-primary/5"}`}><Icon className="h-4 w-4 shrink-0"/><span>{t.label}</span></button>})}
+ <nav aria-label="Seções empresariais" className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+ {businessTabGroups.map(group=><section key={group.label} aria-label={group.label} className="rounded-2xl border border-border/70 bg-card p-4 shadow-sm">
+  <div className="mb-3 flex items-center gap-3 border-b border-border/70 pb-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary"><Building2 className="h-4 w-4"/></span><h2 className="text-sm font-semibold">{group.label}</h2></div>
+  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+   {group.tabs.map(t=>{const Icon=t.icon;return <button key={t.id} type="button" aria-current={tab===t.id?"page":undefined} onClick={()=>{setTab(t.id);try{window.location.hash=encodeURIComponent(t.id);localStorage.setItem("harmony:last-business-tab",t.id)}catch{void 0}}} className={`flex min-h-[48px] min-w-0 items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${tab===t.id?"border-primary/50 bg-primary/10 text-primary":"border-border/70 bg-background text-foreground hover:border-primary/40 hover:bg-primary/5"}`}><Icon className="h-4 w-4 shrink-0"/><span className="min-w-0 flex-1">{t.label}</span></button>})}
   </div>
  </section>)}
 </nav>
