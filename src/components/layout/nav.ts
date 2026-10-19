@@ -30,17 +30,6 @@ export const primaryNavItems: NavItem[] = [
 /** Catálogo único de módulos, usado pela busca e pelo Painel. */
 export const moduleGroups: ModuleGroup[] = [
   {
-    label: "Movimentações",
-    description: "Entradas, saídas e terceiros.",
-    icon: ArrowLeftRight,
-    context: "PERSONAL",
-    items: [
-      { label: "Receitas", to: "/receitas", icon: ArrowUpCircle },
-      { label: "Despesas", to: "/despesas", icon: ArrowDownCircle },
-      { label: "Terceiros", to: "/terceiros", icon: UserRound },
-    ],
-  },
-  {
     label: "Planejamento",
     description: "Orçamentos, assinaturas, custos fixos, metas e investimentos.",
     icon: TrendingUp,
@@ -67,6 +56,19 @@ export const moduleGroups: ModuleGroup[] = [
     ],
   },
   {
+    label: "Sistema",
+    description: "Grupos, planilha, calendário, importações e integrações.",
+    icon: Settings,
+    context: "SYSTEM",
+    items: [
+      { label: "Grupos", to: "/grupos", icon: Users },
+      { label: "Planilha", to: "/integracao-planilha", icon: Table2 },
+      { label: "Calendário", to: "/calendario", icon: CalendarDays },
+      { label: "Importações", to: "/importacao", icon: Upload },
+      { label: "Integrações", to: "/integracoes", icon: Plug },
+    ],
+  },
+  {
     label: "Organização",
     description: "Rotina, hábitos, plantões, treinos, alimentação e mercado/despensa.",
     icon: Sparkles,
@@ -78,7 +80,17 @@ export const moduleGroups: ModuleGroup[] = [
       { label: "Treinos", to: "/treinos", icon: Dumbbell },
       { label: "Alimentação", to: "/alimentacao", icon: Utensils },
       { label: "Mercado / Despensa", to: "/casa", icon: House },
-      { label: "Leitura", to: "/leitura", icon: BookOpen },
+    ],
+  },
+  {
+    label: "Movimentações",
+    description: "Entradas, saídas e terceiros.",
+    icon: ArrowLeftRight,
+    context: "PERSONAL",
+    items: [
+      { label: "Receitas", to: "/receitas", icon: ArrowUpCircle },
+      { label: "Despesas", to: "/despesas", icon: ArrowDownCircle },
+      { label: "Terceiros", to: "/terceiros", icon: UserRound },
     ],
   },
   {
@@ -100,19 +112,6 @@ export const moduleGroups: ModuleGroup[] = [
       { label: "Financeiro empresarial", to: "/empresarial#FINANCEIRO", icon: Wallet },
       { label: "Lucro presumido", to: "/empresarial#LUCRO_PRESUMIDO", icon: Calculator },
       { label: "Ajustes empresariais", to: "/empresarial#AJUSTES", icon: Settings },
-    ],
-  },
-  {
-    label: "Sistema",
-    description: "Grupos, planilha, calendário, importações e integrações.",
-    icon: Settings,
-    context: "SYSTEM",
-    items: [
-      { label: "Grupos", to: "/grupos", icon: Users },
-      { label: "Planilha", to: "/integracao-planilha", icon: Table2 },
-      { label: "Calendário", to: "/calendario", icon: CalendarDays },
-      { label: "Importações", to: "/importacao", icon: Upload },
-      { label: "Integrações", to: "/integracoes", icon: Plug },
     ],
   },
 ];
