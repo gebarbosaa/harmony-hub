@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { SlidersHorizontal, RotateCcw, Eye, EyeOff, Sparkles, ArrowUpRight, CalendarDays, Heart, LayoutGrid, House, Clock3, Utensils } from "lucide-react";
+import { SlidersHorizontal, RotateCcw, Eye, EyeOff, Sparkles, ArrowUpRight, CalendarDays, Heart, LayoutGrid, House, Clock3, Utensils, ShoppingCart } from "lucide-react";
 import { Panel, Button, Hero, SegmentedControl, IconBadge } from "@/components/ui-kit";
 import { moduleGroups, type ModuleGroup } from "@/components/layout/nav";
 
