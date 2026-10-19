@@ -358,3 +358,16 @@ main a, main button { -webkit-tap-highlight-color: transparent; }
   [role="dialog"], [data-radix-dialog-content] { border-radius: 20px; }
   main table { display: block; overflow-x: auto; max-width: 100%; }
 }
+
+
+/* Botões do app: altura e tipografia uniformes; controles icon-only mantêm formato quadrado. */
+@layer components {
+  button:not([class*="size-"]) {
+    height: 40px !important;
+    min-height: 40px;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    font-size: 12px !important;
+    line-height: 1 !important;
+  }
+}
