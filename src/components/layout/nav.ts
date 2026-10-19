@@ -71,7 +71,6 @@ export const moduleGroups: ModuleGroup[] = [
     icon: Sparkles,
     context: "PERSONAL",
     items: [
-      { label: "Desenvolvimento pessoal", to: "/desenvolvimento-pessoal", icon: Sparkles },
       { label: "Casa", to: "/casa", icon: House },
       { label: "Leitura", to: "/leitura", icon: BookOpen },
       { label: "Alimentação", to: "/alimentacao", icon: Utensils },
