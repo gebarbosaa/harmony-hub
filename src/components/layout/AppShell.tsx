@@ -24,7 +24,6 @@ function SidebarSections({pathname,hash,mode,onModeChange}:{pathname:string;hash
   const businessItems=businessNavItems;
   const personalMainItems=[
     {label:"INÍCIO",to:"/",icon:LayoutDashboard},
-    {label:"FLUXO",to:"/fluxo",icon:ArrowLeftRight},
     {label:"PAINEL",to:"/painel",icon:MoreHorizontal},
     {label:"AJUSTES",to:"/ajustes",icon:Settings},
   ];
