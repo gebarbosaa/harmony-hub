@@ -33,11 +33,11 @@ function SidebarSections({pathname,hash,mode,onModeChange}:{pathname:string;hash
     {label:"AJUSTES",to:"/empresarial#AJUSTES",icon:Settings},
   ];
   const businessGroups=[
-    {label:"Visão geral",items:businessItems.filter(item=>["Cadastro da empresa"].includes(item.label))},
-    {label:"Estoque e operação",items:businessItems.filter(item=>["Insumos","Estoque de insumos","Fornecedores","Produção","Compras"].includes(item.label))},
-    {label:"Produtos e vendas",items:businessItems.filter(item=>["Receitas empresariais","Produtos e precificação","Vendas"].includes(item.label))},
-    {label:"Financeiro",items:businessItems.filter(item=>["Financeiro empresarial","Lucro presumido"].includes(item.label))},
-  ];
+    {label:"Visão geral",description:"Cadastro e informações da empresa.",order:["Cadastro da empresa"]},
+    {label:"Estoque e operação",description:"Insumos, estoque, compras, fornecedores e produção.",order:["Insumos","Estoque de insumos","Compras","Fornecedores","Produção"]},
+    {label:"Produtos e vendas",description:"Receitas, precificação e vendas.",order:["Receitas empresariais","Produtos e precificação","Vendas"]},
+    {label:"Financeiro",description:"Caixa empresarial e simulação de lucro presumido.",order:["Financeiro empresarial","Lucro presumido"]},
+  ].map(group=>({...group,items:businessItems.filter(item=>group.order.includes(item.label)).sort((a,b)=>group.order.indexOf(a.label)-group.order.indexOf(b.label))}));
   return <>
     <SidebarModeSwitch mode={mode} onChange={onModeChange}/>
     {mode==="PESSOAL" ? <nav aria-label="Navegação pessoal por grupos" className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
@@ -78,7 +78,7 @@ function SidebarSections({pathname,hash,mode,onModeChange}:{pathname:string;hash
       })}
       <div className="my-3 border-t border-sidebar-border/70"/>
       {businessGroups.map(group=><section key={group.label} aria-label={group.label} className="mb-4">
-        <div className="px-3 pb-2 pt-1"><p className="text-[10px] font-bold tracking-wide text-foreground">{group.label}</p></div>
+        <div className="px-3 pb-2 pt-1"><p className="text-[10px] font-bold tracking-wide text-foreground">{group.label}</p><p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">{group.description}</p></div>
         <div className="space-y-1">
           {group.items.map(item=>{
             const itemHash=item.to.includes("#")?"#"+item.to.split("#")[1]:"";
