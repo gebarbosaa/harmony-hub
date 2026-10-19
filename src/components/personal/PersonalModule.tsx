@@ -167,6 +167,11 @@ export function PersonalModule({ module }: { module: PersonalModuleKey }) {
   const [totalPages,setTotalPages] = useState("240");
   const activeKey = module + ":" + tab;
   const storageTab = sharedTabFor(module, tab);
+  useEffect(() => {
+    if (module !== "casa" || !window.location.hash.startsWith("#tab=")) return;
+    const requested = decodeURIComponent(window.location.hash.slice(5));
+    if (config.tabs.includes(requested)) setTab(requested);
+  }, [module, config.tabs]);
   const ready = loadedKey === activeKey;
   const now = new Date();
   const month = now.toLocaleDateString("pt-BR",{month:"long",year:"numeric"});
