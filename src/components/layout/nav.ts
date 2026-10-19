@@ -54,16 +54,6 @@ export const moduleGroups: ModuleGroup[] = [
     ],
   },
   {
-    label: "Cartões",
-    description: "Cartões de crédito, faturas e compras parceladas.",
-    icon: CreditCard,
-    context: "PERSONAL",
-    items: [
-      { label: "Cartões e faturas", to: "/faturas", icon: CreditCard },
-      { label: "Parcelas", to: "/parcelados", icon: ReceiptText },
-    ],
-  },
-  {
     label: "Planejamento",
     description: "Orçamento, metas e organização dos investimentos.",
     icon: TrendingUp,
@@ -89,6 +79,16 @@ export const moduleGroups: ModuleGroup[] = [
       { label: "Plantões", to: "/plantoes", icon: CalendarClock },
       { label: "Hábitos", to: "/habitos", icon: CheckSquare },
       { label: "Rotina", to: "/rotina", icon: Clock3 },
+    ],
+  },
+  {
+    label: "Cartões",
+    description: "Cartões de crédito, faturas e compras parceladas.",
+    icon: CreditCard,
+    context: "PERSONAL",
+    items: [
+      { label: "Cartões e faturas", to: "/faturas", icon: CreditCard },
+      { label: "Parcelas", to: "/parcelados", icon: ReceiptText },
     ],
   },
   {
