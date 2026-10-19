@@ -123,7 +123,7 @@ export const navItems: NavItem[] = [
 ];
 export const personalNavItems = navItems;
 
-export const businessNavItems: NavItem[] = moduleGroups.find(group => group.context === "BUSINESS")!.items;
+export const businessNavItems: NavItem[] = moduleGroups.filter(group => group.context === "BUSINESS").flatMap(group => group.items);
 
 export const personalQuickAddOptions = [
   { label: "NOVA DESPESA", icon: ArrowDownCircle, kind: "DESPESA" },
