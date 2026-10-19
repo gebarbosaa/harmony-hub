@@ -10,6 +10,12 @@ import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/empresarial")({ head: () => ({ meta: [{ title: "EMPRESARIAL — HARMONY HUB" }] }), component: EmpresarialPage });
 type Tab="DASHBOARD"|"EMPRESA"|"INSUMOS"|"ESTOQUE_INSUMOS"|"COMPRAS"|"RECEITAS"|"PRECIFICAÇÃO"|"FORNECEDORES"|"PRODUÇÃO"|"VENDAS"|"FINANCEIRO"|"LUCRO_PRESUMIDO"|"AJUSTES";
+const businessTabGroups = [
+ { label: "Visão geral", tabs: tabs.filter(t => ["DASHBOARD", "EMPRESA"].includes(t.id)) },
+ { label: "Estoque e operação", tabs: tabs.filter(t => ["INSUMOS", "ESTOQUE_INSUMOS", "FORNECEDORES", "COMPRAS", "PRODUÇÃO"].includes(t.id)) },
+ { label: "Produtos e vendas", tabs: tabs.filter(t => ["RECEITAS", "PRECIFICAÇÃO", "VENDAS"].includes(t.id)) },
+ { label: "Financeiro e configurações", tabs: tabs.filter(t => ["FINANCEIRO", "LUCRO_PRESUMIDO", "AJUSTES"].includes(t.id)) },
+];
 const tabs:{id:Tab;label:string;icon:typeof Building2}[]=[
 {id:"DASHBOARD",label:"DASHBOARD",icon:Wallet},{id:"EMPRESA",label:"EMPRESA",icon:Building2},{id:"INSUMOS",label:"INSUMOS / NECESSIDADES",icon:ClipboardList},{id:"ESTOQUE_INSUMOS",label:"ESTOQUE DE INSUMOS",icon:Package},{id:"COMPRAS",label:"COMPRAS",icon:ShoppingCart},
 {id:"RECEITAS",label:"RECEITAS",icon:ChefHat},{id:"PRECIFICAÇÃO",label:"PRECIFICAÇÃO",icon:Calculator},{id:"FORNECEDORES",label:"FORNECEDORES",icon:Users},
@@ -57,7 +63,7 @@ function EmpresarialPage(){
  {!activeId&&tab!=="EMPRESA"?<Panel><div className="py-10 text-center"><Building2 className="mx-auto mb-3 h-9 w-9 text-primary"/><p className="font-bold">CADASTRE SUA EMPRESA PRIMEIRO</p><p className="mt-1 text-sm text-muted-foreground">O módulo empresarial mantém estoque, receitas, produção e caixa separados do financeiro pessoal.</p><button className={saveBtnClass+" mt-4"} onClick={()=>setTab("EMPRESA")}><Plus className="h-4 w-4"/>CADASTRAR EMPRESA</button></div></Panel>:
  <>
  {businesses.rows.length>1&&<div className="flex items-center gap-2"><span className="label-caps text-[9px] text-muted-foreground">EMPRESA ATIVA</span><select className={inputClass+" max-w-xs"} value={activeId??""} onChange={e=>setBusinessId(e.target.value)}>{businesses.rows.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></div>}
- <div className="flex flex-col gap-2 rounded-xl border border-border/70 bg-card p-3 sm:flex-row sm:items-center sm:justify-between"><label htmlFor="business-section" className="label-caps text-[10px] font-semibold text-muted-foreground">SEÇÃO EMPRESARIAL</label><select id="business-section" aria-label="Selecionar seção empresarial" className={inputClass+" sm:max-w-sm"} value={tab} onChange={e=>{const next=e.target.value as Tab;setTab(next);try{window.location.hash=encodeURIComponent(next);localStorage.setItem("harmony:last-business-tab",next)}catch{void 0}}}>{tabs.map(t=><option key={t.id} value={t.id}>{t.label}</option>)}</select></div>
+ <div className="flex flex-col gap-2 rounded-xl border border-border/70 bg-card p-3 sm:flex-row sm:items-center sm:justify-between"><label htmlFor="business-section" className="label-caps text-[10px] font-semibold text-muted-foreground">SEÇÃO EMPRESARIAL</label><select id="business-section" aria-label="Selecionar seção empresarial" className={inputClass+" sm:max-w-sm"} value={tab} onChange={e=>{const next=e.target.value as Tab;setTab(next);try{window.location.hash=encodeURIComponent(next);localStorage.setItem("harmony:last-business-tab",next)}catch{void 0}}}>{businessTabGroups.map(group=><optgroup key={group.label} label={group.label}>{group.tabs.map(t=><option key={t.id} value={t.id}>{t.label}</option>)}</optgroup>)}</select></div>
  {tab==="DASHBOARD"&&<Dashboard ingredients={bi} recipes={br} products={bp} productions={bprod} stockValue={stockValue} salesTotal={salesTotal} cashIn={cashIn} cashOut={cashOut} salesRows={bsa} cashRows={bc} onNavigate={setTab}/>}
  {tab==="EMPRESA"&&<CompanyTab business={business} table={businesses} onSelected={setBusinessId}/>}
  {tab==="INSUMOS"&&<IngredientsTab business={business} rows={bi} table={ingredients} suppliers={bs} recipes={br} recipeItems={bri}/>}
