@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, Sun, Moon, Plus, Trash2, Check, Play, Pause, RotateCcw, List, Table2, CalendarDays, ChartNoAxesColumn, Search, ArrowUpDown, ChevronLeft, ChevronRight, Clock3, CalendarPlus, LayoutGrid } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Check, Play, Pause, RotateCcw, List, Table2, CalendarDays, ChartNoAxesColumn, Search, ArrowUpDown, ChevronLeft, ChevronRight, Clock3, CalendarPlus, LayoutGrid } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Panel } from "@/components/ui-kit";
 import { shiftToPlannerEntry, type ShiftRecord } from "@/lib/shifts";
@@ -142,7 +142,6 @@ export function PersonalModule({ module }: { module: PersonalModuleKey }) {
   const [routineModalOpen,setRoutineModalOpen] = useState(false);
   const [plannerDate,setPlannerDate] = useState(() => localDateKey());
   const [plannerView,setPlannerView] = useState<"dia"|"semana"|"mes"|"lista">("semana");
-  const [theme,setTheme] = useState<"light"|"dark">("light");
   const [mood,setMood] = useState("🙂");
   const [score,setScore] = useState(7);
   const [seconds,setSeconds] = useState(60);
@@ -189,7 +188,6 @@ export function PersonalModule({ module }: { module: PersonalModuleKey }) {
 
   useEffect(() => {
     try {
-      setTheme(localStorage.getItem("harmony-personal-theme") === "dark" ? "dark" : "light");
       const waterKey = "harmony-food-water:" + localDateKey();
       setWaterMl(Number(localStorage.getItem(waterKey) || 0));
       const checked = JSON.parse(localStorage.getItem("harmony-food-shopping-checked") || "[]") as unknown;
@@ -395,8 +393,8 @@ export function PersonalModule({ module }: { module: PersonalModuleKey }) {
   const pill = (active:boolean) => "shrink-0 rounded-full border px-4 py-2 text-xs font-semibold transition "+(active?"border-foreground bg-foreground text-background":"border-border bg-background text-muted-foreground hover:text-foreground");
   const progress = module==="leitura" ? Math.min(100,Math.max(0,Number(page||0)/Math.max(1,Number(totalPages||1))*100)) : 0;
 
-  return <div className={theme==="dark"?"space-y-5 rounded-3xl bg-slate-950 p-3 text-slate-100 sm:p-6":"space-y-5"}>
-    <div className="flex items-center justify-between gap-3"><Link to="/painel" className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm"><ArrowLeft className="h-4 w-4"/> Voltar ao Painel</Link><button type="button" onClick={()=>setTheme(t=>{const next=t==="dark"?"light":"dark";try { localStorage.setItem("harmony-personal-theme", next); } catch (error) { console.warn("[personal-module] theme preference could not be saved", error); } return next})} className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm">{theme==="dark"?<Sun className="h-4 w-4"/>:<Moon className="h-4 w-4"/>}{theme==="dark"?"Tema claro":"Tema escuro"}</button></div>
+  return <div className="space-y-5">
+    <div className="flex items-center justify-start"><Link to="/painel" className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm"><ArrowLeft className="h-4 w-4"/> Voltar ao Painel</Link></div>
     <header className="rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-card to-transparent p-5 sm:p-7"><div className="flex items-start gap-3"><span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-2xl">{config.emoji}</span><div><p className="text-[10px] font-bold uppercase tracking-[.18em] text-primary">HARMONY HUB · ORGANIZAÇÃO PESSOAL</p><h1 className="mt-2 text-2xl font-extrabold sm:text-3xl">{config.title}</h1><p className="mt-2 text-sm text-muted-foreground">{config.description}</p></div></div><div className="mt-5 flex flex-wrap items-center justify-between gap-3"><p className="text-sm font-semibold capitalize text-muted-foreground">{month}</p>{module==="desenvolvimento-pessoal"&&<p className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-sm">✨ {quote}</p>}</div></header>
     <div className="flex gap-2 overflow-x-auto pb-2" role="tablist" aria-label={"Abas de "+config.title}>{config.tabs.map(t=><button key={t} role="tab" aria-selected={tab===t} className={pill(tab===t)} onClick={()=>{setTab(t);setInput("");setExtra("");}}>{t}</button>)}</div>
     <Panel title={titles[tab]||tab}>
