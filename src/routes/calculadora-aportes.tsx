@@ -4,7 +4,7 @@ import { PageHeader, Panel } from "@/components/ui-kit";
 import { formatCurrency, requiredMonthlyContribution, futureValue, monthsToTarget } from "@/lib/finance";
 
 export const Route = createFileRoute("/calculadora-aportes")({
-  head: () => ({ meta: [{ title: "CALCULADORA DE APORTES — MULTICAP" }] }),
+  head: () => ({ meta: [{ title: "CALCULADORA DE APORTES — Harmony Hub" }] }),
   component: ContributionCalculatorPage,
 });
 
