@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { SlidersHorizontal, RotateCcw, Eye, EyeOff, Sparkles, ArrowUpRight, CalendarDays, Heart, LayoutGrid } from "lucide-react";
+import { SlidersHorizontal, RotateCcw, Eye, EyeOff, Sparkles, ArrowUpRight, CalendarDays, Heart, LayoutGrid, House, Clock3, Utensils } from "lucide-react";
 import { Panel, Button, Hero, SegmentedControl, IconBadge } from "@/components/ui-kit";
 import { moduleGroups, type ModuleGroup } from "@/components/layout/nav";
 
@@ -33,10 +33,31 @@ export function MorePage() {
   const [mode, setMode] = useState<"PESSOAL" | "EMPRESARIAL">(readMode);
   const [customizing, setCustomizing] = useState(false);
   const [visibleModules, setVisibleModules] = useState<string[] | null>(readVisibleModules);
-  const groups: ModuleGroup[] = useMemo(() => moduleGroups.filter(group =>
-    group.context === "SYSTEM" || (mode === "EMPRESARIAL" ? group.context === "BUSINESS" : group.context === "PERSONAL"),
-  ), [mode]);
-  const allModuleIds = useMemo(() => moduleGroups.flatMap(group => group.items.map(item => item.to)), []);
+  const groups: ModuleGroup[] = useMemo(() => {
+    const visibleGroups = moduleGroups.filter(group =>
+      group.context === "SYSTEM" || (mode === "EMPRESARIAL" ? group.context === "BUSINESS" : group.context === "PERSONAL"),
+    );
+    if (mode === "EMPRESARIAL") return visibleGroups;
+
+    const groupedPersonalItems = new Set(["/alimentacao", "/rotina", "/casa"]);
+    const reorganizedGroups = visibleGroups
+      .map(group => ({ ...group, items: group.items.filter(item => !groupedPersonalItems.has(item.to)) }))
+      .filter(group => group.items.length > 0);
+
+    reorganizedGroups.push({
+      label: "Casa, cardápio e rotina",
+      description: "Planeje suas refeições, organize a casa e deixe sua rotina em ordem.",
+      icon: House,
+      context: "PERSONAL",
+      items: [
+        { label: "Cardápio", to: "/alimentacao", icon: Utensils },
+        { label: "Rotina", to: "/rotina", icon: Clock3 },
+        { label: "Organize a casa", to: "/casa", icon: House },
+      ],
+    });
+    return reorganizedGroups;
+  }, [mode]);
+  const allModuleIds = useMemo(() => groups.flatMap(group => group.items.map(item => item.to)), [groups]);
   const activeModuleIds = visibleModules === null ? allModuleIds : allModuleIds.filter(id => visibleModules.includes(id));
   useEffect(() => {
     if (visibleModules === null) return;
