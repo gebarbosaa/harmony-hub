@@ -61,14 +61,16 @@ function EmpresarialPage(){
  const stockValue=bi.reduce((s,x)=>s+Number(x.stock_quantity)*Number(x.cost_per_base_unit),0),monthKey=todaySP().slice(0,7),salesTotal=bsa.filter(x=>x.sale_date?.startsWith(monthKey)&&x.status!=="CANCELADA").reduce((s,x)=>s+Number(x.total_amount),0),cashIn=bc.filter(x=>x.entry_date?.startsWith(monthKey)&&x.entry_type==="ENTRADA").reduce((s,x)=>s+Number(x.amount),0),cashOut=bc.filter(x=>x.entry_date?.startsWith(monthKey)&&x.entry_type==="SAIDA").reduce((s,x)=>s+Number(x.amount),0);
  return <div className="space-y-5">
 
- <nav aria-label="Seções empresariais" className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+ {tab==="DASHBOARD"&&<nav aria-label="Seções empresariais" className="grid grid-cols-1 gap-4 lg:grid-cols-2">
  {businessTabGroups.map(group=><section key={group.label} aria-label={group.label} className="rounded-2xl border border-border/70 bg-card p-4 shadow-sm">
   <div className="mb-3 flex items-center gap-3 border-b border-border/70 pb-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary"><Building2 className="h-4 w-4"/></span><h2 className="text-sm font-semibold">{group.label}</h2></div>
   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
    {group.tabs.map(t=>{const Icon=t.icon;return <button key={t.id} type="button" aria-current={tab===t.id?"page":undefined} onClick={()=>navigateToTab(t.id)} className={`flex min-h-[48px] min-w-0 items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${tab===t.id?"border-primary/50 bg-primary/10 text-primary":"border-border/70 bg-background text-foreground hover:border-primary/40 hover:bg-primary/5"}`}><Icon className="h-4 w-4 shrink-0"/><span className="min-w-0 flex-1">{t.label}</span></button>})}
   </div>
  </section>)}
-</nav>
+</nav>}
+
+ {tab!=="DASHBOARD"&&<div className="flex justify-start"><button type="button" onClick={()=>navigateToTab("DASHBOARD")} className={secondaryBtnClass}><ArrowRight className="h-4 w-4 rotate-180"/>VOLTAR AO PAINEL</button></div>}
 
  {!activeId&&tab!=="EMPRESA"?<Panel><div className="py-10 text-center"><Building2 className="mx-auto mb-3 h-9 w-9 text-primary"/><p className="font-bold">CADASTRE SUA EMPRESA PRIMEIRO</p><p className="mt-1 text-sm text-muted-foreground">O módulo empresarial mantém estoque, receitas, produção e caixa separados do financeiro pessoal.</p><button className={saveBtnClass+" mt-4"} onClick={()=>navigateToTab("EMPRESA")}><Plus className="h-4 w-4"/>CADASTRAR EMPRESA</button></div></Panel>:
  <>
