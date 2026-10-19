@@ -1,7 +1,7 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Plus, LayoutDashboard, ArrowLeftRight, Settings, LogOut, Bell, AlertCircle, MoreHorizontal, Search, ChevronDown, Sun, Moon } from "lucide-react";
-import { primaryNavItems, personalNavItems, businessNavItems, personalQuickAddOptions, businessQuickAddOptions } from "./nav";
+import { primaryNavItems, personalNavItems, businessNavItems, personalQuickAddOptions, businessQuickAddOptions, moduleGroups } from "./nav";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useHouseholdTable } from "@/hooks/use-household-data";
@@ -30,34 +30,27 @@ function SidebarSections({pathname,hash,mode,onModeChange}:{pathname:string;hash
   ];
   return <>
     <SidebarModeSwitch mode={mode} onChange={onModeChange}/>
-    {mode==="PESSOAL" ? <nav aria-label="Navegação principal" className="flex-1 space-y-1 overflow-y-auto px-3 py-5">
+    {mode==="PESSOAL" ? <nav aria-label="Navegação pessoal por grupos" className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
       <p className="px-3 pb-2 text-[10px] font-semibold tracking-wide text-muted-foreground">MENU PRINCIPAL</p>
       {personalMainItems.map(item=>{
         const active=pathname===item.to;
-        return <Link key={item.to} to={item.to as never} className={cn("flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors",active?"bg-primary/10 text-primary":"text-muted-foreground hover:bg-sidebar-accent hover:text-foreground")}>
-          <item.icon className="h-[18px] w-[18px] shrink-0"/><span>{item.label}</span>
+        return <Link key={item.to} to={item.to as never} className={cn("flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold transition-colors",active?"bg-primary/10 text-primary":"text-muted-foreground hover:bg-sidebar-accent hover:text-foreground")}>
+          <item.icon className="h-4 w-4 shrink-0"/><span>{item.label}</span>
           {active&&<span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary"/>}
         </Link>
       })}
-      <div className="mx-3 mt-4 rounded-lg border border-sidebar-border/70 bg-sidebar-accent/40 px-3 py-3">
-        <p className="text-xs font-semibold text-foreground">Todas as áreas</p>
-        <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">Acesse receitas, despesas, cartões, parcelas, investimentos e organização pessoal pelo Painel.</p>
-        <Link to="/painel" className="mt-2 inline-flex text-xs font-semibold text-primary hover:underline">Explorar módulos →</Link>
-      </div>
-    </nav> : <nav aria-label="Navegação empresarial" className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-      <p className="px-3 pb-2 text-[10px] font-semibold tracking-wide text-muted-foreground">GESTÃO EMPRESARIAL</p>
-      {businessItems.map(item=>{
-        const itemHash=item.to.includes("#")?"#"+item.to.split("#")[1]:"";
-        const active=pathname==="/empresarial"&&hash===itemHash;
-        return <button key={item.to} type="button" onClick={()=>{
-          const nextHash=item.to.includes("#")?item.to.slice(item.to.indexOf("#")):"";
-          if(nextHash){try{localStorage.setItem("harmony:last-business-tab",nextHash.slice(1))}catch{void 0}}
-          window.history.replaceState(null,"",nextHash?"/empresarial"+nextHash:"/empresarial");
-          window.dispatchEvent(new HashChangeEvent("hashchange"));
-        }} className={cn("flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-medium transition-colors",active?"bg-primary/10 text-primary":"text-muted-foreground hover:bg-sidebar-accent hover:text-foreground")}>
-          <item.icon className="h-4 w-4 shrink-0"/><span>{item.label}</span>{active&&<span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary"/>}
-        </button>
-      })}
+      <div className="my-3 border-t border-sidebar-border/70"/>
+      {moduleGroups.filter(group=>group.context==="PERSONAL"||group.context==="SYSTEM").map(group=><section key={group.label} aria-label={group.label} className="mb-4">
+        <div className="px-3 pb-2 pt-1"><p className="text-[10px] font-bold tracking-wide text-foreground">{group.label}</p><p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">{group.description}</p></div>
+        <div className="space-y-1">
+          {group.items.map(item=>{
+            const active=pathname===item.to;
+            return <Link key={item.to} to={item.to as never} className={cn("flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-medium transition-colors",active?"bg-primary/10 text-primary":"text-muted-foreground hover:bg-sidebar-accent hover:text-foreground")}>
+              <item.icon className="h-4 w-4 shrink-0"/><span className="min-w-0 flex-1">{item.label}</span>{active&&<span className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-primary"/>}
+            </Link>
+          })}
+        </div>
+      </section>)}
     </nav>}
   </>;
 }
