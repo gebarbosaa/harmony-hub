@@ -27,6 +27,17 @@ function SidebarSections({pathname,hash,mode,onModeChange}:{pathname:string;hash
     {label:"PAINEL",to:"/painel",icon:MoreHorizontal},
     {label:"AJUSTES",to:"/ajustes",icon:Settings},
   ];
+  const businessMainItems=[
+    {label:"INÍCIO",to:"/",icon:LayoutDashboard},
+    {label:"PAINEL",to:"/empresarial#DASHBOARD",icon:MoreHorizontal},
+    {label:"AJUSTES",to:"/empresarial#AJUSTES",icon:Settings},
+  ];
+  const businessGroups=[
+    {label:"Visão geral",items:businessItems.filter(item=>["Cadastro da empresa"].includes(item.label))},
+    {label:"Estoque e operação",items:businessItems.filter(item=>["Insumos","Estoque de insumos","Fornecedores","Produção","Compras"].includes(item.label))},
+    {label:"Produtos e vendas",items:businessItems.filter(item=>["Receitas empresariais","Produtos e precificação","Vendas"].includes(item.label))},
+    {label:"Financeiro",items:businessItems.filter(item=>["Financeiro empresarial","Lucro presumido"].includes(item.label))},
+  ];
   return <>
     <SidebarModeSwitch mode={mode} onChange={onModeChange}/>
     {mode==="PESSOAL" ? <nav aria-label="Navegação pessoal por grupos" className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
@@ -50,20 +61,39 @@ function SidebarSections({pathname,hash,mode,onModeChange}:{pathname:string;hash
           })}
         </div>
       </section>)}
-    </nav> : <nav aria-label="Navegação empresarial" className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-      <p className="px-3 pb-2 text-[10px] font-semibold tracking-wide text-muted-foreground">GESTÃO EMPRESARIAL</p>
-      {businessItems.map(item=>{
-        const itemHash=item.to.includes("#")?"#"+item.to.split("#")[1]:"";
-        const active=pathname==="/empresarial"&&hash===itemHash;
+    </nav> : <nav aria-label="Navegação empresarial por grupos" className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+      <p className="px-3 pb-2 text-[10px] font-semibold tracking-wide text-muted-foreground">MENU PRINCIPAL</p>
+      {businessMainItems.map(item=>{
+        const nextHash=item.to.includes("#")?"#"+item.to.split("#")[1]:"";
+        const active=item.to==="/" ? pathname==="/" : pathname==="/empresarial"&&hash===nextHash;
         return <button key={item.to} type="button" onClick={()=>{
-          const nextHash=item.to.includes("#")?item.to.slice(item.to.indexOf("#")):"";
-          if(nextHash){try{localStorage.setItem("harmony:last-business-tab",nextHash.slice(1))}catch{void 0}}
-          window.history.replaceState(null,"",nextHash?"/empresarial"+nextHash:"/empresarial");
+          if(item.to==="/"){void navigate({to:"/" as never});return;}
+          const h=item.to.slice(item.to.indexOf("#"));
+          try{localStorage.setItem("harmony:last-business-tab",h.slice(1))}catch{void 0}
+          window.history.replaceState(null,"", "/empresarial"+h);
           window.dispatchEvent(new HashChangeEvent("hashchange"));
-        }} className={cn("flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-medium transition-colors",active?"bg-primary/10 text-primary":"text-muted-foreground hover:bg-sidebar-accent hover:text-foreground")}>
+        }} className={cn("flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition-colors",active?"bg-primary/10 text-primary":"text-muted-foreground hover:bg-sidebar-accent hover:text-foreground")}>
           <item.icon className="h-4 w-4 shrink-0"/><span>{item.label}</span>{active&&<span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary"/>}
         </button>
       })}
+      <div className="my-3 border-t border-sidebar-border/70"/>
+      {businessGroups.map(group=><section key={group.label} aria-label={group.label} className="mb-4">
+        <div className="px-3 pb-2 pt-1"><p className="text-[10px] font-bold tracking-wide text-foreground">{group.label}</p></div>
+        <div className="space-y-1">
+          {group.items.map(item=>{
+            const itemHash=item.to.includes("#")?"#"+item.to.split("#")[1]:"";
+            const active=pathname==="/empresarial"&&hash===itemHash;
+            return <button key={item.to} type="button" onClick={()=>{
+              const nextHash=item.to.slice(item.to.indexOf("#"));
+              try{localStorage.setItem("harmony:last-business-tab",nextHash.slice(1))}catch{void 0}
+              window.history.replaceState(null,"","/empresarial"+nextHash);
+              window.dispatchEvent(new HashChangeEvent("hashchange"));
+            }} className={cn("flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-medium transition-colors",active?"bg-primary/10 text-primary":"text-muted-foreground hover:bg-sidebar-accent hover:text-foreground")}>
+              <item.icon className="h-4 w-4 shrink-0"/><span className="min-w-0 flex-1">{item.label}</span>{active&&<span className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-primary"/>}
+            </button>
+          })}
+        </div>
+      </section>)}
     </nav>}
   </>;
 }
