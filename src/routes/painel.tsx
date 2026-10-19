@@ -45,14 +45,20 @@ export function MorePage() {
       .filter(group => group.items.length > 0);
 
     reorganizedGroups.push({
-      label: "Casa, cardápio e rotina",
-      description: "Planeje suas refeições, organize a casa e deixe sua rotina em ordem.",
+      label: "Casa",
+      description: "Acesse cada área da organização doméstica diretamente pelas abas.",
       icon: House,
       context: "PERSONAL",
       items: [
-        { label: "Cardápio", to: "/alimentacao", icon: Utensils },
-        { label: "Rotina", to: "/rotina", icon: Clock3 },
-        { label: "Organize a casa", to: "/casa", icon: House },
+        { label: "Cômodos", to: "/casa#tab=Cômodos", icon: House },
+        { label: "Mercado", to: "/casa#tab=Mercado", icon: ShoppingCart },
+        { label: "Rotina", to: "/casa#tab=Rotina", icon: Clock3 },
+        { label: "Despensa", to: "/casa#tab=Despensa", icon: LayoutGrid },
+        { label: "Cardápio", to: "/casa#tab=Cardápio", icon: Utensils },
+        { label: "Manutenção", to: "/casa#tab=Manutenção", icon: SlidersHorizontal },
+        { label: "Co-op", to: "/casa#tab=Co-op", icon: Heart },
+        { label: "Segurança", to: "/casa#tab=Segurança", icon: Eye },
+        { label: "Utilidades", to: "/casa#tab=Utilidades", icon: Sparkles },
       ],
     });
     return reorganizedGroups;
