@@ -30,7 +30,7 @@ export const primaryNavItems: NavItem[] = [
 /** Catálogo único de módulos, usado pela busca e pelo Painel. */
 export const moduleGroups: ModuleGroup[] = [
 ] = [
-  {
+{
     label: "Planejamento",
     description: "Orçamentos, assinaturas, custos fixos, metas e investimentos.",
     icon: TrendingUp,
@@ -44,7 +44,7 @@ export const moduleGroups: ModuleGroup[] = [
       { label: "Calculadora de aportes", to: "/calculadora-aportes", icon: Calculator },
     ],
   },
-  {
+{
     label: "Contas e pagamentos",
     description: "Cartões, faturas, parcelas, contas a pagar e bancos.",
     icon: Wallet,
@@ -56,7 +56,7 @@ export const moduleGroups: ModuleGroup[] = [
       { label: "Bancos e contas", to: "/bancos", icon: Building2 },
     ],
   },
-  {
+{
     label: "Sistema",
     description: "Grupos, planilha, calendário, importações e integrações.",
     icon: Settings,
@@ -69,7 +69,7 @@ export const moduleGroups: ModuleGroup[] = [
       { label: "Integrações", to: "/integracoes", icon: Plug },
     ],
   },
-  {
+{
     label: "Organização",
     description: "Rotina, hábitos, plantões, treinos, alimentação e mercado/despensa.",
     icon: Sparkles,
@@ -83,7 +83,7 @@ export const moduleGroups: ModuleGroup[] = [
       { label: "Mercado / Despensa", to: "/casa", icon: House },
     ],
   },
-  {
+{
     label: "Movimentações",
     description: "Entradas, saídas e terceiros.",
     icon: ArrowLeftRight,
@@ -94,7 +94,7 @@ export const moduleGroups: ModuleGroup[] = [
       { label: "Terceiros", to: "/terceiros", icon: UserRound },
     ],
   },
-  {
+{
     label: "Empresa",
     description: "Operação, compras, vendas, estoque e finanças empresariais.",
     icon: Factory,
