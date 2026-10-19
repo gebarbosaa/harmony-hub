@@ -93,27 +93,6 @@ export const moduleGroups: ModuleGroup[] = [
       { label: "Terceiros", to: "/terceiros", icon: UserRound },
     ],
   },
-  {
-    label: "Empresa",
-    description: "Operação, compras, vendas, estoque e finanças empresariais.",
-    icon: Factory,
-    context: "BUSINESS",
-    items: [
-      { label: "Painel empresarial", to: "/empresarial#DASHBOARD", icon: LayoutDashboard },
-      { label: "Cadastro da empresa", to: "/empresarial#EMPRESA", icon: Building2 },
-      { label: "Insumos", to: "/empresarial#INSUMOS", icon: Wallet },
-      { label: "Estoque de insumos", to: "/empresarial#ESTOQUE_INSUMOS", icon: Wallet },
-      { label: "Fornecedores", to: "/empresarial#FORNECEDORES", icon: Users },
-      { label: "Produção", to: "/empresarial#PRODUÇÃO", icon: Factory },
-      { label: "Compras", to: "/empresarial#COMPRAS", icon: ShoppingCart },
-      { label: "Vendas", to: "/empresarial#VENDAS", icon: ShoppingCart },
-      { label: "Receitas empresariais", to: "/empresarial#RECEITAS", icon: ArrowUpCircle },
-      { label: "Produtos e precificação", to: "/empresarial#PRECIFICAÇÃO", icon: Calculator },
-      { label: "Financeiro empresarial", to: "/empresarial#FINANCEIRO", icon: Wallet },
-      { label: "Lucro presumido", to: "/empresarial#LUCRO_PRESUMIDO", icon: Calculator },
-      { label: "Ajustes empresariais", to: "/empresarial#AJUSTES", icon: Settings },
-    ],
-  },
 ];
 
 /** Lista completa de rotas pessoais para busca global e cabeçalhos. */
@@ -122,8 +101,6 @@ export const navItems: NavItem[] = [
   ...moduleGroups.filter(group => group.context === "PERSONAL" || group.context === "SYSTEM").flatMap(group => group.items),
 ];
 export const personalNavItems = navItems;
-
-export const businessNavItems: NavItem[] = moduleGroups.filter(group => group.context === "BUSINESS").flatMap(group => group.items);
 
 export const personalQuickAddOptions = [
   { label: "NOVA DESPESA", icon: ArrowDownCircle, kind: "DESPESA" },
@@ -137,13 +114,3 @@ export const personalQuickAddOptions = [
   { label: "NOVO CUSTO FIXO", icon: Repeat, kind: "CUSTO_FIXO" },
 ] as const;
 
-export const businessQuickAddOptions = [
-  { label: "CADASTRO FÁCIL", icon: Building2, kind: "EMPRESA" },
-  { label: "NOVO INSUMO", icon: Wallet, kind: "INSUMO" },
-  { label: "NOVA RECEITA", icon: ArrowUpCircle, kind: "RECEITA_EMPRESARIAL" },
-  { label: "NOVO PRODUTO", icon: Calculator, kind: "PRODUTO" },
-  { label: "NOVO FORNECEDOR", icon: Users, kind: "FORNECEDOR" },
-  { label: "NOVA PRODUÇÃO", icon: Factory, kind: "PRODUCAO" },
-  { label: "NOVA VENDA", icon: ShoppingCart, kind: "VENDA" },
-  { label: "NOVO LANÇAMENTO", icon: Wallet, kind: "CAIXA" },
-] as const;

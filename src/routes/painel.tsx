@@ -9,15 +9,6 @@ export const Route = createFileRoute("/painel")({
   component: MorePage,
 });
 
-function readMode(): "PESSOAL" | "EMPRESARIAL" {
-  if (typeof window === "undefined") return "PESSOAL";
-  try {
-    return localStorage.getItem("harmony:mode") === "EMPRESARIAL" ? "EMPRESARIAL" : "PESSOAL";
-  } catch {
-    return "PESSOAL";
-  }
-}
-
 const DASHBOARD_PREFS_KEY = "harmony:dashboard:visible-modules";
 const DASHBOARD_ORDER_KEY = "harmony:dashboard:group-order";
 
@@ -48,12 +39,12 @@ function readVisibleModules(): string[] | null {
 }
 
 export function MorePage() {
-  const [mode, setMode] = useState<"PESSOAL" | "EMPRESARIAL">(readMode);
+  const mode = "PESSOAL" as const;
   const [customizing, setCustomizing] = useState(false);
   const [visibleModules, setVisibleModules] = useState<string[] | null>(readVisibleModules);
   const [groupOrders, setGroupOrders] = useState<GroupOrders>(readGroupOrders);
   const groups: ModuleGroup[] = useMemo(() => moduleGroups.filter(group =>
-    group.context === "SYSTEM" || (mode === "EMPRESARIAL" ? group.context === "BUSINESS" : group.context === "PERSONAL"),
+    group.context === "SYSTEM" || group.context === "PERSONAL",
   ), [mode]);
   const orderedGroups = useMemo(() => {
     const order = groupOrders[mode] ?? [];
@@ -108,29 +99,12 @@ export function MorePage() {
       <section className="core-hub-hero">
         <div className="core-hub-hero-copy">
           <span className="core-hub-kicker"><Sparkles className="h-3.5 w-3.5" /> SEU ESPAÇO, DO SEU JEITO</span>
-          <h1>{mode === "EMPRESARIAL" ? "Seu espaço de trabalho" : "Organize a vida com mais leveza."}</h1>
-          <p>{mode === "EMPRESARIAL" ? "Acesse as ferramentas da empresa em um só lugar." : "Rotina, hábitos, casa, treinos e finanças — tudo reunido para facilitar seu dia."}</p>
+          <h1>Organize a vida com mais leveza.</h1>
+          <p>Rotina, hábitos, casa, treinos e finanças — tudo reunido para facilitar seu dia.</p>
           <div className="core-hub-hero-meta"><span><LayoutGrid className="h-4 w-4" /> {groups.reduce((sum, group) => sum + group.items.filter(item => activeModuleIds.includes(item.to)).length, 0)} módulos disponíveis</span><span><Heart className="h-4 w-4" /> Um passo de cada vez</span></div>
         </div>
         <div className="core-hub-hero-art" aria-hidden="true"><div className="core-hub-blob"/><div className="core-hub-orbit"/><span>✦</span></div>
       </section>
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/70 bg-card p-3">
-        <p className="text-sm text-muted-foreground">Você está em</p>
-        <div className="inline-flex rounded-xl border border-border bg-secondary/60 p-1" role="group" aria-label="Contexto do painel">
-          <button
-            type="button"
-            aria-pressed={mode === "PESSOAL"}
-            onClick={() => { setMode("PESSOAL"); try { localStorage.setItem("harmony:mode", "PESSOAL"); } catch { /* armazenamento opcional */ } }}
-            className={`rounded-lg px-4 py-2 text-xs font-semibold transition-colors ${mode === "PESSOAL" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-          >Pessoal</button>
-          <button
-            type="button"
-            aria-pressed={mode === "EMPRESARIAL"}
-            onClick={() => { setMode("EMPRESARIAL"); try { localStorage.setItem("harmony:mode", "EMPRESARIAL"); } catch { /* armazenamento opcional */ } }}
-            className={`rounded-lg px-4 py-2 text-xs font-semibold transition-colors ${mode === "EMPRESARIAL" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-          >Empresarial</button>
-        </div>
-      </div>
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/70 bg-card p-4">
         <div className="flex items-center gap-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary"><SlidersHorizontal className="h-5 w-5" /></span>
