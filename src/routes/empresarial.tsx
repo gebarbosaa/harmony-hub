@@ -10,16 +10,16 @@ import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/empresarial")({ head: () => ({ meta: [{ title: "EMPRESARIAL — HARMONY HUB" }] }), component: EmpresarialPage });
 type Tab="DASHBOARD"|"EMPRESA"|"INSUMOS"|"ESTOQUE_INSUMOS"|"COMPRAS"|"RECEITAS"|"PRECIFICAÇÃO"|"FORNECEDORES"|"PRODUÇÃO"|"VENDAS"|"FINANCEIRO"|"LUCRO_PRESUMIDO"|"AJUSTES";
+const tabs:{id:Tab;label:string;icon:typeof Building2}[]=[
+{id:"DASHBOARD",label:"DASHBOARD",icon:Wallet},{id:"EMPRESA",label:"EMPRESA",icon:Building2},{id:"INSUMOS",label:"INSUMOS / NECESSIDADES",icon:ClipboardList},{id:"ESTOQUE_INSUMOS",label:"ESTOQUE DE INSUMOS",icon:Package},{id:"COMPRAS",label:"COMPRAS",icon:ShoppingCart},
+{id:"RECEITAS",label:"RECEITAS",icon:ChefHat},{id:"PRECIFICAÇÃO",label:"PRECIFICAÇÃO",icon:Calculator},{id:"FORNECEDORES",label:"FORNECEDORES",icon:Users},
+{id:"PRODUÇÃO",label:"PRODUÇÃO / ESTOQUE",icon:Factory},{id:"VENDAS",label:"VENDAS",icon:ShoppingCart},{id:"FINANCEIRO",label:"FINANCEIRO",icon:Wallet},{id:"LUCRO_PRESUMIDO",label:"LUCRO PRESUMIDO",icon:Calculator},{id:"AJUSTES",label:"AJUSTES",icon:Settings}];
 const businessTabGroups = [
  { label: "Visão geral", tabs: tabs.filter(t => ["DASHBOARD", "EMPRESA"].includes(t.id)) },
  { label: "Estoque e operação", tabs: tabs.filter(t => ["INSUMOS", "ESTOQUE_INSUMOS", "FORNECEDORES", "COMPRAS", "PRODUÇÃO"].includes(t.id)) },
  { label: "Produtos e vendas", tabs: tabs.filter(t => ["RECEITAS", "PRECIFICAÇÃO", "VENDAS"].includes(t.id)) },
  { label: "Financeiro e configurações", tabs: tabs.filter(t => ["FINANCEIRO", "LUCRO_PRESUMIDO", "AJUSTES"].includes(t.id)) },
 ];
-const tabs:{id:Tab;label:string;icon:typeof Building2}[]=[
-{id:"DASHBOARD",label:"DASHBOARD",icon:Wallet},{id:"EMPRESA",label:"EMPRESA",icon:Building2},{id:"INSUMOS",label:"INSUMOS / NECESSIDADES",icon:ClipboardList},{id:"ESTOQUE_INSUMOS",label:"ESTOQUE DE INSUMOS",icon:Package},{id:"COMPRAS",label:"COMPRAS",icon:ShoppingCart},
-{id:"RECEITAS",label:"RECEITAS",icon:ChefHat},{id:"PRECIFICAÇÃO",label:"PRECIFICAÇÃO",icon:Calculator},{id:"FORNECEDORES",label:"FORNECEDORES",icon:Users},
-{id:"PRODUÇÃO",label:"PRODUÇÃO / ESTOQUE",icon:Factory},{id:"VENDAS",label:"VENDAS",icon:ShoppingCart},{id:"FINANCEIRO",label:"FINANCEIRO",icon:Wallet},{id:"LUCRO_PRESUMIDO",label:"LUCRO PRESUMIDO",icon:Calculator},{id:"AJUSTES",label:"AJUSTES",icon:Settings}];
 type Business={id:string;household_id:string;name:string;legal_name:string|null;document:string|null;tax_regime:string|null;phone:string|null;email:string|null;address:string|null;city:string|null;state:string|null;notes:string|null};
 type Ingredient={id:string;household_id:string;business_id:string;supplier_id:string|null;name:string;category:string|null;base_unit:"G"|"ML"|"UN";purchase_quantity:number;purchase_unit:string;purchase_cost:number;cost_per_base_unit:number;stock_quantity:number;minimum_stock:number;notes:string|null};
 type Recipe={id:string;household_id:string;business_id:string;name:string;category:string|null;yield_quantity:number;yield_unit:string;preparation:string|null;notes:string|null};
@@ -63,7 +63,14 @@ function EmpresarialPage(){
  {!activeId&&tab!=="EMPRESA"?<Panel><div className="py-10 text-center"><Building2 className="mx-auto mb-3 h-9 w-9 text-primary"/><p className="font-bold">CADASTRE SUA EMPRESA PRIMEIRO</p><p className="mt-1 text-sm text-muted-foreground">O módulo empresarial mantém estoque, receitas, produção e caixa separados do financeiro pessoal.</p><button className={saveBtnClass+" mt-4"} onClick={()=>setTab("EMPRESA")}><Plus className="h-4 w-4"/>CADASTRAR EMPRESA</button></div></Panel>:
  <>
  {businesses.rows.length>1&&<div className="flex items-center gap-2"><span className="label-caps text-[9px] text-muted-foreground">EMPRESA ATIVA</span><select className={inputClass+" max-w-xs"} value={activeId??""} onChange={e=>setBusinessId(e.target.value)}>{businesses.rows.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></div>}
- <div className="flex flex-col gap-2 rounded-xl border border-border/70 bg-card p-3 sm:flex-row sm:items-center sm:justify-between"><label htmlFor="business-section" className="label-caps text-[10px] font-semibold text-muted-foreground">SEÇÃO EMPRESARIAL</label><select id="business-section" aria-label="Selecionar seção empresarial" className={inputClass+" sm:max-w-sm"} value={tab} onChange={e=>{const next=e.target.value as Tab;setTab(next);try{window.location.hash=encodeURIComponent(next);localStorage.setItem("harmony:last-business-tab",next)}catch{void 0}}}>{businessTabGroups.map(group=><optgroup key={group.label} label={group.label}>{group.tabs.map(t=><option key={t.id} value={t.id}>{t.label}</option>)}</optgroup>)}</select></div>
+ <nav aria-label="Seções empresariais" className="space-y-4">
+ {businessTabGroups.map(group=><section key={group.label} aria-label={group.label} className="rounded-xl border border-border/70 bg-card p-3 sm:p-4">
+  <h2 className="mb-3 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{group.label}</h2>
+  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
+   {group.tabs.map(t=>{const Icon=t.icon;return <button key={t.id} type="button" aria-current={tab===t.id?"page":undefined} onClick={()=>{setTab(t.id);try{window.location.hash=encodeURIComponent(t.id);localStorage.setItem("harmony:last-business-tab",t.id)}catch{void 0}}} className={`flex min-h-[72px] items-center gap-2 rounded-xl border px-3 py-3 text-left text-[10px] font-bold transition-colors ${tab===t.id?"border-primary bg-primary/10 text-primary shadow-sm":"border-border/70 bg-background text-foreground hover:border-primary/40 hover:bg-primary/5"}`}><Icon className="h-4 w-4 shrink-0"/><span>{t.label}</span></button>})}
+  </div>
+ </section>)}
+</nav>
  {tab==="DASHBOARD"&&<Dashboard ingredients={bi} recipes={br} products={bp} productions={bprod} stockValue={stockValue} salesTotal={salesTotal} cashIn={cashIn} cashOut={cashOut} salesRows={bsa} cashRows={bc} onNavigate={setTab}/>}
  {tab==="EMPRESA"&&<CompanyTab business={business} table={businesses} onSelected={setBusinessId}/>}
  {tab==="INSUMOS"&&<IngredientsTab business={business} rows={bi} table={ingredients} suppliers={bs} recipes={br} recipeItems={bri}/>}
